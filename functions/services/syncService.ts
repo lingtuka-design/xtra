@@ -96,40 +96,14 @@ export class SyncService {
             mizoText = tweet.text;
           }
 
-          // 3. Post to Facebook Page (if credentials provided)
-          let fbStatus: 'published' | 'skipped' | 'failed' = 'skipped';
-          let fbPostId: string | undefined = undefined;
-          let fbError: string | undefined = undefined;
-
-          if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
-            const fbResult = await facebookPoster.postNews(
-              mizoText,
-              tweet.primaryImageUrl,
-              env.FB_PAGE_ID,
-              env.FB_PAGE_ACCESS_TOKEN
-            );
-
-            if (fbResult.success) {
-              fbStatus = 'published';
-              fbPostId = fbResult.postId;
-              console.log(`Successfully posted to Facebook Page: ${fbPostId}`);
-            } else {
-              fbStatus = 'failed';
-              fbError = fbResult.error;
-              console.warn(`Facebook post failed for ${tweet.id}: ${fbError}`);
-            }
-          } else {
-            console.log('Facebook Page credentials not set; skipping auto-post.');
-          }
-
-          // 4. Save to Cloudflare D1
+          // 3. Save to Cloudflare D1 with facebook_status = 'none' (awaiting curation / editorial choice)
           await env.DB.prepare(
             `INSERT INTO posts (
               tweet_id, author_handle, author_name, author_avatar,
               original_text, mizo_translation, primary_image_url,
               media_urls, tweet_url, tweet_created_at, facebook_post_id,
               facebook_status, error_message, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'none', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
           )
             .bind(
               tweet.id,
@@ -141,10 +115,7 @@ export class SyncService {
               tweet.primaryImageUrl || null,
               JSON.stringify(tweet.photos),
               tweet.tweetUrl,
-              tweet.createdAt,
-              fbPostId || null,
-              fbStatus,
-              fbError || null
+              tweet.createdAt
             )
             .run();
 
@@ -178,6 +149,39 @@ export class SyncService {
       }
 
       results.push(syncResult);
+    }
+
+    // 4. Process the next queued item for Facebook (Drip scheduler: 1 post per cron cycle, spaced every 15-20 mins)
+    try {
+      if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+        const nextQueued = await env.DB.prepare(
+          "SELECT * FROM posts WHERE facebook_status = 'queued' ORDER BY id ASC LIMIT 1"
+        ).first<any>();
+
+        if (nextQueued) {
+          console.log(`[FB Queue Drip] Auto-publishing queued post #${nextQueued.id} to Facebook...`);
+          const fbRes = await facebookPoster.postNews(
+            nextQueued.mizo_translation,
+            nextQueued.primary_image_url,
+            env.FB_PAGE_ID,
+            env.FB_PAGE_ACCESS_TOKEN
+          );
+
+          if (fbRes.success) {
+            await env.DB.prepare(
+              "UPDATE posts SET facebook_status = 'published', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+            ).bind(fbRes.postId, nextQueued.id).run();
+            console.log(`[FB Queue Drip] Post #${nextQueued.id} successfully published to Facebook.`);
+          } else {
+            await env.DB.prepare(
+              "UPDATE posts SET facebook_status = 'failed', error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+            ).bind(fbRes.error || 'Drip post failed', nextQueued.id).run();
+            console.warn(`[FB Queue Drip] Post #${nextQueued.id} failed:`, fbRes.error);
+          }
+        }
+      }
+    } catch (dripErr: any) {
+      console.warn('Error in FB Queue drip execution:', dripErr.message);
     }
 
     return results;

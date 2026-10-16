@@ -9,7 +9,14 @@ import {
   ChevronUp, 
   Share2, 
   Sparkles,
-  Maximize2
+  Maximize2,
+  Edit3,
+  Send,
+  PlusCircle,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  Trash2
 } from 'lucide-react';
 
 const FacebookIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
@@ -21,11 +28,22 @@ const FacebookIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
 interface PostCardProps {
   post: Post;
   onImageClick: (url: string) => void;
+  onPostUpdated?: (updated: Post) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUpdated }) => {
   const [showOriginal, setShowOriginal] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Inline editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [captionText, setCaptionText] = useState(post.mizo_translation);
+  const [isSavingCaption, setIsSavingCaption] = useState(false);
+
+  // Queue and publishing states
+  const [isQueueing, setIsQueueing] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const formatTimeAgo = (dateStr: string) => {
     try {
@@ -63,8 +81,107 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick }) => {
     }
   };
 
+  // Save edited Mizo caption
+  const handleSaveCaption = async () => {
+    if (!captionText.trim()) return;
+    setIsSavingCaption(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: post.id,
+          mizo_translation: captionText.trim(),
+        }),
+      });
+
+      const data = (await res.json()) as any;
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save caption');
+      }
+
+      setIsEditing(false);
+      if (onPostUpdated) {
+        onPostUpdated({ ...post, mizo_translation: captionText.trim() });
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'Error updating caption');
+    } finally {
+      setIsSavingCaption(false);
+    }
+  };
+
+  // Toggle in/out of Facebook Queue
+  const handleToggleQueue = async (targetStatus: 'queued' | 'none') => {
+    setIsQueueing(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: post.id,
+          facebook_status: targetStatus,
+        }),
+      });
+
+      const data = (await res.json()) as any;
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update queue');
+      }
+
+      if (onPostUpdated) {
+        onPostUpdated({ ...post, facebook_status: targetStatus });
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'Error updating queue');
+    } finally {
+      setIsQueueing(false);
+    }
+  };
+
+  // 1-Click Instant Post to Facebook Page
+  const handlePublishNow = async () => {
+    setIsPublishing(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: post.id }),
+      });
+
+      const data = (await res.json()) as any;
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Publish failed');
+      }
+
+      if (onPostUpdated) {
+        onPostUpdated({
+          ...post,
+          facebook_status: 'published',
+          facebook_post_id: data.postId,
+        });
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'Publishing failed');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const isQueued = post.facebook_status === 'queued';
+  const isPublished = post.facebook_status === 'published';
+  const isFailed = post.facebook_status === 'failed';
+
   return (
-    <article className="border-b border-zinc-800/80 bg-zinc-950/40 hover:bg-zinc-900/30 transition-colors duration-150 p-4 sm:p-5">
+    <article className={`border-b border-zinc-800/80 transition-colors duration-150 p-4 sm:p-5 ${
+      isQueued ? 'bg-blue-950/15' : 'bg-zinc-950/40 hover:bg-zinc-900/30'
+    }`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -93,15 +210,32 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick }) => {
                 {formatTimeAgo(post.created_at)}
               </span>
             </div>
-            <div className="flex items-center gap-2 mt-0.5">
+
+            {/* Badges */}
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-950/50 border border-emerald-800/40 px-2 py-0.5 rounded-full">
                 <Sparkles className="w-3 h-3 text-emerald-400" />
                 Gemini Mizo
               </span>
-              {post.facebook_status === 'published' && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 bg-blue-950/40 border border-blue-800/40 px-2 py-0.5 rounded-full">
-                  <FacebookIcon className="w-3 h-3 text-blue-400" />
-                  Auto-posted
+
+              {isQueued && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300 bg-amber-950/50 border border-amber-800/50 px-2.5 py-0.5 rounded-full animate-pulse">
+                  <FacebookIcon className="w-3 h-3 text-amber-300" />
+                  In FB Queue (Drip 15m)
+                </span>
+              )}
+
+              {isPublished && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 bg-blue-950/50 border border-blue-800/50 px-2.5 py-0.5 rounded-full">
+                  <CheckCircle className="w-3 h-3 text-blue-400" />
+                  Published to FB
+                </span>
+              )}
+
+              {isFailed && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 bg-red-950/50 border border-red-800/50 px-2 py-0.5 rounded-full">
+                  <AlertCircle className="w-3 h-3 text-red-400" />
+                  FB Post Error
                 </span>
               )}
             </div>
@@ -119,10 +253,60 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick }) => {
         </a>
       </div>
 
-      {/* Mizo Translated News (Main Highlight) */}
-      <div className="text-[15px] sm:text-[16px] leading-relaxed text-zinc-100 font-normal whitespace-pre-line mb-3.5">
-        {post.mizo_translation}
-      </div>
+      {/* Mizo Translated News (Main Highlight or Inline Editor) */}
+      {isEditing ? (
+        <div className="mb-3.5 space-y-2 p-3 rounded-2xl bg-zinc-900/90 border border-amber-500/50">
+          <div className="flex items-center justify-between text-xs text-amber-400 font-semibold">
+            <span>✏️ Edit Mizo Caption for Facebook:</span>
+            <span>{captionText.length} characters</span>
+          </div>
+          <textarea
+            value={captionText}
+            onChange={(e) => setCaptionText(e.target.value)}
+            rows={4}
+            className="w-full bg-zinc-950 border border-zinc-700 rounded-xl p-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400 leading-relaxed"
+          />
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              onClick={() => {
+                setCaptionText(post.mizo_translation);
+                setIsEditing(false);
+              }}
+              className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveCaption}
+              disabled={isSavingCaption}
+              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg shadow transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isSavingCaption ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Save Changes
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="group/caption relative text-[15px] sm:text-[16px] leading-relaxed text-zinc-100 font-normal whitespace-pre-line mb-3.5">
+          {post.mizo_translation}
+          <button
+            onClick={() => setIsEditing(true)}
+            className="inline-flex items-center gap-1 ml-2 text-xs text-amber-400 hover:text-amber-300 bg-amber-950/40 border border-amber-800/40 px-2 py-0.5 rounded-md opacity-80 hover:opacity-100 transition-opacity"
+            title="Edit caption before posting"
+          >
+            <Edit3 className="w-3 h-3" />
+            <span>Siamrem</span>
+          </button>
+        </div>
+      )}
+
+      {/* Action Error message if any */}
+      {actionError && (
+        <div className="mb-3 p-2.5 rounded-xl bg-red-950/40 border border-red-800/50 text-red-300 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+          <span>{actionError}</span>
+        </div>
+      )}
 
       {/* Optional Full HD Photo */}
       {post.primary_image_url && (
@@ -164,9 +348,63 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick }) => {
         )}
       </div>
 
-      {/* Action Footer */}
-      <div className="flex items-center justify-between pt-2 border-t border-zinc-900 text-zinc-400 text-xs">
-        <div className="flex items-center gap-1 sm:gap-2">
+      {/* Action Footer (Facebook Curation & Sharing) */}
+      <div className="flex items-center justify-between pt-3 border-t border-zinc-900 text-zinc-400 text-xs flex-wrap gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {/* Facebook Curation Button */}
+          {!isPublished && (
+            <>
+              {isQueued ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handlePublishNow}
+                    disabled={isPublishing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md shadow-blue-500/20 transition-all disabled:opacity-50"
+                    title="1-Click immediate publish to Facebook Page"
+                  >
+                    {isPublishing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isPublishing ? 'Posting...' : 'Post to FB Now'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleToggleQueue('none')}
+                    disabled={isQueueing}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-red-400 border border-zinc-800 text-xs transition-colors"
+                    title="Remove from scheduled queue"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Remove</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleToggleQueue('queued')}
+                  disabled={isQueueing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-blue-950/60 text-zinc-200 hover:text-blue-300 border border-zinc-700/80 hover:border-blue-600/60 font-medium text-xs transition-all shadow-sm disabled:opacity-50"
+                  title="Add to Facebook queue (will auto-drip every 15m or post now)"
+                >
+                  {isQueueing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <PlusCircle className="w-3.5 h-3.5 text-blue-400" />
+                  )}
+                  <span>+ Add to FB Queue</span>
+                </button>
+              )}
+            </>
+          )}
+
+          {isPublished && (
+            <span className="inline-flex items-center gap-1 text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-1 rounded-lg text-xs font-medium">
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              Posted to Facebook
+            </span>
+          )}
+
           <button
             onClick={handleCopy}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-zinc-800/60 hover:text-zinc-200 transition-colors"
@@ -180,7 +418,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick }) => {
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" />
-                <span>Copy Mizo</span>
+                <span>Copy</span>
               </>
             )}
           </button>
@@ -191,7 +429,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick }) => {
             title="Share"
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span>Share</span>
           </button>
         </div>
 
@@ -201,7 +438,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick }) => {
           rel="noopener noreferrer"
           className="text-zinc-500 hover:text-sky-400 transition-colors flex items-center gap-1 text-[11px]"
         >
-          View source on X &rarr;
+          View source &rarr;
         </a>
       </div>
     </article>
