@@ -40,7 +40,7 @@ export const ImageModal: React.FC<ImageModalProps> = ({ imageUrl, onClose }) => 
         <img
           src={imageUrl}
           alt="Full size view"
-          className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl border border-zinc-800"
+          className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl border border-stone-700/60"
         />
       </div>
     </div>

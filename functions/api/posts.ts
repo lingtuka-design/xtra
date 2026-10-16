@@ -140,7 +140,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       // Publish immediately to Facebook Page
       const fbRes = await facebookPoster.postNews(
         mizoCaption,
-        photoUrl,
+        photoUrl || undefined,
         env.FB_PAGE_ID,
         env.FB_PAGE_ACCESS_TOKEN
       );
@@ -156,7 +156,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           try {
             await whatsappPoster.postNews(
               mizoCaption,
-              photoUrl,
+              photoUrl || undefined,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
               env.WHATSAPP_API_URL

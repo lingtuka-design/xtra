@@ -189,18 +189,18 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
   };
 
   return (
-    <div className="bg-zinc-950/80 border border-zinc-800/90 rounded-2xl p-4 sm:p-6 shadow-xl mb-6 backdrop-blur-sm">
+    <div className="bg-white border border-stone-200/90 rounded-2xl p-4 sm:p-6 shadow-xs mb-6">
       {/* Title */}
-      <div className="flex items-center justify-between pb-4 mb-5 border-b border-zinc-800/80">
+      <div className="flex items-center justify-between pb-4 mb-5 border-b border-stone-200">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold">
+          <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 font-bold">
             ✍️
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-zinc-100">
+            <h2 className="text-base sm:text-lg font-bold text-stone-900">
               Post Thar Siamna (Manual Post Creator)
             </h2>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-stone-500">
               English news copy-paste la Gemini-in a letling ang, emaw Mizo-in type lut tawp rawh.
             </p>
           </div>
@@ -209,15 +209,15 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
 
       {/* Notifications */}
       {statusMessage && (
-        <div className="mb-4 p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 text-xs sm:text-sm flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+        <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 flex-shrink-0 text-emerald-600" />
           <span>{statusMessage}</span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="mb-4 p-3 rounded-xl bg-red-950/40 border border-red-800/50 text-red-300 text-xs sm:text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -225,7 +225,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
       <div className="space-y-4">
         {/* Source / Author Name */}
         <div>
-          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+          <label className="block text-xs font-semibold text-stone-700 mb-1.5">
             Source / Hming (Optional):
           </label>
           <input
@@ -233,21 +233,21 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             value={authorName}
             onChange={(e) => setAuthorName(e.target.value)}
             placeholder="e.g. Fabrizio Romano, David Ornstein, Sky Sports"
-            className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500"
+            className="w-full bg-[#FCFAF6] focus:bg-white border border-stone-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 transition-colors shadow-xs"
           />
         </div>
 
         {/* Section 1: English News + Gemini Paraphraser */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/70 space-y-2.5">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-[#FAF8F5] border border-stone-200 space-y-2.5">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-zinc-400" />
+            <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-stone-500" />
               <span>1. English News Copy-Paste Rawh (Optional):</span>
             </label>
             <button
               onClick={handleParaphrase}
               disabled={isTranslating || !englishText.trim()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-semibold text-xs shadow-sm transition-all disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs shadow-xs transition-all disabled:opacity-40"
               title="Letling and paraphrase with Gemini AI"
             >
               {isTranslating ? (
@@ -257,7 +257,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3.5 h-3.5 fill-black" />
+                  <Sparkles className="w-3.5 h-3.5 fill-stone-950" />
                   <span>✨ Gemini-in Mizo-ah Letling Rawh</span>
                 </>
               )}
@@ -268,18 +268,18 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             onChange={(e) => setEnglishText(e.target.value)}
             rows={3}
             placeholder="Copy and paste English football tweet or article here..."
-            className="w-full bg-zinc-950 border border-zinc-800/90 rounded-xl p-3 text-xs sm:text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/70"
+            className="w-full bg-white border border-stone-300 rounded-xl p-3 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500"
           />
         </div>
 
         {/* Section 2: Mizo Caption (Main Content) */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+            <label className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
               <span>✏️</span>
               <span>2. Facebook Post Caption (Mizo ṭawng - A hnuaia mi hi a in-post tur a ni):</span>
             </label>
-            <span className="text-[11px] text-zinc-500">
+            <span className="text-[11px] text-stone-500">
               {mizoCaption.length} characters
             </span>
           </div>
@@ -288,25 +288,25 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             onChange={(e) => setMizoCaption(e.target.value)}
             rows={7}
             placeholder="Mizo caption hetah hian type lut rawh, emaw a chunga Gemini lehlin sa hi duh tawkin edit rawh..."
-            className="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl p-4 text-[15px] sm:text-base text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 leading-relaxed font-normal min-h-[180px] resize-y shadow-inner"
+            className="w-full bg-[#FCFAF6] focus:bg-white border border-stone-300 rounded-xl p-4 text-[15px] sm:text-base text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 leading-relaxed font-normal min-h-[180px] resize-y shadow-xs"
           />
         </div>
 
         {/* Section 3: Image Upload or URL */}
-        <div className="p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-800/70 space-y-3">
+        <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-stone-200 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-              <ImageIcon className="w-3.5 h-3.5 text-zinc-400" />
+            <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-stone-500" />
               <span>3. Thlalak (Photo):</span>
             </label>
-            <div className="flex items-center gap-1 bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 text-xs">
+            <div className="flex items-center gap-1 bg-stone-200/80 p-0.5 rounded-lg border border-stone-300 text-xs">
               <button
                 type="button"
                 onClick={() => setImageInputMode('upload')}
                 className={`px-2.5 py-1 rounded-md transition-colors ${
                   imageInputMode === 'upload'
-                    ? 'bg-zinc-800 text-zinc-100 font-medium'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-white text-stone-900 font-semibold shadow-xs'
+                    : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 <Upload className="w-3 h-3 inline mr-1" />
@@ -317,8 +317,8 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
                 onClick={() => setImageInputMode('url')}
                 className={`px-2.5 py-1 rounded-md transition-colors ${
                   imageInputMode === 'url'
-                    ? 'bg-zinc-800 text-zinc-100 font-medium'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-white text-stone-900 font-semibold shadow-xs'
+                    : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 <LinkIcon className="w-3 h-3 inline mr-1" />
@@ -339,13 +339,13 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
               />
               <label
                 htmlFor="photo-file-input"
-                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-zinc-800 hover:border-amber-500/50 rounded-xl cursor-pointer bg-zinc-950/60 transition-colors"
+                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-stone-300 hover:border-amber-500 rounded-xl cursor-pointer bg-white transition-colors"
               >
-                <Upload className="w-5 h-5 text-zinc-400 mb-1" />
-                <span className="text-xs text-zinc-300 font-medium">
+                <Upload className="w-5 h-5 text-stone-500 mb-1" />
+                <span className="text-xs text-stone-800 font-medium">
                   {photoPreview ? 'Thlalak thlak duh chuan click rawh' : 'Thlalak upload nan hetah hian click rawh'}
                 </span>
-                <span className="text-[11px] text-zinc-500 mt-0.5">
+                <span className="text-[11px] text-stone-500 mt-0.5">
                   PNG, JPG, WEBP (up to 10MB)
                 </span>
               </label>
@@ -360,14 +360,14 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
                   setPhotoPreview(e.target.value);
                 }}
                 placeholder="https://pbs.twimg.com/media/...jpg"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border border-stone-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500"
               />
             </div>
           )}
 
           {/* Photo Live Preview */}
           {photoPreview && (
-            <div className="relative mt-2 rounded-xl overflow-hidden border border-zinc-800 max-h-56 bg-zinc-950 group">
+            <div className="relative mt-2 rounded-xl overflow-hidden border border-stone-300 max-h-56 bg-stone-100 group">
               <img
                 src={photoPreview}
                 alt="Upload preview"
@@ -376,7 +376,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
               <button
                 type="button"
                 onClick={handleClearImage}
-                className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 hover:bg-red-600 text-white transition-colors"
+                className="absolute top-2 right-2 p-1.5 rounded-lg bg-stone-900/80 hover:bg-red-600 text-white transition-colors"
                 title="Paih rawh"
               >
                 <X className="w-4 h-4" />
@@ -391,13 +391,13 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             type="button"
             onClick={handleAddToQueue}
             disabled={isQueueing || isPublishing || !mizoCaption.trim()}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs"
             title="Add to Facebook 15-minute drip queue"
           >
             {isQueueing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Clock className="w-4 h-4 text-amber-400" />
+              <Clock className="w-4 h-4 text-amber-700" />
             )}
             <span>+ Add to FB Queue</span>
           </button>
@@ -406,7 +406,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             type="button"
             onClick={handlePublishNow}
             disabled={isPublishing || isQueueing || !mizoCaption.trim()}
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-md shadow-blue-500/20"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs"
             title="Publish immediately to Facebook Page"
           >
             {isPublishing ? (

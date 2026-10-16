@@ -8,8 +8,8 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: #09090b;
-    color: #f4f4f5;
+    background-color: #F8F6F0;
+    color: #1c1917;
   }
 }
 
@@ -20,14 +20,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: #F8F6F0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #D6D3D1;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #A8A29E;
 }

@@ -214,8 +214,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
   const isFailed = post.facebook_status === 'failed';
 
   return (
-    <article className={`border-b border-zinc-800/80 transition-colors duration-150 p-4 sm:p-5 ${
-      isQueued ? 'bg-blue-950/15' : 'bg-zinc-950/40 hover:bg-zinc-900/30'
+    <article className={`border-b border-stone-200/80 transition-colors duration-150 p-4 sm:p-5 ${
+      isQueued ? 'bg-blue-50/50' : 'bg-white hover:bg-[#FAF9F5]'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -223,7 +223,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           <img
             src={post.author_avatar || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'}
             alt={post.author_name}
-            className="w-10 h-10 rounded-full object-cover ring-1 ring-zinc-800 bg-zinc-900 flex-shrink-0"
+            className="w-10 h-10 rounded-full object-cover ring-1 ring-stone-200 bg-stone-100 flex-shrink-0"
             onError={(e) => {
               (e.target as HTMLImageElement).src =
                 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
@@ -231,45 +231,45 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-bold text-zinc-100 text-[15px] truncate hover:underline cursor-pointer">
+              <span className="font-bold text-stone-900 text-[15px] truncate hover:underline cursor-pointer">
                 {post.author_name}
               </span>
-              <span className="inline-flex items-center text-sky-400" title="Tier-1 Verified Journalist">
+              <span className="inline-flex items-center text-sky-600" title="Tier-1 Verified Journalist">
                 <CheckCircle2 className="w-4 h-4 fill-sky-500/20" />
               </span>
-              <span className="text-zinc-500 text-xs sm:text-sm truncate">
+              <span className="text-stone-500 text-xs sm:text-sm truncate">
                 @{post.author_handle}
               </span>
-              <span className="text-zinc-600 text-xs">•</span>
-              <span className="text-zinc-400 text-xs sm:text-sm font-medium">
+              <span className="text-stone-300 text-xs">•</span>
+              <span className="text-stone-500 text-xs sm:text-sm font-medium">
                 {formatTimeAgo(post.created_at)}
               </span>
             </div>
 
             {/* Badges */}
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-950/50 border border-emerald-800/40 px-2 py-0.5 rounded-full">
-                <Sparkles className="w-3 h-3 text-emerald-400" />
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                <Sparkles className="w-3 h-3 text-emerald-600" />
                 Gemini Mizo
               </span>
 
               {isQueued && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300 bg-amber-950/50 border border-amber-800/50 px-2.5 py-0.5 rounded-full animate-pulse">
-                  <FacebookIcon className="w-3 h-3 text-amber-300" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-900 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full animate-pulse">
+                  <FacebookIcon className="w-3 h-3 text-amber-700" />
                   In FB Queue (Drip 15m)
                 </span>
               )}
 
               {isPublished && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 bg-blue-950/50 border border-blue-800/50 px-2.5 py-0.5 rounded-full">
-                  <CheckCircle className="w-3 h-3 text-blue-400" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-900 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                  <CheckCircle className="w-3 h-3 text-blue-600" />
                   Published to FB
                 </span>
               )}
 
               {isFailed && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 bg-red-950/50 border border-red-800/50 px-2 py-0.5 rounded-full">
-                  <AlertCircle className="w-3 h-3 text-red-400" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-800 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                  <AlertCircle className="w-3 h-3 text-red-600" />
                   FB Post Error
                 </span>
               )}
@@ -281,7 +281,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           href={post.tweet_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-zinc-500 hover:text-zinc-200 transition-colors p-1.5 rounded-lg hover:bg-zinc-800/60 flex-shrink-0"
+          className="text-stone-400 hover:text-stone-700 transition-colors p-1.5 rounded-lg hover:bg-stone-100 flex-shrink-0"
           title="Open original tweet on X"
         >
           <ExternalLink className="w-4 h-4" />
@@ -290,13 +290,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
 
       {/* Mizo Translated News (Main Highlight or Inline Editor) */}
       {isEditing ? (
-        <div className="mb-4 space-y-3 p-4 sm:p-5 rounded-2xl bg-zinc-900/95 border border-amber-500/60 shadow-xl shadow-amber-950/20">
-          <div className="flex items-center justify-between text-xs sm:text-sm text-amber-400 font-semibold">
+        <div className="mb-4 space-y-3 p-4 sm:p-5 rounded-2xl bg-[#FCFAF6] border border-amber-400/80 shadow-xs">
+          <div className="flex items-center justify-between text-xs sm:text-sm text-amber-900 font-semibold">
             <span className="flex items-center gap-1.5">
               <span>✏️</span>
               <span>Facebook Caption Siamremna:</span>
             </span>
-            <span className="text-zinc-400 text-xs font-normal">
+            <span className="text-stone-500 text-xs font-normal">
               {captionText.length} characters
             </span>
           </div>
@@ -304,11 +304,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
             value={captionText}
             onChange={(e) => setCaptionText(e.target.value)}
             rows={8}
-            className="w-full bg-zinc-950 border border-zinc-700/90 rounded-xl p-4 text-[15px] sm:text-base text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 leading-relaxed font-normal min-h-[200px] sm:min-h-[260px] resize-y shadow-inner"
+            className="w-full bg-white border border-stone-300 rounded-xl p-4 text-[15px] sm:text-base text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 leading-relaxed font-normal min-h-[200px] sm:min-h-[260px] resize-y shadow-inner"
             placeholder="Type Mizo caption here..."
           />
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-zinc-500 hidden sm:inline">
+            <span className="text-[11px] text-stone-500 hidden sm:inline">
               💡 Paragraph duhin Enter hmet la, duh tawkin a hnuaiah hian a pawtsei (resize) theih bawk e.
             </span>
             <div className="flex items-center gap-2 ml-auto">
@@ -317,14 +317,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
                   setCaptionText(post.mizo_translation);
                   setIsEditing(false);
                 }}
-                className="px-3.5 py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+                className="px-3.5 py-2 text-xs font-medium text-stone-600 hover:text-stone-900 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveCaption}
                 disabled={isSavingCaption}
-                className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black text-xs sm:text-sm font-semibold rounded-xl shadow-md transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
               >
                 {isSavingCaption ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Save Changes
@@ -333,11 +333,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           </div>
         </div>
       ) : (
-        <div className="group/caption relative text-[15px] sm:text-[16px] leading-relaxed text-zinc-100 font-normal whitespace-pre-line mb-3.5">
+        <div className="group/caption relative text-[15px] sm:text-[16px] leading-relaxed text-stone-900 font-normal whitespace-pre-line mb-3.5">
           {post.mizo_translation}
           <button
             onClick={() => setIsEditing(true)}
-            className="inline-flex items-center gap-1 ml-2 text-xs text-amber-400 hover:text-amber-300 bg-amber-950/40 border border-amber-800/40 px-2 py-0.5 rounded-md opacity-80 hover:opacity-100 transition-opacity"
+            className="inline-flex items-center gap-1 ml-2 text-xs text-amber-800 hover:text-amber-950 bg-amber-100/70 hover:bg-amber-200/70 border border-amber-300/80 px-2 py-0.5 rounded-md opacity-80 hover:opacity-100 transition-opacity"
             title="Edit caption before posting"
           >
             <Edit3 className="w-3 h-3" />
@@ -348,18 +348,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
 
       {/* Action or Background Error message */}
       {(actionError || (isFailed && post.error_message)) && (
-        <div className="mb-3 p-3 rounded-xl bg-red-950/50 border border-red-800/60 text-red-200 text-xs flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400 mt-0.5" />
+        <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600 mt-0.5" />
           <div className="flex-1">
-            <span className="font-semibold block text-red-300">Facebook Post A Hlawhchham (Error):</span>
-            <span className="text-zinc-300 block mt-0.5">{actionError || post.error_message}</span>
+            <span className="font-semibold block text-red-900">Facebook Post A Hlawhchham (Error):</span>
+            <span className="text-red-700 block mt-0.5">{actionError || post.error_message}</span>
           </div>
         </div>
       )}
 
       {/* Optional Full HD Photo */}
       {post.primary_image_url && (
-        <div className="relative mb-3.5 group rounded-2xl overflow-hidden border border-zinc-800/80 bg-zinc-900 cursor-zoom-in">
+        <div className="relative mb-3.5 group rounded-2xl overflow-hidden border border-stone-200 bg-stone-100 cursor-zoom-in">
           <img
             src={post.primary_image_url}
             alt="Breaking football update photo"
@@ -369,7 +369,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           />
           <div 
             onClick={() => onImageClick(post.primary_image_url!)}
-            className="absolute bottom-2 right-2 p-1.5 bg-black/70 backdrop-blur-md rounded-lg text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute bottom-2 right-2 p-1.5 bg-stone-900/70 backdrop-blur-md rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity"
             title="Expand HD photo"
           >
             <Maximize2 className="w-4 h-4" />
@@ -381,15 +381,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
       <div className="mb-3">
         <button
           onClick={() => setShowOriginal(!showOriginal)}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-800 transition-colors"
         >
           {showOriginal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           {showOriginal ? 'Hide original tweet' : 'View original English tweet'}
         </button>
 
         {showOriginal && (
-          <div className="mt-2.5 p-3 rounded-xl bg-zinc-900/70 border border-zinc-800/90 text-zinc-300 text-xs sm:text-sm font-mono leading-relaxed whitespace-pre-line">
-            <div className="text-[11px] font-sans font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+          <div className="mt-2.5 p-3 rounded-xl bg-[#F5F3EC] border border-stone-200 text-stone-700 text-xs sm:text-sm font-mono leading-relaxed whitespace-pre-line">
+            <div className="text-[11px] font-sans font-semibold text-stone-500 uppercase tracking-wider mb-1">
               Original Tweet (@{post.author_handle})
             </div>
             {post.original_text}
@@ -398,9 +398,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
       </div>
 
       {/* Action Footer (Facebook Curation & Sharing) */}
-      <div className="flex items-center justify-between pt-3 border-t border-zinc-900 text-zinc-400 text-xs flex-wrap gap-2">
+      <div className="flex items-center justify-between pt-3 border-t border-stone-100 text-stone-600 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {/* Facebook Curation Button */}
           {/* Facebook Curation Button */}
           {!isPublished && (
             <>
@@ -409,7 +408,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
                   <button
                     onClick={handlePublishNow}
                     disabled={isPublishing}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-colors shadow-sm disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-colors shadow-xs disabled:opacity-50"
                     title="Retry publishing now"
                   >
                     {isPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FacebookIcon className="w-3.5 h-3.5" />}
@@ -418,10 +417,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
                   <button
                     onClick={() => handleToggleQueue('queued')}
                     disabled={isQueueing}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 text-xs font-medium transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 text-xs font-medium transition-colors disabled:opacity-50"
                     title="Re-add to queue"
                   >
-                    <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+                    <PlusCircle className="w-3.5 h-3.5 text-amber-600" />
                     <span>Queue-ah dah leh rawh</span>
                   </button>
                 </div>
@@ -430,7 +429,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
                   <button
                     onClick={handlePublishNow}
                     disabled={isPublishing}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md shadow-blue-500/20 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
                     title="1-Click immediate publish to Facebook Page"
                   >
                     {isPublishing ? (
@@ -444,13 +443,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
                   <button
                     onClick={() => handleToggleQueue('none')}
                     disabled={isQueueing}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-rose-100 border border-rose-800/60 text-xs font-medium transition-colors"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-medium transition-colors"
                     title="Remove from scheduled queue"
                   >
                     {isQueueing ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                     )}
                     <span>Queue atanga paih</span>
                   </button>
@@ -459,13 +458,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
                 <button
                   onClick={() => handleToggleQueue('queued')}
                   disabled={isQueueing}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-blue-950/60 text-zinc-200 hover:text-blue-300 border border-zinc-700/80 hover:border-blue-600/60 font-medium text-xs transition-all shadow-sm disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50"
                   title="Add to Facebook queue (will auto-drip every 15m or post now)"
                 >
                   {isQueueing ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <PlusCircle className="w-3.5 h-3.5 text-blue-400" />
+                    <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
                   )}
                   <span>+ Add to FB Queue</span>
                 </button>
@@ -474,30 +473,30 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           )}
 
           {isPublished && (
-            <span className="inline-flex items-center gap-1 text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-1 rounded-lg text-xs font-medium">
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="inline-flex items-center gap-1 text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg text-xs font-medium">
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
               Posted to Facebook
             </span>
           )}
 
           <button
             onClick={handleShareToWhatsApp}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-100 border border-emerald-800/40 text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-medium transition-colors"
             title="Share directly to WhatsApp Channel or Group"
           >
-            <Send className="w-3.5 h-3.5 text-emerald-400" />
+            <Send className="w-3.5 h-3.5 text-emerald-600" />
             <span>WhatsApp</span>
           </button>
 
           <button
             onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-zinc-800/60 hover:text-zinc-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-stone-100 hover:text-stone-900 transition-colors"
             title="Copy Mizo translation"
           >
             {copied ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400 font-medium">Copied!</span>
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-emerald-700 font-medium">Copied!</span>
               </>
             ) : (
               <>
@@ -509,7 +508,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
 
           <button
             onClick={handleShare}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-zinc-800/60 hover:text-zinc-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-stone-100 hover:text-stone-900 transition-colors"
             title="Share"
           >
             <Share2 className="w-3.5 h-3.5" />
@@ -519,11 +518,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           <button
             onClick={handleDeletePost}
             disabled={isDeleting}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-950/40 text-zinc-500 hover:text-rose-400 transition-colors"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 text-stone-400 hover:text-rose-600 transition-colors"
             title="Delete this post completely from Xtra database"
           >
             {isDeleting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
             ) : (
               <Trash2 className="w-3.5 h-3.5" />
             )}
@@ -535,7 +534,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           href={post.tweet_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-zinc-500 hover:text-sky-400 transition-colors flex items-center gap-1 text-[11px]"
+          className="text-stone-400 hover:text-stone-800 transition-colors flex items-center gap-1 text-[11px]"
         >
           View source &rarr;
         </a>

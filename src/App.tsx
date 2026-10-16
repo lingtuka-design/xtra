@@ -160,7 +160,7 @@ export default function App() {
   }, [posts, activeTab, selectedSource, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F8F6F0] text-stone-900 flex flex-col font-sans">
       <Header
         onOpenSync={() => setSyncModalOpen(true)}
         isSyncing={isSyncing}
@@ -171,13 +171,13 @@ export default function App() {
         {/* Main Feed Column */}
         <main className="flex-1 min-w-0 max-w-2xl mx-auto w-full">
           {/* Top Primary Tabs: Feed vs FB Queue vs Published */}
-          <div className="flex items-center gap-1.5 p-1 bg-zinc-950 border border-zinc-800/80 rounded-2xl mb-3.5 text-xs font-semibold">
+          <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-semibold">
             <button
               onClick={() => setActiveTab('all')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center ${
                 activeTab === 'all'
-                  ? 'bg-zinc-800 text-zinc-100 shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-white text-stone-900 shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               All Scraped Feed ({posts.length})
@@ -187,14 +187,14 @@ export default function App() {
               onClick={() => setActiveTab('queue')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
                 activeTab === 'queue'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <span>📌 FB Queue</span>
               {queueCount > 0 && (
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  activeTab === 'queue' ? 'bg-white text-blue-700' : 'bg-blue-950 text-blue-300 border border-blue-800/60'
+                  activeTab === 'queue' ? 'bg-white text-blue-700' : 'bg-blue-100 text-blue-800 border border-blue-200'
                 }`}>
                   {queueCount}
                 </span>
@@ -205,8 +205,8 @@ export default function App() {
               onClick={() => setActiveTab('create')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
                 activeTab === 'create'
-                  ? 'bg-amber-500 text-black shadow-sm font-bold'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-amber-500 text-stone-950 shadow-xs font-bold'
+                  : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <PenSquare className="w-3.5 h-3.5" />
@@ -217,14 +217,14 @@ export default function App() {
               onClick={() => setActiveTab('published')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
                 activeTab === 'published'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <span>✓ Published</span>
               {publishedCount > 0 && (
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  activeTab === 'published' ? 'bg-white text-emerald-700' : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                  activeTab === 'published' ? 'bg-white text-emerald-700' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                 }`}>
                   {publishedCount}
                 </span>
@@ -242,24 +242,24 @@ export default function App() {
             <>
               {/* FB Queue Explainer Banner when on Queue tab */}
               {activeTab === 'queue' && (
-            <div className="p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-blue-900/20 to-transparent border border-blue-800/40 text-xs text-blue-200 space-y-2">
+            <div className="p-3.5 mb-4 rounded-2xl bg-blue-50/90 border border-blue-200 text-xs text-blue-950 space-y-2 shadow-xs">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-1.5 font-bold text-blue-300 text-[13px]">
-                  <Clock className="w-4 h-4 text-blue-400" />
+                <div className="flex items-center gap-1.5 font-bold text-blue-900 text-[13px]">
+                  <Clock className="w-4 h-4 text-blue-600" />
                   <span>Facebook Auto-Drip Scheduler Active ({queueCount} in queue)</span>
                 </div>
                 {queueCount > 0 && (
                   <button
                     onClick={handleClearAllQueue}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/70 text-rose-300 hover:text-rose-100 text-[11px] font-semibold transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 border border-rose-300 text-rose-800 text-[11px] font-semibold transition-colors"
                     title="Remove all posts from FB queue"
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                     <span>Queue zawng zawng paihfai rawh</span>
                   </button>
                 )}
               </div>
-              <p className="text-zinc-400 leading-relaxed text-[11px]">
+              <p className="text-stone-600 leading-relaxed text-[11px]">
                 Heta post awm ho hi **minute 15 danah 1 zelin** Cloudflare Cron trigger hmangin Facebook Page-ah a post chho zel dawn e. Post nghal duh chu **"Post to FB Now"** hmetin vawi 1 click-in i post nghal thei bawk e!
               </p>
             </div>
@@ -268,18 +268,18 @@ export default function App() {
           {/* Search & Filter Bar */}
           <div className="mb-4 space-y-2.5">
             <div className="relative">
-              <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search transfer news, player, or club..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors shadow-sm"
+                className="w-full bg-white border border-stone-300 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 transition-colors shadow-xs"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 hover:text-zinc-300 bg-zinc-800 px-1.5 py-0.5 rounded"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-500 hover:text-stone-700 bg-stone-100 px-2 py-0.5 rounded border border-stone-200"
                 >
                   Clear
                 </button>
@@ -292,8 +292,8 @@ export default function App() {
                 onClick={() => setSelectedSource('all')}
                 className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
                   selectedSource === 'all'
-                    ? 'bg-zinc-100 text-zinc-950 shadow-sm'
-                    : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                    ? 'bg-stone-900 text-white shadow-xs'
+                    : 'bg-white text-stone-600 hover:text-stone-900 border border-stone-200 shadow-xs'
                 }`}
               >
                 All Sources
@@ -309,14 +309,14 @@ export default function App() {
                     onClick={() => setSelectedSource(s.id)}
                     className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 ${
                       isSelected
-                        ? 'bg-amber-400 text-zinc-950 shadow-sm'
-                        : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                        ? 'bg-amber-400 text-stone-950 font-bold shadow-xs'
+                        : 'bg-white text-stone-600 hover:text-stone-900 border border-stone-200 shadow-xs'
                     }`}
                   >
                     <span>@{s.id}</span>
                     {count > 0 && (
                       <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                        isSelected ? 'bg-black/20 text-black font-bold' : 'bg-zinc-800 text-zinc-400'
+                        isSelected ? 'bg-black/15 text-stone-950 font-bold' : 'bg-stone-100 text-stone-600 border border-stone-200'
                       }`}>
                         {count}
                       </span>
@@ -328,7 +328,7 @@ export default function App() {
           </div>
 
           {/* Feed Container */}
-          <div className="border border-zinc-800/80 rounded-2xl overflow-hidden bg-zinc-950/60 divide-y divide-zinc-800/60 shadow-xl">
+          <div className="border border-stone-200/90 rounded-2xl overflow-hidden bg-white divide-y divide-stone-200/80 shadow-xs">
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post) => (
                 <PostCard
@@ -340,8 +340,8 @@ export default function App() {
                 />
               ))
             ) : (
-              <div className="p-12 text-center text-zinc-500 space-y-3">
-                <AlertCircle className="w-8 h-8 mx-auto text-zinc-600" />
+              <div className="p-12 text-center text-stone-500 space-y-3">
+                <AlertCircle className="w-8 h-8 mx-auto text-stone-400" />
                 <p className="text-sm font-medium">
                   {activeTab === 'queue'
                     ? 'Awm lo rih! Feed atangin "+ Add to FB Queue" hmet la, heta a lo lang ang.'
@@ -350,7 +350,7 @@ export default function App() {
                 {activeTab !== 'all' && (
                   <button
                     onClick={() => setActiveTab('all')}
-                    className="text-xs text-amber-400 hover:underline"
+                    className="text-xs text-amber-600 hover:underline font-semibold"
                   >
                     View all feed &rarr;
                   </button>
@@ -370,7 +370,7 @@ export default function App() {
       {showScrollTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-40 p-3 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 rounded-full text-zinc-200 shadow-xl backdrop-blur-md transition-all hover:scale-105"
+          className="fixed bottom-6 right-6 z-40 p-3 bg-white hover:bg-stone-50 border border-stone-300 rounded-full text-stone-700 shadow-lg backdrop-blur-md transition-all hover:scale-105"
           title="Scroll to top"
         >
           <ArrowUp className="w-4 h-4" />
