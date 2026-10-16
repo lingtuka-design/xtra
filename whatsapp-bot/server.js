@@ -16,6 +16,8 @@ app.use(express.json({ limit: '10mb' }));
 const PORT = process.env.PORT || 3000;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 const API_SECRET = process.env.API_SECRET || ''; // Optional secret token
+const BACKUP_URL = process.env.XTRA_BACKUP_URL || 'https://xtra-byd.pages.dev/api/bot-auth';
+const BACKUP_SECRET = process.env.XTRA_BACKUP_SECRET || 'xtra_secret_2026';
 
 let sock = null;
 let currentQr = null;
@@ -29,11 +31,111 @@ const logger = pino({ level: 'silent' });
 let reconnectAttempts = 0;
 
 /**
+ * Restore auth_info files from Cloudflare D1
+ */
+async function restoreAuthFromD1() {
+  try {
+    console.log('[WhatsApp Bot] Checking Cloudflare D1 for existing session backup...');
+    const res = await fetch(BACKUP_URL, {
+      headers: { Authorization: `Bearer ${BACKUP_SECRET}` },
+    });
+    if (!res.ok) {
+      console.warn(`[WhatsApp Bot] D1 auth check returned HTTP ${res.status}`);
+      return;
+    }
+    const data = await res.json();
+    if (data?.success && data?.files && Object.keys(data.files).length > 0) {
+      if (!fs.existsSync(AUTH_DIR)) {
+        fs.mkdirSync(AUTH_DIR, { recursive: true });
+      }
+      let count = 0;
+      for (const [filename, content] of Object.entries(data.files)) {
+        const filePath = path.join(AUTH_DIR, filename);
+        fs.writeFileSync(filePath, content, 'utf8');
+        count++;
+      }
+      console.log(`[WhatsApp Bot] 🎉 Successfully restored ${count} session file(s) from Cloudflare D1!`);
+    } else {
+      console.log('[WhatsApp Bot] No previous session found in D1. Ready for initial QR scan.');
+    }
+  } catch (err) {
+    console.warn('[WhatsApp Bot] Could not restore session from D1:', err.message);
+  }
+}
+
+/**
+ * Sync local auth_info files to Cloudflare D1
+ */
+async function backupAuthToD1() {
+  try {
+    if (!fs.existsSync(AUTH_DIR)) return;
+    const files = fs.readdirSync(AUTH_DIR);
+    const updates = {};
+    for (const f of files) {
+      const filePath = path.join(AUTH_DIR, f);
+      if (fs.statSync(filePath).isFile()) {
+        updates[f] = fs.readFileSync(filePath, 'utf8');
+      }
+    }
+    if (Object.keys(updates).length === 0) return;
+
+    const res = await fetch(BACKUP_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${BACKUP_SECRET}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ updates }),
+    });
+    const data = await res.json();
+    if (data?.success) {
+      console.log(`[WhatsApp Bot] ☁️ Persisted ${Object.keys(updates).length} session file(s) to Cloudflare D1.`);
+    }
+  } catch (err) {
+    console.warn('[WhatsApp Bot] Could not backup session to D1:', err.message);
+  }
+}
+
+/**
+ * Clear D1 session backup
+ */
+async function clearD1Backup() {
+  try {
+    const res = await fetch(BACKUP_URL, {
+      headers: { Authorization: `Bearer ${BACKUP_SECRET}` },
+    });
+    const data = await res.json();
+    if (data?.files) {
+      const updates = {};
+      for (const k of Object.keys(data.files)) {
+        updates[k] = null;
+      }
+      await fetch(BACKUP_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${BACKUP_SECRET}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ updates }),
+      });
+      console.log('[WhatsApp Bot] Cleared session backup from Cloudflare D1.');
+    }
+  } catch (err) {
+    console.warn('[WhatsApp Bot] Could not clear D1 backup:', err.message);
+  }
+}
+
+/**
  * Start Baileys WhatsApp Connection
  */
 async function startWhatsApp() {
   if (!fs.existsSync(AUTH_DIR)) {
     fs.mkdirSync(AUTH_DIR, { recursive: true });
+  }
+
+  // If local directory is empty, restore credentials from Cloudflare D1
+  if (fs.readdirSync(AUTH_DIR).length === 0) {
+    await restoreAuthFromD1();
   }
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
@@ -48,7 +150,10 @@ async function startWhatsApp() {
     syncFullHistory: false,
   });
 
-  sock.ev.on('creds.update', saveCreds);
+  sock.ev.on('creds.update', async () => {
+    await saveCreds();
+    await backupAuthToD1();
+  });
 
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
@@ -77,6 +182,7 @@ async function startWhatsApp() {
         try {
           fs.rmSync(AUTH_DIR, { recursive: true, force: true });
         } catch {}
+        await clearD1Backup();
         setTimeout(startWhatsApp, 2000);
       } else {
         setTimeout(startWhatsApp, 3000);
@@ -87,6 +193,9 @@ async function startWhatsApp() {
       reconnectAttempts = 0;
       userPhone = sock.user?.id ? sock.user.id.split(':')[0] : 'Connected';
       console.log(`[WhatsApp Bot] ✅ Connected successfully! Phone: ${userPhone}`);
+
+      // Persist complete session to Cloudflare D1 upon successful connection
+      await backupAuthToD1();
 
       // Attempt to load newsletters/channels list
       try {
@@ -354,6 +463,27 @@ app.get('/reset', (req, res) => {
   }
 });
 
+/**
+ * Health check & Keep-alive endpoint
+ */
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    connected: isConnected,
+    phone: userPhone,
+    uptime: process.uptime(),
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`[WhatsApp Bot] Server listening on port ${PORT}`);
+
+  // Self Keep-Alive: Ping itself every 8 minutes so Render free tier never sleeps
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://xtra-whatsapp-bot.onrender.com';
+  setInterval(async () => {
+    try {
+      await fetch(`${SELF_URL}/health`);
+      console.log('[WhatsApp Bot] Keep-alive ping sent to prevent sleep.');
+    } catch {}
+  }, 8 * 60 * 1000);
 });
