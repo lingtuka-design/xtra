@@ -57,9 +57,20 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const formatTimeAgo = (dateStr: string) => {
+  const parseUtcDate = (dateStr?: string | null): Date => {
+    if (!dateStr) return new Date();
+    if (dateStr.includes('+0000')) return new Date(dateStr);
+    const iso = dateStr.includes('T')
+      ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z')
+      : dateStr.replace(' ', 'T') + 'Z';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? new Date(dateStr) : d;
+  };
+
+  const formatTimeAgo = (dateStr?: string | null) => {
+    if (!dateStr) return 'Just now';
     try {
-      const date = new Date(dateStr);
+      const date = parseUtcDate(dateStr);
       const diffMs = Date.now() - date.getTime();
       const diffMins = Math.floor(diffMs / (1000 * 60));
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -265,7 +276,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               </span>
               <span className="text-stone-300 text-xs">•</span>
               <span className="text-stone-500 text-xs sm:text-sm font-medium">
-                {formatTimeAgo(post.created_at)}
+                {formatTimeAgo(post.tweet_created_at || post.created_at)}
               </span>
             </div>
 

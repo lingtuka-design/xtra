@@ -144,13 +144,23 @@ export default function App() {
   const DRIP_INTERVAL_MS = 20 * 60 * 1000;
   const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000;
 
+  const parseSqliteDate = (dateStr?: string | null): number => {
+    if (!dateStr) return 0;
+    if (dateStr.includes('+0000')) return new Date(dateStr).getTime();
+    const iso = dateStr.includes('T')
+      ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z')
+      : dateStr.replace(' ', 'T') + 'Z';
+    const t = new Date(iso).getTime();
+    return isNaN(t) ? new Date(dateStr).getTime() : t;
+  };
+
   // Active queued posts sorted by FIFO order (updated_at ASC, id ASC)
   const queuedSortedList = useMemo(() => {
     return posts
       .filter((p) => p.facebook_status === 'queued')
       .sort((a, b) => {
-        const timeA = new Date(a.updated_at || a.created_at).getTime();
-        const timeB = new Date(b.updated_at || b.created_at).getTime();
+        const timeA = parseSqliteDate(a.updated_at || a.created_at);
+        const timeB = parseSqliteDate(b.updated_at || b.created_at);
         if (timeA !== timeB) return timeA - timeB;
         return a.id - b.id;
       });
@@ -184,9 +194,9 @@ export default function App() {
     // Find the last published post
     const lastPublishedPost = posts
       .filter((p) => p.facebook_status === 'published' && p.updated_at)
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
+      .sort((a, b) => parseSqliteDate(b.updated_at) - parseSqliteDate(a.updated_at))[0];
 
-    const lastPubTime = lastPublishedPost ? new Date(lastPublishedPost.updated_at).getTime() : 0;
+    const lastPubTime = lastPublishedPost ? parseSqliteDate(lastPublishedPost.updated_at) : 0;
     const timeSinceLastPub = lastPubTime ? nowTick - lastPubTime : DRIP_INTERVAL_MS;
 
     // Gap required from last published post
@@ -196,7 +206,7 @@ export default function App() {
 
     // First post delay: 5-minute initial buffer from queue time
     const firstPost = queuedSortedList[0];
-    const firstQueuedTime = new Date(firstPost.updated_at || firstPost.created_at).getTime();
+    const firstQueuedTime = parseSqliteDate(firstPost.updated_at || firstPost.created_at);
     const timeSinceFirstQueued = nowTick - firstQueuedTime;
     const queueBufferMins = timeSinceFirstQueued < INITIAL_QUEUE_DELAY_MS
       ? Math.max(1, Math.ceil((INITIAL_QUEUE_DELAY_MS - timeSinceFirstQueued) / 60000))
