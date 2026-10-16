@@ -1,4 +1,6 @@
 import { Env, PostRecord } from '../types';
+import { facebookPoster } from '../services/facebookPoster';
+import { whatsappPoster } from '../services/whatsappPoster';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
@@ -74,6 +76,117 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       },
       { status: 500 }
     );
+  }
+};
+
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
+
+  try {
+    const body = (await request.json()) as {
+      mizo_translation: string;
+      original_text?: string;
+      primary_image_url?: string;
+      author_name?: string;
+      author_handle?: string;
+      facebook_status?: 'queued' | 'none';
+      publish_now?: boolean;
+    };
+
+    if (!body.mizo_translation || !body.mizo_translation.trim()) {
+      return Response.json({ success: false, error: 'Mizo caption is required' }, { status: 400 });
+    }
+
+    const mizoCaption = body.mizo_translation.trim();
+    const originalText = (body.original_text || mizoCaption).trim();
+    const photoUrl = body.primary_image_url?.trim() || null;
+    const authorName = body.author_name?.trim() || 'Xtra Editorial';
+    const authorHandle = body.author_handle?.trim() || 'inkhel_xtra';
+    const tweetId = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const tweetUrl = 'https://www.facebook.com/inkhel.Xtra';
+    const initialStatus = body.publish_now ? 'pending' : (body.facebook_status || 'queued');
+
+    // Insert into D1
+    const insertRes = await env.DB.prepare(
+      `INSERT INTO posts (
+        tweet_id, author_handle, author_name, author_avatar,
+        original_text, mizo_translation, primary_image_url,
+        media_urls, tweet_url, tweet_created_at, facebook_post_id,
+        facebook_status, error_message, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, NULL, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+    )
+      .bind(
+        tweetId,
+        authorHandle,
+        authorName,
+        'https://pbs.twimg.com/profile_images/1689000000000000000/madrid_400x400.jpg',
+        originalText,
+        mizoCaption,
+        photoUrl,
+        photoUrl ? JSON.stringify([{ url: photoUrl, hd_url: photoUrl, type: 'photo' }]) : JSON.stringify([]),
+        tweetUrl,
+        initialStatus
+      )
+      .run();
+
+    const newPostId = insertRes.meta.last_row_id;
+    let publishResult = null;
+
+    if (body.publish_now) {
+      if (!env.FB_PAGE_ID || !env.FB_PAGE_ACCESS_TOKEN) {
+        throw new Error('Facebook credentials are not configured');
+      }
+
+      // Publish immediately to Facebook Page
+      const fbRes = await facebookPoster.postNews(
+        mizoCaption,
+        photoUrl,
+        env.FB_PAGE_ID,
+        env.FB_PAGE_ACCESS_TOKEN
+      );
+
+      if (fbRes.success) {
+        await env.DB.prepare(
+          "UPDATE posts SET facebook_status = 'published', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        ).bind(fbRes.postId, newPostId).run();
+        publishResult = { success: true, postId: fbRes.postId };
+
+        // Also broadcast to WhatsApp if configured
+        if (env.WHATSAPP_API_TOKEN && env.WHATSAPP_CHANNEL_ID) {
+          try {
+            await whatsappPoster.postNews(
+              mizoCaption,
+              photoUrl,
+              env.WHATSAPP_API_TOKEN,
+              env.WHATSAPP_CHANNEL_ID,
+              env.WHATSAPP_API_URL
+            );
+          } catch {}
+        }
+      } else {
+        await env.DB.prepare(
+          "UPDATE posts SET facebook_status = 'failed', error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        ).bind(fbRes.error || 'Failed to post', newPostId).run();
+        return Response.json({
+          success: false,
+          error: fbRes.error,
+          postId: newPostId,
+        }, { status: 500 });
+      }
+    }
+
+    const createdPost = await env.DB.prepare('SELECT * FROM posts WHERE id = ?').bind(newPostId).first();
+
+    return Response.json({
+      success: true,
+      message: body.publish_now
+        ? 'Post published to Facebook Page successfully!'
+        : 'Post added to FB Queue successfully!',
+      post: createdPost,
+      publishResult,
+    });
+  } catch (err: any) {
+    return Response.json({ success: false, error: err.message }, { status: 500 });
   }
 };
 

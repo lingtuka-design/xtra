@@ -31,18 +31,45 @@ export class FacebookPoster {
 
     try {
       // 1. If photo is present, upload as unpublished photo, then create a native timeline feed post
-      if (photoUrl && photoUrl.startsWith('http')) {
+      if (photoUrl && (photoUrl.startsWith('http') || photoUrl.startsWith('data:image/'))) {
         try {
           const uploadUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
-          const uploadBody = new URLSearchParams();
-          uploadBody.append('url', photoUrl);
-          uploadBody.append('published', 'false');
-          uploadBody.append('access_token', cleanToken);
+          let uploadRes: Response;
 
-          const uploadRes = await fetch(uploadUrl, {
-            method: 'POST',
-            body: uploadBody,
-          });
+          if (photoUrl.startsWith('data:image/')) {
+            // Upload Base64 image file
+            const commaIdx = photoUrl.indexOf(',');
+            const mimeMatch = photoUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,/);
+            const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const base64Data = photoUrl.slice(commaIdx + 1);
+            const binaryStr = atob(base64Data);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) {
+              bytes[i] = binaryStr.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: mimeType });
+
+            const formData = new FormData();
+            formData.append('source', blob, 'photo.jpg');
+            formData.append('published', 'false');
+            formData.append('access_token', cleanToken);
+
+            uploadRes = await fetch(uploadUrl, {
+              method: 'POST',
+              body: formData,
+            });
+          } else {
+            // Upload via web URL
+            const uploadBody = new URLSearchParams();
+            uploadBody.append('url', photoUrl);
+            uploadBody.append('published', 'false');
+            uploadBody.append('access_token', cleanToken);
+
+            uploadRes = await fetch(uploadUrl, {
+              method: 'POST',
+              body: uploadBody,
+            });
+          }
 
           const uploadData = (await uploadRes.json()) as any;
 

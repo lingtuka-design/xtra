@@ -4,9 +4,10 @@ import { PostCard } from './components/PostCard';
 import { Sidebar } from './components/Sidebar';
 import { ImageModal } from './components/ImageModal';
 import { SyncModal } from './components/SyncModal';
+import { CreatePostCard } from './components/CreatePostCard';
 import { Post } from './types';
 import { INITIAL_POSTS } from './mockData';
-import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, Trash2 } from 'lucide-react';
+import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, Trash2, PenSquare } from 'lucide-react';
 
 export default function App() {
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
@@ -15,7 +16,7 @@ export default function App() {
   const [syncModalOpen, setSyncModalOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'all' | 'queue' | 'published'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'queue' | 'create' | 'published'>('all');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
@@ -93,6 +94,10 @@ export default function App() {
 
   const handlePostUpdated = (updated: Post) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  };
+
+  const handlePostCreated = (newPost: Post) => {
+    setPosts((prev) => [newPost, ...prev]);
   };
 
   const handlePostDeleted = (id: number) => {
@@ -197,6 +202,18 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => setActiveTab('create')}
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
+                activeTab === 'create'
+                  ? 'bg-amber-500 text-black shadow-sm font-bold'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <PenSquare className="w-3.5 h-3.5" />
+              <span>✍️ Post</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('published')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
                 activeTab === 'published'
@@ -215,8 +232,16 @@ export default function App() {
             </button>
           </div>
 
-          {/* FB Queue Explainer Banner when on Queue tab */}
-          {activeTab === 'queue' && (
+          {/* Conditional: Create Post Screen vs Feed Views */}
+          {activeTab === 'create' ? (
+            <CreatePostCard
+              onPostCreated={handlePostCreated}
+              onSwitchToQueue={() => setActiveTab('queue')}
+            />
+          ) : (
+            <>
+              {/* FB Queue Explainer Banner when on Queue tab */}
+              {activeTab === 'queue' && (
             <div className="p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-blue-900/20 to-transparent border border-blue-800/40 text-xs text-blue-200 space-y-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-1.5 font-bold text-blue-300 text-[13px]">
@@ -333,6 +358,8 @@ export default function App() {
               </div>
             )}
           </div>
+            </>
+          )}
         </main>
 
         {/* Sidebar for Desktop */}
