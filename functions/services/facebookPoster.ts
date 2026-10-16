@@ -30,10 +30,50 @@ export class FacebookPoster {
     }
 
     try {
-      // 1. If photo is present, use POST /{page-id}/photos for native full-size photo post
+      // 1. If photo is present, upload as unpublished photo, then create a native timeline feed post
       if (photoUrl && photoUrl.startsWith('http')) {
-        const url = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
+        try {
+          const uploadUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
+          const uploadBody = new URLSearchParams();
+          uploadBody.append('url', photoUrl);
+          uploadBody.append('published', 'false');
+          uploadBody.append('access_token', cleanToken);
 
+          const uploadRes = await fetch(uploadUrl, {
+            method: 'POST',
+            body: uploadBody,
+          });
+
+          const uploadData = (await uploadRes.json()) as any;
+
+          if (uploadRes.ok && uploadData?.id) {
+            // Post directly to main Page Timeline Feed with the photo attached
+            const feedUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/feed`;
+            const feedBody = new URLSearchParams();
+            feedBody.append('message', caption);
+            feedBody.append('attached_media', JSON.stringify([{ media_fbid: uploadData.id }]));
+            feedBody.append('access_token', cleanToken);
+
+            const feedRes = await fetch(feedUrl, {
+              method: 'POST',
+              body: feedBody,
+            });
+
+            const feedData = (await feedRes.json()) as any;
+
+            if (feedRes.ok && feedData?.id) {
+              return {
+                success: true,
+                postId: feedData.id,
+              };
+            }
+          }
+        } catch (e: any) {
+          console.warn('Native timeline photo post failed, falling back to direct photo:', e.message);
+        }
+
+        // Fallback: Direct photo post
+        const url = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
         const body = new URLSearchParams();
         body.append('url', photoUrl);
         body.append('caption', caption);
