@@ -16,7 +16,8 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
-  Trash2
+  Trash2,
+  Clock
 } from 'lucide-react';
 
 const FacebookIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
@@ -30,9 +31,18 @@ interface PostCardProps {
   onImageClick: (url: string) => void;
   onPostUpdated?: (updated: Post) => void;
   onPostDeleted?: (id: number) => void;
+  queuePosition?: number;
+  queueEstimatedMinutes?: number;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUpdated, onPostDeleted }) => {
+export const PostCard: React.FC<PostCardProps> = ({
+  post,
+  onImageClick,
+  onPostUpdated,
+  onPostDeleted,
+  queuePosition,
+  queueEstimatedMinutes,
+}) => {
   const [showOriginal, setShowOriginal] = useState(false);
   const [copied, setCopied] = useState(false);
   
@@ -63,6 +73,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
     } catch {
       return 'Recent';
     }
+  };
+
+  const formatQueueTime = (mins?: number) => {
+    if (mins === undefined || mins === null) return 'Drip 15m';
+    if (mins <= 1) return '~1 min left';
+    if (mins < 60) return `~${mins} mins left`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (m === 0) return h === 1 ? '~1 hr left' : `~${h} hrs left`;
+    return `~${h}h ${m}m left`;
   };
 
   const handleCopy = () => {
@@ -254,9 +274,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
               </span>
 
               {isQueued && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-900 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full animate-pulse">
-                  <FacebookIcon className="w-3 h-3 text-amber-700" />
-                  In FB Queue (Drip 15m)
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-950 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full shadow-2xs">
+                  <Clock className="w-3 h-3 text-amber-700 animate-pulse flex-shrink-0" />
+                  {queuePosition ? (
+                    <span>
+                      {queuePosition === 1 ? 'Next in queue' : `Queue #${queuePosition}`}{' '}
+                      <span className="font-bold text-amber-900">
+                        ({formatQueueTime(queueEstimatedMinutes)})
+                      </span>
+                    </span>
+                  ) : (
+                    <span>In FB Queue (Drip 15m)</span>
+                  )}
                 </span>
               )}
 

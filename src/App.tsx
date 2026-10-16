@@ -124,6 +124,13 @@ export default function App() {
     }
   };
 
+  // Real-time ticker (updates countdowns every 30s)
+  const [nowTick, setNowTick] = useState<number>(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
   // Counts
   const queueCount = useMemo(
     () => posts.filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'failed').length,
@@ -134,9 +141,63 @@ export default function App() {
     [posts]
   );
 
+  const DRIP_INTERVAL_MS = 15 * 60 * 1000;
+
+  // Active queued posts sorted by FIFO order (updated_at ASC, id ASC)
+  const queuedSortedList = useMemo(() => {
+    return posts
+      .filter((p) => p.facebook_status === 'queued')
+      .sort((a, b) => {
+        const timeA = new Date(a.updated_at || a.created_at).getTime();
+        const timeB = new Date(b.updated_at || b.created_at).getTime();
+        if (timeA !== timeB) return timeA - timeB;
+        return a.id - b.id;
+      });
+  }, [posts]);
+
+  // Calculate live position and estimated minutes left for each queued post
+  const queueInfoMap = useMemo(() => {
+    const map = new Map<number, { position: number; estimatedMinutes: number }>();
+    if (queuedSortedList.length === 0) return map;
+
+    // Find the last published post
+    const lastPublishedPost = posts
+      .filter((p) => p.facebook_status === 'published' && p.updated_at)
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
+
+    const lastPubTime = lastPublishedPost ? new Date(lastPublishedPost.updated_at).getTime() : 0;
+    const timeSinceLastPub = lastPubTime ? nowTick - lastPubTime : DRIP_INTERVAL_MS;
+
+    // Remaining time until next 15-minute drip window
+    const windowWaitMins = timeSinceLastPub < DRIP_INTERVAL_MS
+      ? Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceLastPub) / 60000))
+      : 1;
+
+    queuedSortedList.forEach((post, index) => {
+      // Check if post itself hasn't reached 15 minutes in queue yet
+      const queuedTime = new Date(post.updated_at || post.created_at).getTime();
+      const timeSinceQueued = nowTick - queuedTime;
+      const initialPostWaitMins = timeSinceQueued < DRIP_INTERVAL_MS
+        ? Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceQueued) / 60000))
+        : 1;
+
+      // The 1st post waits for the maximum of the publish window or its queue delay
+      const baseDelay = Math.max(windowWaitMins, initialPostWaitMins);
+      // Each subsequent post in queue is spaced out by 15 minutes
+      const estimatedMinutes = baseDelay + (index * 15);
+
+      map.set(post.id, {
+        position: index + 1,
+        estimatedMinutes,
+      });
+    });
+
+    return map;
+  }, [posts, queuedSortedList, nowTick]);
+
   // Filter posts
   const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
+    let list = posts.filter((post) => {
       // 1. Tab filter (include both queued and failed posts in the Queue view)
       if (activeTab === 'queue' && post.facebook_status !== 'queued' && post.facebook_status !== 'failed') return false;
       if (activeTab === 'published' && post.facebook_status !== 'published') return false;
@@ -157,7 +218,18 @@ export default function App() {
 
       return matchesSource && matchesText;
     });
-  }, [posts, activeTab, selectedSource, searchQuery]);
+
+    if (activeTab === 'queue') {
+      // Order queued posts ascending (FIFO) so #1 (next out) is at the top
+      list = [...list].sort((a, b) => {
+        const posA = queueInfoMap.get(a.id)?.position ?? 9999;
+        const posB = queueInfoMap.get(b.id)?.position ?? 9999;
+        return posA - posB;
+      });
+    }
+
+    return list;
+  }, [posts, activeTab, selectedSource, searchQuery, queueInfoMap]);
 
   return (
     <div className="min-h-screen bg-[#F8F6F0] text-stone-900 flex flex-col font-sans">
@@ -337,6 +409,8 @@ export default function App() {
                   onImageClick={(url) => setSelectedImage(url)}
                   onPostUpdated={handlePostUpdated}
                   onPostDeleted={handlePostDeleted}
+                  queuePosition={queueInfoMap.get(post.id)?.position}
+                  queueEstimatedMinutes={queueInfoMap.get(post.id)?.estimatedMinutes}
                 />
               ))
             ) : (
