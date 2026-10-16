@@ -6,7 +6,7 @@ import { ImageModal } from './components/ImageModal';
 import { SyncModal } from './components/SyncModal';
 import { Post } from './types';
 import { INITIAL_POSTS } from './mockData';
-import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock } from 'lucide-react';
+import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, Trash2 } from 'lucide-react';
 
 export default function App() {
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
@@ -83,6 +83,30 @@ export default function App() {
 
   const handlePostUpdated = (updated: Post) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  };
+
+  const handlePostDeleted = (id: number) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleClearAllQueue = async () => {
+    if (
+      !window.confirm(
+        `FB Queue-a post awm zawng zawng (${queueCount}) hi i paihfai (remove) vek duh tak tak em?`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/posts?clear_queue=true', { method: 'DELETE' });
+      if (res.ok) {
+        setPosts((prev) =>
+          prev.map((p) => (p.facebook_status === 'queued' ? { ...p, facebook_status: 'none' } : p))
+        );
+      }
+    } catch (e) {
+      console.error('Failed to clear queue:', e);
+    }
   };
 
   // Counts
@@ -183,10 +207,22 @@ export default function App() {
 
           {/* FB Queue Explainer Banner when on Queue tab */}
           {activeTab === 'queue' && (
-            <div className="p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-blue-900/20 to-transparent border border-blue-800/40 text-xs text-blue-200 space-y-1">
-              <div className="flex items-center gap-1.5 font-bold text-blue-300 text-[13px]">
-                <Clock className="w-4 h-4 text-blue-400" />
-                Facebook Auto-Drip Scheduler Active
+            <div className="p-3.5 mb-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-blue-900/20 to-transparent border border-blue-800/40 text-xs text-blue-200 space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 font-bold text-blue-300 text-[13px]">
+                  <Clock className="w-4 h-4 text-blue-400" />
+                  <span>Facebook Auto-Drip Scheduler Active ({queueCount} in queue)</span>
+                </div>
+                {queueCount > 0 && (
+                  <button
+                    onClick={handleClearAllQueue}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/70 text-rose-300 hover:text-rose-100 text-[11px] font-semibold transition-colors"
+                    title="Remove all posts from FB queue"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Queue zawng zawng paihfai rawh</span>
+                  </button>
+                )}
               </div>
               <p className="text-zinc-400 leading-relaxed text-[11px]">
                 Heta post awm ho hi **minute 15 danah 1 zelin** Cloudflare Cron trigger hmangin Facebook Page-ah a post chho zel dawn e. Post nghal duh chu **"Post to FB Now"** hmetin vawi 1 click-in i post nghal thei bawk e!
@@ -265,6 +301,7 @@ export default function App() {
                   post={post}
                   onImageClick={(url) => setSelectedImage(url)}
                   onPostUpdated={handlePostUpdated}
+                  onPostDeleted={handlePostDeleted}
                 />
               ))
             ) : (

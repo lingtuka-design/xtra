@@ -132,3 +132,73 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     );
   }
 };
+
+export const onRequestDelete: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
+  const url = new URL(request.url);
+
+  try {
+    const idParam = url.searchParams.get('id');
+    const clearQueueParam = url.searchParams.get('clear_queue');
+
+    // 1. Clear entire FB queue
+    if (clearQueueParam === 'true') {
+      await env.DB.prepare("UPDATE posts SET facebook_status = 'none', updated_at = CURRENT_TIMESTAMP WHERE facebook_status = 'queued'").run();
+      return Response.json({
+        success: true,
+        message: 'FB Queue cleared successfully',
+      });
+    }
+
+    let id = idParam ? parseInt(idParam, 10) : null;
+    let permanent = url.searchParams.get('permanent') === 'true';
+
+    // Check JSON body if query param not present
+    if (!id) {
+      try {
+        const body = (await request.json()) as any;
+        id = body?.id;
+        if (body?.permanent !== undefined) {
+          permanent = Boolean(body.permanent);
+        }
+        if (body?.clear_queue) {
+          await env.DB.prepare("UPDATE posts SET facebook_status = 'none', updated_at = CURRENT_TIMESTAMP WHERE facebook_status = 'queued'").run();
+          return Response.json({
+            success: true,
+            message: 'FB Queue cleared successfully',
+          });
+        }
+      } catch {}
+    }
+
+    if (!id) {
+      return Response.json({ success: false, error: 'Post ID is required' }, { status: 400 });
+    }
+
+    if (permanent) {
+      // Delete post entirely from D1 database
+      await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(id).run();
+      return Response.json({
+        success: true,
+        message: 'Post deleted permanently from database',
+        id,
+      });
+    } else {
+      // Just remove from queue (reset status to 'none')
+      await env.DB.prepare("UPDATE posts SET facebook_status = 'none', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(id).run();
+      return Response.json({
+        success: true,
+        message: 'Post removed from FB queue',
+        id,
+      });
+    }
+  } catch (err: any) {
+    return Response.json(
+      {
+        success: false,
+        error: err.message,
+      },
+      { status: 500 }
+    );
+  }
+};

@@ -29,9 +29,10 @@ interface PostCardProps {
   post: Post;
   onImageClick: (url: string) => void;
   onPostUpdated?: (updated: Post) => void;
+  onPostDeleted?: (id: number) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUpdated }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUpdated, onPostDeleted }) => {
   const [showOriginal, setShowOriginal] = useState(false);
   const [copied, setCopied] = useState(false);
   
@@ -43,6 +44,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
   // Queue and publishing states
   const [isQueueing, setIsQueueing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const formatTimeAgo = (dateStr: string) => {
@@ -171,6 +173,33 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
       setActionError(err.message || 'Publishing failed');
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  // Permanently delete post from D1 database
+  const handleDeletePost = async () => {
+    if (!window.confirm('He post hi D1 database atangin i paih (delete) hlen duh tak tak em?')) {
+      return;
+    }
+    setIsDeleting(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/posts?id=${post.id}&permanent=true`, {
+        method: 'DELETE',
+      });
+      const data = (await res.json()) as any;
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete post');
+      }
+
+      if (onPostDeleted) {
+        onPostDeleted(post.id);
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to delete post');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -355,7 +384,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
           {!isPublished && (
             <>
               {isQueued ? (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     onClick={handlePublishNow}
                     disabled={isPublishing}
@@ -373,11 +402,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
                   <button
                     onClick={() => handleToggleQueue('none')}
                     disabled={isQueueing}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-red-400 border border-zinc-800 text-xs transition-colors"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-rose-100 border border-rose-800/60 text-xs font-medium transition-colors"
                     title="Remove from scheduled queue"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Remove</span>
+                    {isQueueing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    )}
+                    <span>Queue atanga paih</span>
                   </button>
                 </div>
               ) : (
@@ -429,6 +462,21 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
             title="Share"
           >
             <Share2 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Delete completely button */}
+          <button
+            onClick={handleDeletePost}
+            disabled={isDeleting}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-950/40 text-zinc-500 hover:text-rose-400 transition-colors"
+            title="Delete this post completely from Xtra database"
+          >
+            {isDeleting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+            ) : (
+              <Trash2 className="w-3.5 h-3.5" />
+            )}
+            <span className="text-[11px]">Delete</span>
           </button>
         </div>
 
