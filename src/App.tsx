@@ -31,25 +31,25 @@ export default function App() {
   ]);
 
   // Fetch real posts from Cloudflare D1 via Pages Functions
-  const fetchPosts = async () => {
+  const fetchPosts = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch('/api/posts?limit=100');
       if (res.ok) {
         const data = (await res.json()) as any;
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           setPosts(data.data);
-        } else {
+        } else if (!silent) {
           setPosts(INITIAL_POSTS);
         }
-      } else {
+      } else if (!silent) {
         setPosts(INITIAL_POSTS);
       }
     } catch (err) {
       console.warn('API /api/posts unavailable, using sample data:', err);
-      setPosts(INITIAL_POSTS);
+      if (!silent) setPosts(INITIAL_POSTS);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -66,15 +66,23 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchPosts();
+    fetchPosts(false);
     fetchSources();
+
+    // Live sync polling: auto-refresh every 20s so published posts vanish from queue automatically
+    const interval = setInterval(() => {
+      fetchPosts(true);
+    }, 20000);
 
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const scrollToTop = () => {
