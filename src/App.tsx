@@ -283,32 +283,36 @@ export default function App() {
       <div className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-4 sm:py-6 flex gap-6">
         {/* Main Feed Column */}
         <main className="flex-1 min-w-0 max-w-2xl mx-auto w-full">
-          {/* Top Primary Tabs: Feed vs FB Queue vs Published */}
-          <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-semibold">
+          {/* Top Primary Tabs: FEED vs SCHEDULED vs CREATE vs PUBLISHED */}
+          <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-bold uppercase tracking-wide">
             <button
               onClick={() => setActiveTab('all')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center ${
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center font-bold uppercase tracking-wide ${
                 activeTab === 'all'
                   ? 'bg-white text-stone-900 shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              All Scraped Feed ({posts.length})
+              FEED ({posts.length})
             </button>
 
             <button
               onClick={() => setActiveTab('queue')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
                 activeTab === 'queue'
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              <span>📌 FB Queue</span>
+              <span>SCHEDULED</span>
               {queueCount > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  activeTab === 'queue' ? 'bg-white text-blue-700' : 'bg-blue-100 text-blue-800 border border-blue-200'
-                }`}>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'queue'
+                      ? 'bg-white text-blue-700'
+                      : 'bg-blue-100 text-blue-800 border border-blue-200'
+                  }`}
+                >
                   {queueCount}
                 </span>
               )}
@@ -316,29 +320,33 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('create')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
                 activeTab === 'create'
-                  ? 'bg-amber-500 text-stone-950 shadow-xs font-bold'
+                  ? 'bg-amber-500 text-stone-950 shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <PenSquare className="w-3.5 h-3.5" />
-              <span>✍️ Post</span>
+              <span>CREATE</span>
             </button>
 
             <button
               onClick={() => setActiveTab('published')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
                 activeTab === 'published'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              <span>✓ Published</span>
+              <span>PUBLISHED</span>
               {publishedCount > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  activeTab === 'published' ? 'bg-white text-emerald-700' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                }`}>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'published'
+                      ? 'bg-white text-emerald-700'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}
+                >
                   {publishedCount}
                 </span>
               )}

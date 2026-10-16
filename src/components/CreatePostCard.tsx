@@ -446,7 +446,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             ) : (
               <Clock className="w-4 h-4 text-amber-700" />
             )}
-            <span>+ Add to FB Queue</span>
+            <span>+ Schedule Post</span>
           </button>
 
           <button

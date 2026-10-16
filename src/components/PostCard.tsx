@@ -298,7 +298,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                       </span>
                     </span>
                   ) : (
-                    <span>In FB Queue (Drip 15m)</span>
+                    <span>Scheduled</span>
                   )}
                 </span>
               )}
@@ -509,7 +509,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   ) : (
                     <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
                   )}
-                  <span>+ Add to FB Queue</span>
+                  <span>+ Schedule</span>
                 </button>
               )}
             </>
