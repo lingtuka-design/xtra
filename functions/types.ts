@@ -5,6 +5,9 @@ export interface Env {
   FB_PAGE_ID?: string;
   CRON_SECRET?: string;
   DEFAULT_SOURCES?: string;
+  WHATSAPP_API_TOKEN?: string;
+  WHATSAPP_CHANNEL_ID?: string;
+  WHATSAPP_API_URL?: string;
 }
 
 export interface TweetPhoto {

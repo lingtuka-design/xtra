@@ -115,6 +115,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
     }
   };
 
+  const handleShareToWhatsApp = () => {
+    const text = encodeURIComponent(post.mizo_translation);
+    const waUrl = `https://api.whatsapp.com/send?text=${text}`;
+    window.open(waUrl, '_blank');
+  };
+
   // Toggle in/out of Facebook Queue
   const handleToggleQueue = async (targetStatus: 'queued' | 'none') => {
     setIsQueueing(true);
@@ -448,6 +454,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
               Posted to Facebook
             </span>
           )}
+
+          <button
+            onClick={handleShareToWhatsApp}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-100 border border-emerald-800/40 text-xs font-medium transition-colors"
+            title="Share directly to WhatsApp Channel or Group"
+          >
+            <Send className="w-3.5 h-3.5 text-emerald-400" />
+            <span>WhatsApp</span>
+          </button>
 
           <button
             onClick={handleCopy}

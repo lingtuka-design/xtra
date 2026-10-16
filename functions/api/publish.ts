@@ -1,5 +1,6 @@
 import { Env, PostRecord } from '../types';
 import { facebookPoster } from '../services/facebookPoster';
+import { whatsappPoster } from '../services/whatsappPoster';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
@@ -50,10 +51,31 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       "UPDATE posts SET facebook_status = 'published', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
     ).bind(fbResult.postId, post.id).run();
 
+    // Simultaneously publish to WhatsApp Channel if configured
+    let waNotice = '';
+    if (env.WHATSAPP_API_TOKEN && env.WHATSAPP_CHANNEL_ID) {
+      try {
+        const waRes = await whatsappPoster.postNews(
+          post.mizo_translation,
+          post.primary_image_url,
+          env.WHATSAPP_API_TOKEN,
+          env.WHATSAPP_CHANNEL_ID,
+          env.WHATSAPP_API_URL
+        );
+        if (waRes.success) {
+          waNotice = ' & WhatsApp Channel';
+        } else {
+          console.warn('WhatsApp broadcast failed:', waRes.error);
+        }
+      } catch (waErr: any) {
+        console.warn('WhatsApp broadcast error:', waErr.message);
+      }
+    }
+
     return Response.json({
       success: true,
       postId: fbResult.postId,
-      message: 'Successfully published to Facebook Page!',
+      message: `Successfully published to Facebook Page${waNotice}!`,
     });
   } catch (err: any) {
     return Response.json(

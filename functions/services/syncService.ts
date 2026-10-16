@@ -2,6 +2,7 @@ import { Env, SyncResult } from '../types';
 import { twitterScraper } from './twitterScraper';
 import { geminiTranslator } from './geminiTranslator';
 import { facebookPoster } from './facebookPoster';
+import { whatsappPoster } from './whatsappPoster';
 
 export class SyncService {
   /**
@@ -167,14 +168,57 @@ export class SyncService {
       results.push(syncResult);
     }
 
-    // 4. Process the next queued item for Facebook (Drip scheduler: 1 post per cron cycle, spaced every 15-20 mins)
+    // 4. Process the next queued item for Facebook (Strict 15-minute drip scheduler)
     try {
       if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+        const MIN_POST_INTERVAL_MS = 15 * 60 * 1000; // Strictly 15 minutes gap
+
+        // Helper to parse SQLite UTC timestamps safely into milliseconds
+        const parseSqliteUtc = (dateStr?: string | null): number => {
+          if (!dateStr) return 0;
+          const iso = dateStr.includes('T')
+            ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z')
+            : dateStr.replace(' ', 'T') + 'Z';
+          const t = new Date(iso).getTime();
+          return isNaN(t) ? 0 : t;
+        };
+
+        const now = Date.now();
+
+        // Condition 1: Check when the last Facebook post was published
+        const lastPublished = await env.DB.prepare(
+          "SELECT updated_at FROM posts WHERE facebook_status = 'published' ORDER BY updated_at DESC LIMIT 1"
+        ).first<{ updated_at: string }>();
+
+        if (lastPublished && lastPublished.updated_at) {
+          const lastPublishedTime = parseSqliteUtc(lastPublished.updated_at);
+          const timeSinceLastPublish = now - lastPublishedTime;
+          if (timeSinceLastPublish > 0 && timeSinceLastPublish < MIN_POST_INTERVAL_MS) {
+            const minsLeft = Math.ceil((MIN_POST_INTERVAL_MS - timeSinceLastPublish) / 60000);
+            console.log(
+              `[FB Queue Drip] Last Facebook post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 15m drip interval.`
+            );
+            return results;
+          }
+        }
+
+        // Condition 2: Check the oldest queued item
         const nextQueued = await env.DB.prepare(
-          "SELECT * FROM posts WHERE facebook_status = 'queued' ORDER BY id ASC LIMIT 1"
+          "SELECT * FROM posts WHERE facebook_status = 'queued' ORDER BY updated_at ASC, id ASC LIMIT 1"
         ).first<any>();
 
         if (nextQueued) {
+          // Check if at least 15 minutes have passed since this post was added to the queue
+          const queuedTime = parseSqliteUtc(nextQueued.updated_at);
+          const timeSinceQueued = now - queuedTime;
+          if (timeSinceQueued > 0 && timeSinceQueued < MIN_POST_INTERVAL_MS) {
+            const minsLeft = Math.ceil((MIN_POST_INTERVAL_MS - timeSinceQueued) / 60000);
+            console.log(
+              `[FB Queue Drip] Post #${nextQueued.id} was queued ${Math.floor(timeSinceQueued / 60000)}m ago. Waiting ${minsLeft}m more for 15m initial delay.`
+            );
+            return results;
+          }
+
           console.log(`[FB Queue Drip] Auto-publishing queued post #${nextQueued.id} to Facebook...`);
           const fbRes = await facebookPoster.postNews(
             nextQueued.mizo_translation,
@@ -188,6 +232,27 @@ export class SyncService {
               "UPDATE posts SET facebook_status = 'published', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
             ).bind(fbRes.postId, nextQueued.id).run();
             console.log(`[FB Queue Drip] Post #${nextQueued.id} successfully published to Facebook.`);
+
+            // Broadcast to WhatsApp Channel simultaneously if credentials configured
+            if (env.WHATSAPP_API_TOKEN && env.WHATSAPP_CHANNEL_ID) {
+              try {
+                console.log(`[WA Channel Drip] Auto-publishing post #${nextQueued.id} to WhatsApp Channel...`);
+                const waRes = await whatsappPoster.postNews(
+                  nextQueued.mizo_translation,
+                  nextQueued.primary_image_url,
+                  env.WHATSAPP_API_TOKEN,
+                  env.WHATSAPP_CHANNEL_ID,
+                  env.WHATSAPP_API_URL
+                );
+                if (waRes.success) {
+                  console.log(`[WA Channel Drip] Post #${nextQueued.id} successfully published to WhatsApp Channel.`);
+                } else {
+                  console.warn(`[WA Channel Drip] WhatsApp post #${nextQueued.id} failed:`, waRes.error);
+                }
+              } catch (waErr: any) {
+                console.warn('[WA Channel Drip] Error in WhatsApp drip broadcast:', waErr.message);
+              }
+            }
           } else {
             await env.DB.prepare(
               "UPDATE posts SET facebook_status = 'failed', error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
