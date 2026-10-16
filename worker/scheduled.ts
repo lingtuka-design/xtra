@@ -22,6 +22,15 @@ export default {
           console.error('[Xtra Cron] Error triggering sync:', err);
         })
     );
+
+    // Keep-alive ping for Render.com WhatsApp Bot microservice so it never sleeps
+    if (env.WHATSAPP_API_URL) {
+      ctx.waitUntil(
+        fetch(`${env.WHATSAPP_API_URL.replace(/\/$/, '')}/health`)
+          .then((r) => console.log(`[Xtra Cron] WhatsApp bot keep-alive status: ${r.status}`))
+          .catch((e) => console.warn('[Xtra Cron] WhatsApp bot ping error:', e.message))
+      );
+    }
   },
 
   async fetch(request: Request): Promise<Response> {

@@ -183,6 +183,38 @@ app.get('/', (req, res) => {
 });
 
 /**
+ * Resolve target identifier to WhatsApp Channel JID (e.g. 120363xxx@newsletter)
+ */
+async function resolveChannelJid(target) {
+  if (!target) return null;
+  const trimmed = target.trim();
+
+  // If already ends with @newsletter
+  if (trimmed.endsWith('@newsletter')) return trimmed;
+
+  // If numeric JID
+  if (/^\d{10,}$/.test(trimmed)) return `${trimmed}@newsletter`;
+
+  // If it's a WhatsApp channel link or invite code (e.g. 0029Va9TAJnKbYMRVbHZbQ1A)
+  const match = trimmed.match(/channel\/([A-Za-z0-9_-]+)/) || trimmed.match(/^([A-Za-z0-9_-]{15,})$/);
+  const inviteCode = match ? match[1] : null;
+
+  if (inviteCode && sock && typeof sock.newsletterMetadata === 'function') {
+    try {
+      const meta = await sock.newsletterMetadata('invite', inviteCode);
+      if (meta?.id) {
+        console.log(`[WhatsApp Bot] Resolved invite ${inviteCode} to JID: ${meta.id} (${meta.name || 'Channel'})`);
+        return meta.id;
+      }
+    } catch (e) {
+      console.warn(`[WhatsApp Bot] Note: Could not resolve invite ${inviteCode} via API:`, e.message);
+    }
+  }
+
+  return trimmed.includes('@') ? trimmed : `${trimmed}@newsletter`;
+}
+
+/**
  * Universal Post Endpoint (Supports /send, /messages/image, /messages/text)
  */
 async function handleSend(req, res) {
@@ -201,24 +233,36 @@ async function handleSend(req, res) {
   }
 
   const { to, caption, body, media, imageUrl } = req.body;
-  const targetJid = to || process.env.CHANNEL_JID;
+  const targetRaw = to || process.env.CHANNEL_JID || '0029Va9TAJnKbYMRVbHZbQ1A';
   const textContent = caption || body || '';
   const photoUrl = media || imageUrl;
 
-  if (!targetJid) {
+  if (!targetRaw) {
     return res.status(400).json({ success: false, error: 'Missing target channel JID ("to" or CHANNEL_JID environment variable)' });
   }
 
-  // Ensure JID ends with @newsletter for WhatsApp Channels
-  const formattedJid = targetJid.includes('@') ? targetJid : `${targetJid}@newsletter`;
+  // Resolve invite links / codes to JID
+  const formattedJid = await resolveChannelJid(targetRaw);
 
   try {
     let resultMsg = null;
+    let imagePayload = null;
 
     if (photoUrl) {
+      if (photoUrl.startsWith('data:image/')) {
+        // Decode Base64 data URL to Buffer
+        const commaIdx = photoUrl.indexOf(',');
+        const base64Data = photoUrl.slice(commaIdx + 1);
+        imagePayload = Buffer.from(base64Data, 'base64');
+      } else if (photoUrl.startsWith('http')) {
+        imagePayload = { url: photoUrl };
+      }
+    }
+
+    if (imagePayload) {
       console.log(`[WhatsApp Bot] Sending image with caption to ${formattedJid}...`);
       resultMsg = await sock.sendMessage(formattedJid, {
-        image: { url: photoUrl },
+        image: imagePayload,
         caption: textContent,
       });
     } else {
