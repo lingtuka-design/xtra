@@ -151,30 +151,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         ).bind(fbRes.postId, newPostId).run();
         publishResult = { success: true, postId: fbRes.postId };
 
-        // Also broadcast to WhatsApp if configured
-        if (env.WHATSAPP_API_TOKEN && env.WHATSAPP_CHANNEL_ID) {
-          try {
-            console.log('Broadcasting post to WhatsApp Channel...', {
-              apiUrl: env.WHATSAPP_API_URL,
-              channelId: env.WHATSAPP_CHANNEL_ID,
-            });
-            const waRes = await whatsappPoster.postNews(
-              mizoCaption,
-              photoUrl || undefined,
-              env.WHATSAPP_API_TOKEN,
-              env.WHATSAPP_CHANNEL_ID,
-              env.WHATSAPP_API_URL
-            );
-            console.log('WhatsApp broadcast result:', waRes);
-          } catch (waErr: any) {
-            console.error('WhatsApp broadcast failed:', waErr.message);
-          }
-        } else {
-          console.warn('WhatsApp environment variables missing:', {
-            hasUrl: !!env.WHATSAPP_API_URL,
-            hasToken: !!env.WHATSAPP_API_TOKEN,
-            hasChannel: !!env.WHATSAPP_CHANNEL_ID,
-          });
+        // Also broadcast to WhatsApp Channel
+        try {
+          console.log('Broadcasting manual post to WhatsApp Channel...');
+          const waRes = await whatsappPoster.postNews(
+            mizoCaption,
+            photoUrl || undefined,
+            env.WHATSAPP_API_TOKEN,
+            env.WHATSAPP_CHANNEL_ID,
+            env.WHATSAPP_API_URL
+          );
+          console.log('WhatsApp broadcast result:', waRes);
+        } catch (waErr: any) {
+          console.error('WhatsApp broadcast failed:', waErr.message);
         }
       } else {
         await env.DB.prepare(

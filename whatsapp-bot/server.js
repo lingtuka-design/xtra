@@ -26,6 +26,8 @@ let channelsList = [];
 // Logger
 const logger = pino({ level: 'silent' });
 
+let reconnectAttempts = 0;
+
 /**
  * Start Baileys WhatsApp Connection
  */
@@ -54,6 +56,7 @@ async function startWhatsApp() {
     if (qr) {
       currentQr = await QRCode.toDataURL(qr);
       isConnected = false;
+      reconnectAttempts = 0;
       console.log('[WhatsApp Bot] New QR Code generated. Visit web UI to scan.');
     }
 
@@ -61,22 +64,27 @@ async function startWhatsApp() {
       isConnected = false;
       currentQr = null;
       const statusCode = lastDisconnect?.error?.output?.statusCode;
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+      reconnectAttempts++;
 
-      console.warn(`[WhatsApp Bot] Connection closed. Reason code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
+      console.warn(
+        `[WhatsApp Bot] Connection closed. Reason code: ${statusCode}. Reconnect attempt #${reconnectAttempts}`
+      );
 
-      if (shouldReconnect) {
-        setTimeout(startWhatsApp, 3000);
-      } else {
-        console.error('[WhatsApp Bot] Logged out. Clearing auth credentials...');
+      // If logged out or stuck in closed loop > 3 times, reset auth credentials to generate a fresh QR
+      if (statusCode === DisconnectReason.loggedOut || reconnectAttempts >= 3) {
+        console.error('[WhatsApp Bot] Session logged out or stale credentials. Clearing auth_info...');
+        reconnectAttempts = 0;
         try {
           fs.rmSync(AUTH_DIR, { recursive: true, force: true });
         } catch {}
         setTimeout(startWhatsApp, 2000);
+      } else {
+        setTimeout(startWhatsApp, 3000);
       }
     } else if (connection === 'open') {
       isConnected = true;
       currentQr = null;
+      reconnectAttempts = 0;
       userPhone = sock.user?.id ? sock.user.id.split(':')[0] : 'Connected';
       console.log(`[WhatsApp Bot] ✅ Connected successfully! Phone: ${userPhone}`);
 
@@ -316,13 +324,34 @@ app.get('/resolve', async (req, res) => {
 /**
  * Health check & Keep-alive endpoint
  */
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    connected: isConnected,
-    phone: userPhone,
-    uptime: process.uptime(),
-  });
+app.get('/reset', (req, res) => {
+  try {
+    reconnectAttempts = 0;
+    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+    isConnected = false;
+    currentQr = null;
+    if (sock) {
+      try { sock.end(); } catch {}
+    }
+    setTimeout(startWhatsApp, 1000);
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Resetting WhatsApp</title>
+          <meta http-equiv="refresh" content="3;url=/">
+          <style>body { font-family:sans-serif; background:#09090b; color:#fff; text-align:center; padding:50px; }</style>
+        </head>
+        <body>
+          <h2>WhatsApp Auth Reset</h2>
+          <p>Credentials cleared. Generating fresh QR code...</p>
+          <p><a href="/" style="color:#22c55e;">Click here to view QR Code</a></p>
+        </body>
+      </html>
+    `);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
 });
 
 app.listen(PORT, () => {

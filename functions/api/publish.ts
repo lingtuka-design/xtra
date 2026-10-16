@@ -51,25 +51,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       "UPDATE posts SET facebook_status = 'published', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
     ).bind(fbResult.postId, post.id).run();
 
-    // Simultaneously publish to WhatsApp Channel if configured
+    // Simultaneously publish to WhatsApp Channel
     let waNotice = '';
-    if (env.WHATSAPP_API_TOKEN && env.WHATSAPP_CHANNEL_ID) {
-      try {
-        const waRes = await whatsappPoster.postNews(
-          post.mizo_translation,
-          post.primary_image_url,
-          env.WHATSAPP_API_TOKEN,
-          env.WHATSAPP_CHANNEL_ID,
-          env.WHATSAPP_API_URL
-        );
-        if (waRes.success) {
-          waNotice = ' & WhatsApp Channel';
-        } else {
-          console.warn('WhatsApp broadcast failed:', waRes.error);
-        }
-      } catch (waErr: any) {
-        console.warn('WhatsApp broadcast error:', waErr.message);
+    try {
+      const waRes = await whatsappPoster.postNews(
+        post.mizo_translation,
+        post.primary_image_url,
+        env.WHATSAPP_API_TOKEN,
+        env.WHATSAPP_CHANNEL_ID,
+        env.WHATSAPP_API_URL
+      );
+      if (waRes.success) {
+        waNotice = ' & WhatsApp Channel';
+      } else {
+        console.warn('WhatsApp broadcast failed:', waRes.error);
       }
+    } catch (waErr: any) {
+      console.warn('WhatsApp broadcast error:', waErr.message);
     }
 
     return Response.json({

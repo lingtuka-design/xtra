@@ -311,25 +311,23 @@ export class SyncService {
             ).bind(fbRes.postId, nextQueued.id).run();
             console.log(`[FB Queue Drip] Post #${nextQueued.id} successfully published to Facebook.`);
 
-            // Broadcast to WhatsApp Channel simultaneously if credentials configured
-            if (env.WHATSAPP_API_TOKEN && env.WHATSAPP_CHANNEL_ID) {
-              try {
-                console.log(`[WA Channel Drip] Auto-publishing post #${nextQueued.id} to WhatsApp Channel...`);
-                const waRes = await whatsappPoster.postNews(
-                  nextQueued.mizo_translation,
-                  nextQueued.primary_image_url,
-                  env.WHATSAPP_API_TOKEN,
-                  env.WHATSAPP_CHANNEL_ID,
-                  env.WHATSAPP_API_URL
-                );
-                if (waRes.success) {
-                  console.log(`[WA Channel Drip] Post #${nextQueued.id} successfully published to WhatsApp Channel.`);
-                } else {
-                  console.warn(`[WA Channel Drip] WhatsApp post #${nextQueued.id} failed:`, waRes.error);
-                }
-              } catch (waErr: any) {
-                console.warn('[WA Channel Drip] Error in WhatsApp drip broadcast:', waErr.message);
+            // Broadcast to WhatsApp Channel simultaneously
+            try {
+              console.log(`[WA Channel Drip] Auto-publishing post #${nextQueued.id} to WhatsApp Channel...`);
+              const waRes = await whatsappPoster.postNews(
+                nextQueued.mizo_translation,
+                nextQueued.primary_image_url,
+                env.WHATSAPP_API_TOKEN,
+                env.WHATSAPP_CHANNEL_ID,
+                env.WHATSAPP_API_URL
+              );
+              if (waRes.success) {
+                console.log(`[WA Channel Drip] Post #${nextQueued.id} successfully published to WhatsApp Channel.`);
+              } else {
+                console.warn(`[WA Channel Drip] WhatsApp post #${nextQueued.id} failed:`, waRes.error);
               }
+            } catch (waErr: any) {
+              console.warn('[WA Channel Drip] Error in WhatsApp drip broadcast:', waErr.message);
             }
           } else {
             await env.DB.prepare(
