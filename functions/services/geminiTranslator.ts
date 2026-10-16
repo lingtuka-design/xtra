@@ -15,8 +15,8 @@ export class GeminiTranslator {
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
-    // Try gemini-2.0-flash first, fallback to gemini-1.5-flash
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+    // Try gemini-3.8-flash first, fallback to gemini-2.5-flash and gemini-flash-latest
+    const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
     let lastError: Error | null = null;
 
     for (const model of models) {
