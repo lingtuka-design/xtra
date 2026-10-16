@@ -1,5 +1,6 @@
 import { Env, SyncResult } from '../types';
 import { twitterScraper } from './twitterScraper';
+import { telegramScraper } from './telegramScraper';
 import { geminiTranslator } from './geminiTranslator';
 import { facebookPoster } from './facebookPoster';
 import { whatsappPoster } from './whatsappPoster';
@@ -50,8 +51,21 @@ export class SyncService {
       };
 
       try {
-        // 1. Scrape latest tweets
-        const tweets = await twitterScraper.getRecentTweets(sourceHandle, 25);
+        // 1. Scrape latest posts (Support both Twitter and Telegram channels)
+        const isTelegram =
+          sourceHandle.startsWith('tg:') ||
+          sourceHandle.startsWith('t.me/') ||
+          sourceHandle.toLowerCase().includes('telegram');
+        const cleanHandle = sourceHandle
+          .replace(/^tg:/i, '')
+          .replace(/^t\.me\//i, '')
+          .replace(/^https?:\/\/t\.me\/(s\/)?/i, '')
+          .trim();
+
+        const tweets = isTelegram
+          ? await telegramScraper.getRecentPosts(cleanHandle, 25)
+          : await twitterScraper.getRecentTweets(sourceHandle, 25);
+
         syncResult.tweetsFound = tweets.length;
 
         if (tweets.length === 0) {
