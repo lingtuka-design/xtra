@@ -6,11 +6,11 @@ compatibility_date = "2026-04-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "xtra-db"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # Replace with your real Cloudflare D1 Database ID
+database_id = "d382c966-7c09-40cc-aaec-33f4e417a10d"
 
 # Environment Variables (Public defaults)
 [vars]
-DEFAULT_SOURCES = "David_Ornstein"
+DEFAULT_SOURCES = "David_Ornstein,footballontnt,ESPNUK,433,MadridXtra,brfootball,Squawka,UtdDistrict"
 
 # Secrets to set via `wrangler secret put <KEY>` or Cloudflare Pages Dashboard:
 # 1. GEMINI_API_KEY       -> From Google AI Studio (Free Tier)

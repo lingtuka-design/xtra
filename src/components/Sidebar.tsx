@@ -4,31 +4,37 @@ import { ShieldCheck, CheckCircle2, Clock, Cpu, Cloud, Globe } from 'lucide-reac
 export const Sidebar: React.FC = () => {
   return (
     <aside className="hidden lg:block w-80 space-y-4 flex-shrink-0">
-      {/* Active Source Card */}
+      {/* Active Sources Card */}
       <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3 flex items-center justify-between">
           <span>Active Sources</span>
           <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded-full font-semibold">
-            1 Active
+            8 Live
           </span>
         </h3>
 
-        <div className="flex items-start gap-3 p-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800/60">
-          <img
-            src="https://pbs.twimg.com/profile_images/1178558529105530880/Qvy-hv3O_400x400.jpg"
-            alt="David Ornstein"
-            className="w-10 h-10 rounded-full object-cover ring-1 ring-zinc-700 flex-shrink-0"
-          />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1">
-              <span className="font-bold text-sm text-zinc-100 truncate">David Ornstein</span>
-              <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
+        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+          {[
+            { id: 'David_Ornstein', name: 'David Ornstein', role: 'The Athletic • Tier 1' },
+            { id: 'footballontnt', name: 'TNT Sports', role: 'UCL & Premier League' },
+            { id: 'ESPNUK', name: 'ESPN UK', role: 'Breaking Football' },
+            { id: '433', name: '433', role: 'Global Football' },
+            { id: 'MadridXtra', name: 'Madrid Xtra', role: 'Real Madrid 24/7' },
+            { id: 'brfootball', name: 'B/R Football', role: 'Culture & Breaking' },
+            { id: 'Squawka', name: 'Squawka', role: 'Stats & Tactical' },
+            { id: 'UtdDistrict', name: 'United District', role: 'Man United Hub' },
+          ].map((s) => (
+            <div key={s.id} className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/40 hover:bg-zinc-900/80 border border-zinc-800/50 transition-colors">
+              <div className="min-w-0 pr-2">
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-xs text-zinc-200 truncate">{s.name}</span>
+                  <CheckCircle2 className="w-3 h-3 text-sky-400 flex-shrink-0" />
+                </div>
+                <p className="text-[10px] text-zinc-500 truncate">@{s.id} • {s.role}</p>
+              </div>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
             </div>
-            <p className="text-xs text-zinc-400">@David_Ornstein</p>
-            <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2">
-              The Athletic FC. Premier League Tier-1 breaking transfer authority.
-            </p>
-          </div>
+          ))}
         </div>
       </div>
 

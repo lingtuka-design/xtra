@@ -18,11 +18,22 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
+  const [sources, setSources] = useState<{ id: string; name: string }[]>([
+    { id: 'David_Ornstein', name: 'David Ornstein' },
+    { id: 'footballontnt', name: 'TNT Sports' },
+    { id: 'ESPNUK', name: 'ESPN UK' },
+    { id: '433', name: '433' },
+    { id: 'MadridXtra', name: 'Madrid Xtra' },
+    { id: 'brfootball', name: 'B/R Football' },
+    { id: 'Squawka', name: 'Squawka' },
+    { id: 'UtdDistrict', name: 'United District' },
+  ]);
+
   // Fetch real posts from Cloudflare D1 via Pages Functions
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/posts?limit=50');
+      const res = await fetch('/api/posts?limit=100');
       if (res.ok) {
         const data = (await res.json()) as any;
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -43,8 +54,21 @@ export default function App() {
     }
   };
 
+  const fetchSources = async () => {
+    try {
+      const res = await fetch('/api/sources');
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          setSources(data.data);
+        }
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetchPosts();
+    fetchSources();
 
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
@@ -110,10 +134,10 @@ export default function App() {
             </div>
 
             {/* Source selector tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
               <button
                 onClick={() => setSelectedSource('all')}
-                className={`px-3.5 py-1.5 rounded-full font-semibold transition-all ${
+                className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
                   selectedSource === 'all'
                     ? 'bg-zinc-100 text-zinc-950 shadow-sm'
                     : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
@@ -121,19 +145,32 @@ export default function App() {
               >
                 All News ({posts.length})
               </button>
-              <button
-                onClick={() => setSelectedSource('David_Ornstein')}
-                className={`px-3.5 py-1.5 rounded-full font-semibold transition-all flex items-center gap-1.5 ${
-                  selectedSource === 'David_Ornstein'
-                    ? 'bg-amber-400 text-zinc-950 shadow-sm'
-                    : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
-                }`}
-              >
-                <span>@David_Ornstein</span>
-                <span className="text-[10px] bg-zinc-800/80 px-1.5 py-0.2 rounded-full text-zinc-300">
-                  Tier 1
-                </span>
-              </button>
+              {sources.map((s) => {
+                const count = posts.filter(
+                  (p) => p.author_handle.toLowerCase() === s.id.toLowerCase()
+                ).length;
+                const isSelected = selectedSource.toLowerCase() === s.id.toLowerCase();
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedSource(s.id)}
+                    className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-amber-400 text-zinc-950 shadow-sm'
+                        : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                    }`}
+                  >
+                    <span>@{s.id}</span>
+                    {count > 0 && (
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        isSelected ? 'bg-black/20 text-black font-bold' : 'bg-zinc-800 text-zinc-400'
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

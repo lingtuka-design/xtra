@@ -22,9 +22,9 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, onSyncSuc
     setResult(null);
 
     try {
-      let url = `/api/sync?source=${encodeURIComponent(source)}`;
+      let url = source ? `/api/sync?source=${encodeURIComponent(source)}` : '/api/sync';
       if (secret.trim()) {
-        url += `&secret=${encodeURIComponent(secret.trim())}`;
+        url += (url.includes('?') ? '&' : '?') + `secret=${encodeURIComponent(secret.trim())}`;
       }
 
       const res = await fetch(url, {
@@ -71,8 +71,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, onSyncSuc
               onChange={(e) => setSource(e.target.value)}
               className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-zinc-100 focus:outline-none focus:border-amber-500"
             >
+              <option value="">⚡ All Active Sources (Batch Sync)</option>
               <option value="David_Ornstein">@David_Ornstein (The Athletic - Premier League)</option>
-              <option value="FabrizioRomano">@FabrizioRomano (Here We Go / Transfers)</option>
+              <option value="footballontnt">@footballontnt (TNT Sports Football)</option>
+              <option value="ESPNUK">@ESPNUK (ESPN UK)</option>
+              <option value="433">@433 (Global Football)</option>
+              <option value="MadridXtra">@MadridXtra (Real Madrid)</option>
+              <option value="brfootball">@brfootball (B/R Football)</option>
+              <option value="Squawka">@Squawka (Squawka Stats)</option>
+              <option value="UtdDistrict">@UtdDistrict (United District)</option>
             </select>
           </div>
 
