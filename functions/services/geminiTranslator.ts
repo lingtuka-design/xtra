@@ -11,17 +11,18 @@ export class GeminiTranslator {
     authorName: string,
     apiKey: string
   ): Promise<string> {
-    if (!apiKey) {
+    const cleanKey = (apiKey || '').replace(/^\uFEFF/, '').trim();
+    if (!cleanKey) {
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
-    // Try gemini-3.8-flash first, fallback to gemini-2.5-flash and gemini-flash-latest
-    const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+    // Prioritize high-availability fast models
+    const models = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.8-flash'];
     let lastError: Error | null = null;
 
     for (const model of models) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
 
         const prompt = `You are a Tier-1 sports journalist writing breaking football news for a Mizo football community Facebook page.
 Translate the following English football transfer or breaking news tweet into clean, authentic, punchy, and engaging Mizo language.

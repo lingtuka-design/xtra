@@ -59,8 +59,8 @@ export class SyncService {
           continue;
         }
 
-        // Process tweets in chronological order (oldest first so posting matches real timeline)
-        const sortedTweets = [...tweets].reverse();
+        // Process the freshest 6 tweets in chronological order so Gemini translation is fast and avoids timeouts
+        const sortedTweets = [...tweets].slice(0, 6).reverse();
 
         for (const tweet of sortedTweets) {
           // Check D1 for duplicate
