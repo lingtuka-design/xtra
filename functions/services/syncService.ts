@@ -207,6 +207,33 @@ export class SyncService {
           return isNaN(t) ? 0 : t;
         };
 
+        // Night Sleep Pause: 11:00 PM to 7:00 AM IST
+        // Active publishing window is strictly 7:00 AM to 11:00 PM IST
+        const istOffsetMs = 5.5 * 60 * 60 * 1000;
+        const istDate = new Date(now + istOffsetMs);
+        const istHours = istDate.getUTCHours();
+        const istMinutes = istDate.getUTCMinutes();
+        const istTotalMinutes = istHours * 60 + istMinutes;
+
+        const ACTIVE_START_MINS = 7 * 60; // 7:00 AM IST
+        const ACTIVE_END_MINS = 23 * 60;  // 11:00 PM IST
+
+        if (istTotalMinutes < ACTIVE_START_MINS || istTotalMinutes >= ACTIVE_END_MINS) {
+          const next7AmIst = new Date(istDate);
+          if (istTotalMinutes >= ACTIVE_END_MINS) {
+            next7AmIst.setUTCDate(next7AmIst.getUTCDate() + 1);
+          }
+          next7AmIst.setUTCHours(7, 0, 0, 0);
+          const resumeTimeMs = next7AmIst.getTime() - istOffsetMs;
+          const minsUntil7Am = Math.max(1, Math.ceil((resumeTimeMs - now) / 60000));
+          console.log(
+            `[FB Queue Drip] Night pause active (11:00 PM - 7:00 AM IST). Queue drip will resume at 7:00 AM IST in ${Math.floor(
+              minsUntil7Am / 60
+            )}h ${minsUntil7Am % 60}m.`
+          );
+          return results;
+        }
+
         // Condition 1: Check when the last post was published (must have 20 mins gap)
         const lastPublished = await env.DB.prepare(
           "SELECT updated_at FROM posts WHERE facebook_status = 'published' ORDER BY updated_at DESC LIMIT 1"

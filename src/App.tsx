@@ -156,10 +156,30 @@ export default function App() {
       });
   }, [posts]);
 
-  // Calculate live position and estimated minutes left for each queued post
+  // Calculate live position and estimated minutes left for each queued post (respecting 11:00 PM - 7:00 AM IST night sleep pause)
   const queueInfoMap = useMemo(() => {
-    const map = new Map<number, { position: number; estimatedMinutes: number }>();
+    const map = new Map<number, { position: number; estimatedMinutes: number; isNightPaused?: boolean }>();
     if (queuedSortedList.length === 0) return map;
+
+    const istOffsetMs = 5.5 * 60 * 60 * 1000;
+
+    // Helper to get next active dispatch timestamp, shifting past 11:00 PM into next morning 7:00 AM IST
+    const shiftIfNightPause = (timestampMs: number): number => {
+      const istDate = new Date(timestampMs + istOffsetMs);
+      const istHours = istDate.getUTCHours();
+      const istMinutes = istDate.getUTCMinutes();
+      const istTotal = istHours * 60 + istMinutes;
+
+      if (istTotal < 7 * 60 || istTotal >= 23 * 60) {
+        const next7Am = new Date(istDate);
+        if (istTotal >= 23 * 60) {
+          next7Am.setUTCDate(next7Am.getUTCDate() + 1);
+        }
+        next7Am.setUTCHours(7, 0, 0, 0);
+        return next7Am.getTime() - istOffsetMs;
+      }
+      return timestampMs;
+    };
 
     // Find the last published post
     const lastPublishedPost = posts
@@ -169,12 +189,12 @@ export default function App() {
     const lastPubTime = lastPublishedPost ? new Date(lastPublishedPost.updated_at).getTime() : 0;
     const timeSinceLastPub = lastPubTime ? nowTick - lastPubTime : DRIP_INTERVAL_MS;
 
-    // 20-minute gap required from last published post
+    // Gap required from last published post
     const pubWaitMins = (lastPubTime && timeSinceLastPub < DRIP_INTERVAL_MS)
       ? Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceLastPub) / 60000))
       : 1;
 
-    // First post delay: must also wait for 5-minute initial buffer from when it was queued
+    // First post delay: 5-minute initial buffer from queue time
     const firstPost = queuedSortedList[0];
     const firstQueuedTime = new Date(firstPost.updated_at || firstPost.created_at).getTime();
     const timeSinceFirstQueued = nowTick - firstQueuedTime;
@@ -182,15 +202,24 @@ export default function App() {
       ? Math.max(1, Math.ceil((INITIAL_QUEUE_DELAY_MS - timeSinceFirstQueued) / 60000))
       : 1;
 
-    const baseDelay = Math.max(pubWaitMins, queueBufferMins);
+    const baseDelayMins = Math.max(pubWaitMins, queueBufferMins);
+
+    // Initial dispatch time for post #1
+    let currentDispatchTime = shiftIfNightPause(nowTick + baseDelayMins * 60000);
 
     queuedSortedList.forEach((post, index) => {
-      // Each subsequent post in queue is spaced out by 20 minutes
-      const estimatedMinutes = baseDelay + (index * 20);
+      if (index > 0) {
+        currentDispatchTime = shiftIfNightPause(currentDispatchTime + 20 * 60000);
+      }
+
+      const diffMs = currentDispatchTime - nowTick;
+      const estimatedMinutes = Math.max(1, Math.ceil(diffMs / 60000));
+      const isNightPaused = diffMs > 60 * 60000 && estimatedMinutes > 120;
 
       map.set(post.id, {
         position: index + 1,
         estimatedMinutes,
+        isNightPaused,
       });
     });
 
@@ -334,7 +363,7 @@ export default function App() {
                 )}
               </div>
               <p className="text-stone-600 leading-relaxed text-[11px]">
-                Post i queue veleh **minute 5 buffer** hnuah a chhuak hmasa ber ang a, a dawt leh zelte chu **minute 20 dan zelin** Facebook Page leh WhatsApp Channel-ah automatic-in an chhuak thla zel ang. Hmanhmawh thilah <strong>"Post to FB Now"</strong> hmetin instant-in a post nghal theih bawk e.
+                Post i queue veleh **minute 5 buffer** hnuah a chhuak hmasa ber ang a, a dawt leh zelte chu **minute 20 dan zelin** Facebook Page leh WhatsApp Channel-ah automatic-in an chhuak thla zel ang. (Active hours: <strong>7:00 AM – 11:00 PM IST</strong>; zan dar 11:00 PM hnuah pause a ni ang a, zing dar 7:00 AM-ah automatic-in a in-post chhunzawm leh ang).
               </p>
             </div>
           )}

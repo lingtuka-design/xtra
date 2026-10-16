@@ -81,6 +81,9 @@ export const PostCard: React.FC<PostCardProps> = ({
     if (mins < 60) return `~${mins} mins left`;
     const h = Math.floor(mins / 60);
     const m = mins % 60;
+    if (h >= 3) {
+      return `~${h}h left (Resumes 7 AM)`;
+    }
     if (m === 0) return h === 1 ? '~1 hr left' : `~${h} hrs left`;
     return `~${h}h ${m}m left`;
   };
