@@ -74,24 +74,71 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
     }
   };
 
-  // Handle local image file upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Optimize and compress image on client before sending to API
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const rawData = event.target?.result as string;
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(rawData);
+            return;
+          }
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Export as JPEG with 0.88 quality (super fast, crystal-clear HD for Facebook)
+          const compressed = canvas.toDataURL('image/jpeg', 0.88);
+          resolve(compressed);
+        };
+        img.onerror = () => resolve(rawData);
+        img.src = rawData;
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle local image file upload (auto-compressed for mobile)
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      setErrorMessage('Thlalak hi 10MB aia lian a ni tur a ni lo.');
+    if (file.size > 25 * 1024 * 1024) {
+      setErrorMessage('Thlalak hi 25MB aia lian a ni tur a ni lo.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    try {
+      const base64 = await compressImage(file);
       setPhotoUrl(base64);
       setPhotoPreview(base64);
       setErrorMessage(null);
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      setErrorMessage('Thlalak chhiar theih a ni lo.');
+    }
   };
 
   // Clear selected image
