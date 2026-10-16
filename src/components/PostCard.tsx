@@ -284,35 +284,46 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
 
       {/* Mizo Translated News (Main Highlight or Inline Editor) */}
       {isEditing ? (
-        <div className="mb-3.5 space-y-2 p-3 rounded-2xl bg-zinc-900/90 border border-amber-500/50">
-          <div className="flex items-center justify-between text-xs text-amber-400 font-semibold">
-            <span>✏️ Edit Mizo Caption for Facebook:</span>
-            <span>{captionText.length} characters</span>
+        <div className="mb-4 space-y-3 p-4 sm:p-5 rounded-2xl bg-zinc-900/95 border border-amber-500/60 shadow-xl shadow-amber-950/20">
+          <div className="flex items-center justify-between text-xs sm:text-sm text-amber-400 font-semibold">
+            <span className="flex items-center gap-1.5">
+              <span>✏️</span>
+              <span>Facebook Caption Siamremna:</span>
+            </span>
+            <span className="text-zinc-400 text-xs font-normal">
+              {captionText.length} characters
+            </span>
           </div>
           <textarea
             value={captionText}
             onChange={(e) => setCaptionText(e.target.value)}
-            rows={4}
-            className="w-full bg-zinc-950 border border-zinc-700 rounded-xl p-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400 leading-relaxed"
+            rows={8}
+            className="w-full bg-zinc-950 border border-zinc-700/90 rounded-xl p-4 text-[15px] sm:text-base text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 leading-relaxed font-normal min-h-[200px] sm:min-h-[260px] resize-y shadow-inner"
+            placeholder="Type Mizo caption here..."
           />
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              onClick={() => {
-                setCaptionText(post.mizo_translation);
-                setIsEditing(false);
-              }}
-              className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveCaption}
-              disabled={isSavingCaption}
-              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-lg shadow transition-all flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {isSavingCaption ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-              Save Changes
-            </button>
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-[11px] text-zinc-500 hidden sm:inline">
+              💡 Paragraph duhin Enter hmet la, duh tawkin a hnuaiah hian a pawtsei (resize) theih bawk e.
+            </span>
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={() => {
+                  setCaptionText(post.mizo_translation);
+                  setIsEditing(false);
+                }}
+                className="px-3.5 py-2 text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCaption}
+                disabled={isSavingCaption}
+                className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black text-xs sm:text-sm font-semibold rounded-xl shadow-md transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
+              >
+                {isSavingCaption ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       ) : (
