@@ -24,6 +24,7 @@ export default function App() {
     { id: 'DeadlineDayLive', name: 'Deadline Day Live' },
     { id: 'TheAthleticFC', name: 'The Athletic FC' },
     { id: 'centregoals', name: 'CentreGoals' },
+    { id: 'onefootball', name: 'OneFootball' },
     { id: 'brfootball', name: 'B/R Football' },
     { id: 'Squawka', name: 'Squawka' },
     { id: 'UtdDistrict', name: 'United District' },
