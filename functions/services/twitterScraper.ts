@@ -227,11 +227,24 @@ export class TwitterScraper {
               }
             }
 
+            // Check if tweet contains external website URLs or links (per user requirement: do not scrape tweets with links/websites)
+            const hasExternalEntitiesUrl =
+              Array.isArray(legacy.entities?.urls) && legacy.entities.urls.length > 0;
+
             // Clean up trailing photo link from text (e.g. https://t.co/...)
-            // but keep the text clean for translation
             const cleanedText = fullText
               .replace(/https:\/\/t\.co\/[a-zA-Z0-9]+$/g, '')
               .trim();
+
+            const hasWebsiteLink =
+              /https?:\/\/|www\.|\bt\.co\/|\bbit\.ly\/|\.(com|co\.uk|org|net|io|app|me)\//i.test(
+                cleanedText
+              );
+
+            if (hasExternalEntitiesUrl || hasWebsiteLink) {
+              // Skip tweets linking to external articles or websites
+              continue;
+            }
 
             tweets.push({
               id: tweetId,

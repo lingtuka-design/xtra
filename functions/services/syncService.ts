@@ -60,7 +60,7 @@ export class SyncService {
           continue;
         }
 
-        // 2. Filter strictly for FRESH tweets only (past 7 days) to discard ancient pinned tweets (2022-2024)
+        // 2. Filter strictly for FRESH tweets only (past 7 days) and EXCLUDE any tweets with website URLs/links
         const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
         const seenIds = new Set<string>();
         const freshTweets = tweets
@@ -68,7 +68,16 @@ export class SyncService {
             if (seenIds.has(t.id)) return false;
             seenIds.add(t.id);
             const time = new Date(t.createdAt).getTime();
-            return !isNaN(time) && time >= sevenDaysAgo;
+            if (isNaN(time) || time < sevenDaysAgo) return false;
+
+            // Exclude tweets containing external websites or links per user directive
+            const hasWebsiteOrLink =
+              /https?:\/\/|www\.|\bt\.co\/|\bbit\.ly\/|\.(com|co\.uk|org|net|io|app|me)\//i.test(
+                t.text
+              );
+            if (hasWebsiteOrLink) return false;
+
+            return true;
           })
           .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
           .slice(-15); // process up to 15 freshest tweets
