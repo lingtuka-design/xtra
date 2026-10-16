@@ -101,10 +101,11 @@ export class SyncService {
 
         console.log(`Found ${newTweetsToProcess.length} new tweet(s) to translate for @${sourceHandle}`);
 
-        // Limit batch size to 5 tweets to fit comfortably within free tier token limits
-        const batchToTranslate = newTweetsToProcess.slice(0, 5);
+        // Process up to 3 fresh short news tweets per 15m run to optimize free tier tokens
+        const batchToTranslate = newTweetsToProcess.slice(0, 3);
 
         // Batch translate in a single Gemini request
+        const fallbackKey = env.GEMINI_API_KEY_2 || env.GEMINI_API_KEY_FALLBACK;
         let translationsMap = new Map<string, { id: string; mizo_title?: string; mizo_content: string }>();
         try {
           translationsMap = await geminiTranslator.batchTranslate(
@@ -114,7 +115,7 @@ export class SyncService {
               authorName: t.authorName,
             })),
             env.GEMINI_API_KEY,
-            env.GEMINI_API_KEY_FALLBACK
+            fallbackKey
           );
         } catch (transErr: any) {
           console.error(`Gemini batch translation error for @${sourceHandle}:`, transErr.message);
@@ -130,8 +131,14 @@ export class SyncService {
           ) {
             mizoText = `${transResult.mizo_title.trim()}\n\n${mizoText.trim()}`;
           }
+
+          // Do NOT save as raw English if model translation failed!
+          // Skipping allows it to retry on the next sync when quota or fallback recovers
           if (!mizoText.trim()) {
-            mizoText = tweet.text; // Fallback to raw text if model failed
+            console.warn(
+              `Translation failed for tweet ${tweet.id}. Skipping to retry on next sync.`
+            );
+            continue;
           }
 
           // Save to Cloudflare D1 with facebook_status = 'none' (awaiting editorial curation)

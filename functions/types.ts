@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   GEMINI_API_KEY?: string;
+  GEMINI_API_KEY_2?: string;
   GEMINI_API_KEY_FALLBACK?: string;
   FB_PAGE_ACCESS_TOKEN?: string;
   FB_PAGE_ID?: string;

@@ -17,7 +17,10 @@ export interface TranslatedPost {
 
 export class GeminiTranslator {
   private defaultPrimaryKey = (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : '') || '';
-  private defaultFallbackKey = (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY_FALLBACK : '') || '';
+  private defaultFallbackKey =
+    (typeof process !== 'undefined'
+      ? process.env?.GEMINI_API_KEY_2 || process.env?.GEMINI_API_KEY_FALLBACK
+      : '') || '';
 
   // Primary model and fallback chain
   private modelChain = [
@@ -127,7 +130,7 @@ STRICT MIZO TRANSLATION & GRAMMAR RULES:
               contents,
               generationConfig: {
                 temperature: 0.3,
-                maxOutputTokens: 1000,
+                maxOutputTokens: 500,
                 responseMimeType: 'application/json',
               },
             }),
