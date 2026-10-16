@@ -1,43 +1,42 @@
-import { Env } from '../functions/types';
-import { syncService } from '../functions/services/syncService';
-
 /**
- * Cloudflare Scheduled Worker (Cron Trigger)
- * Automatically triggers every 15-20 minutes in the cloud 24/7.
+ * Cloudflare Scheduled Worker (Cron Trigger: Every 15 minutes)
+ * Automatically triggers the Xtra sync & auto-drip poster 24/7 in the cloud.
  */
 export default {
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    console.log(`[Cron Trigger] Scheduled event fired at ${new Date(event.scheduledTime).toISOString()}`);
+  async scheduled(event: ScheduledEvent, env: any, ctx: ExecutionContext): Promise<void> {
+    const time = new Date(event.scheduledTime).toISOString();
+    console.log(`[Xtra Cron] Waking up at ${time} to trigger /api/sync...`);
+
     ctx.waitUntil(
-      syncService.runSync(env).then((results) => {
-        console.log('[Cron Trigger] Sync finished:', JSON.stringify(results));
-      }).catch((err) => {
-        console.error('[Cron Trigger] Sync error:', err);
+      fetch('https://xtra-byd.pages.dev/api/sync', {
+        method: 'POST',
+        headers: {
+          'User-Agent': 'Xtra-Cron-Worker/1.0',
+        },
       })
+        .then(async (res) => {
+          const body = await res.text();
+          console.log(`[Xtra Cron] Sync completed with HTTP ${res.status}: ${body.substring(0, 150)}`);
+        })
+        .catch((err) => {
+          console.error('[Xtra Cron] Error triggering sync:', err);
+        })
     );
   },
 
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
+  async fetch(request: Request): Promise<Response> {
+    console.log('[Xtra Cron] Manual HTTP trigger received');
+    const res = await fetch('https://xtra-byd.pages.dev/api/sync', {
+      method: 'POST',
+      headers: {
+        'User-Agent': 'Xtra-Cron-Worker/1.0',
+      },
+    });
 
-    // Health check endpoint
-    if (url.pathname === '/health') {
-      return Response.json({ status: 'ok', worker: 'xtra-scheduled-worker' });
-    }
-
-    // Manual sync trigger
-    if (url.pathname === '/trigger') {
-      if (env.CRON_SECRET) {
-        const secret = url.searchParams.get('secret');
-        if (secret !== env.CRON_SECRET) {
-          return new Response('Unauthorized', { status: 401 });
-        }
-      }
-
-      const results = await syncService.runSync(env);
-      return Response.json({ success: true, results });
-    }
-
-    return new Response('Xtra Worker is running. Trigger via cron or /trigger endpoint.', { status: 200 });
+    const data = await res.text();
+    return new Response(data, {
+      status: res.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   },
 };
