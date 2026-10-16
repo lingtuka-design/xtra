@@ -76,7 +76,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const formatQueueTime = (mins?: number) => {
-    if (mins === undefined || mins === null) return 'Drip 15m';
+    if (mins === undefined || mins === null) return 'Drip 20m';
     if (mins <= 1) return '~1 min left';
     if (mins < 60) return `~${mins} mins left`;
     const h = Math.floor(mins / 60);

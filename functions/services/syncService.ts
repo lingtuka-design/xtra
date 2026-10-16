@@ -189,10 +189,20 @@ export class SyncService {
       results.push(syncResult);
     }
 
-    // 4. Process the next queued item for Facebook (Strict 15-minute drip scheduler)
+    // 4. Process the next queued item for Facebook & WhatsApp (Strict 20-minute drip scheduler)
     try {
       if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
-        const MIN_POST_INTERVAL_MS = 15 * 60 * 1000; // Strictly 15 minutes gap
+        const MIN_POST_INTERVAL_MS = 20 * 60 * 1000; // Strictly 20 minutes gap
+        const SCHEDULED_START_TIME = new Date('2026-10-16T15:15:00.000Z').getTime(); // Tonight 8:45 PM IST
+
+        const now = Date.now();
+
+        // Check scheduled start time (8:45 PM tonight)
+        if (now < SCHEDULED_START_TIME) {
+          const minsLeft = Math.ceil((SCHEDULED_START_TIME - now) / 60000);
+          console.log(`[FB Queue Drip] Scheduled to start at 8:45 PM IST. Waiting ${minsLeft}m more.`);
+          return results;
+        }
 
         // Helper to parse SQLite UTC timestamps safely into milliseconds
         const parseSqliteUtc = (dateStr?: string | null): number => {
@@ -203,8 +213,6 @@ export class SyncService {
           const t = new Date(iso).getTime();
           return isNaN(t) ? 0 : t;
         };
-
-        const now = Date.now();
 
         // Condition 1: Check when the last Facebook post was published
         const lastPublished = await env.DB.prepare(
@@ -217,7 +225,7 @@ export class SyncService {
           if (timeSinceLastPublish > 0 && timeSinceLastPublish < MIN_POST_INTERVAL_MS) {
             const minsLeft = Math.ceil((MIN_POST_INTERVAL_MS - timeSinceLastPublish) / 60000);
             console.log(
-              `[FB Queue Drip] Last Facebook post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 15m drip interval.`
+              `[FB Queue Drip] Last Facebook post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 20m drip interval.`
             );
             return results;
           }
@@ -229,18 +237,7 @@ export class SyncService {
         ).first<any>();
 
         if (nextQueued) {
-          // Check if at least 15 minutes have passed since this post was added to the queue
-          const queuedTime = parseSqliteUtc(nextQueued.updated_at);
-          const timeSinceQueued = now - queuedTime;
-          if (timeSinceQueued > 0 && timeSinceQueued < MIN_POST_INTERVAL_MS) {
-            const minsLeft = Math.ceil((MIN_POST_INTERVAL_MS - timeSinceQueued) / 60000);
-            console.log(
-              `[FB Queue Drip] Post #${nextQueued.id} was queued ${Math.floor(timeSinceQueued / 60000)}m ago. Waiting ${minsLeft}m more for 15m initial delay.`
-            );
-            return results;
-          }
-
-          console.log(`[FB Queue Drip] Auto-publishing queued post #${nextQueued.id} to Facebook...`);
+          console.log(`[FB Queue Drip] Auto-publishing queued post #${nextQueued.id} to Facebook & WhatsApp...`);
           const fbRes = await facebookPoster.postNews(
             nextQueued.mizo_translation,
             nextQueued.primary_image_url,

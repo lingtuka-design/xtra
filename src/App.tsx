@@ -141,7 +141,8 @@ export default function App() {
     [posts]
   );
 
-  const DRIP_INTERVAL_MS = 15 * 60 * 1000;
+  const DRIP_INTERVAL_MS = 20 * 60 * 1000;
+  const SCHEDULED_START_TIME = new Date('2026-10-16T15:15:00.000Z').getTime(); // Tonight 8:45 PM IST
 
   // Active queued posts sorted by FIFO order (updated_at ASC, id ASC)
   const queuedSortedList = useMemo(() => {
@@ -168,23 +169,18 @@ export default function App() {
     const lastPubTime = lastPublishedPost ? new Date(lastPublishedPost.updated_at).getTime() : 0;
     const timeSinceLastPub = lastPubTime ? nowTick - lastPubTime : DRIP_INTERVAL_MS;
 
-    // Remaining time until next 15-minute drip window
-    const windowWaitMins = timeSinceLastPub < DRIP_INTERVAL_MS
-      ? Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceLastPub) / 60000))
-      : 1;
+    let baseDelay = 1;
+    if (nowTick < SCHEDULED_START_TIME) {
+      // Waiting for scheduled 8:45 PM launch
+      baseDelay = Math.max(1, Math.ceil((SCHEDULED_START_TIME - nowTick) / 60000));
+    } else if (timeSinceLastPub < DRIP_INTERVAL_MS) {
+      // Waiting for 20-minute gap since last post
+      baseDelay = Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceLastPub) / 60000));
+    }
 
     queuedSortedList.forEach((post, index) => {
-      // Check if post itself hasn't reached 15 minutes in queue yet
-      const queuedTime = new Date(post.updated_at || post.created_at).getTime();
-      const timeSinceQueued = nowTick - queuedTime;
-      const initialPostWaitMins = timeSinceQueued < DRIP_INTERVAL_MS
-        ? Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceQueued) / 60000))
-        : 1;
-
-      // The 1st post waits for the maximum of the publish window or its queue delay
-      const baseDelay = Math.max(windowWaitMins, initialPostWaitMins);
-      // Each subsequent post in queue is spaced out by 15 minutes
-      const estimatedMinutes = baseDelay + (index * 15);
+      // Each subsequent post in queue is spaced out by 20 minutes
+      const estimatedMinutes = baseDelay + (index * 20);
 
       map.set(post.id, {
         position: index + 1,
@@ -332,7 +328,7 @@ export default function App() {
                 )}
               </div>
               <p className="text-stone-600 leading-relaxed text-[11px]">
-                Heta post awm ho hi **minute 15 danah 1 zelin** Cloudflare Cron trigger hmangin Facebook Page-ah a post chho zel dawn e. Post nghal duh chu **"Post to FB Now"** hmetin vawi 1 click-in i post nghal thei bawk e!
+                Heta post awm ho hi **minute 20 danah 1 zelin** (Zanin 8:45 PM aṭangin) Facebook Page leh WhatsApp Channel-ah automatic-in a post chho zel dawn e. Post nghal duh chu **"Post to FB Now"** hmetin vawi 1 click-in i post nghal thei bawk e!
               </p>
             </div>
           )}
