@@ -19,7 +19,10 @@ export class FacebookPoster {
     pageId: string,
     pageAccessToken: string
   ): Promise<{ success: boolean; postId?: string; error?: string }> {
-    if (!pageId || !pageAccessToken) {
+    const cleanId = (pageId || '').replace(/^\uFEFF/, '').trim();
+    const cleanToken = (pageAccessToken || '').replace(/^\uFEFF/, '').trim();
+
+    if (!cleanId || !cleanToken) {
       return {
         success: false,
         error: 'Facebook Page ID or Access Token is missing',
@@ -29,12 +32,12 @@ export class FacebookPoster {
     try {
       // 1. If photo is present, use POST /{page-id}/photos for native full-size photo post
       if (photoUrl && photoUrl.startsWith('http')) {
-        const url = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${pageId}/photos`;
+        const url = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
 
         const body = new URLSearchParams();
         body.append('url', photoUrl);
         body.append('caption', caption);
-        body.append('access_token', pageAccessToken);
+        body.append('access_token', cleanToken);
 
         const res = await fetch(url, {
           method: 'POST',
@@ -60,10 +63,10 @@ export class FacebookPoster {
       }
 
       // 2. If no photo is present, fallback to pure status update: POST /{page-id}/feed
-      const feedUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${pageId}/feed`;
+      const feedUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/feed`;
       const body = new URLSearchParams();
       body.append('message', caption);
-      body.append('access_token', pageAccessToken);
+      body.append('access_token', cleanToken);
 
       const res = await fetch(feedUrl, {
         method: 'POST',
