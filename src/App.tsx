@@ -121,7 +121,7 @@ export default function App() {
 
   // Counts
   const queueCount = useMemo(
-    () => posts.filter((p) => p.facebook_status === 'queued').length,
+    () => posts.filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'failed').length,
     [posts]
   );
   const publishedCount = useMemo(
@@ -132,8 +132,8 @@ export default function App() {
   // Filter posts
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
-      // 1. Tab filter
-      if (activeTab === 'queue' && post.facebook_status !== 'queued') return false;
+      // 1. Tab filter (include both queued and failed posts in the Queue view)
+      if (activeTab === 'queue' && post.facebook_status !== 'queued' && post.facebook_status !== 'failed') return false;
       if (activeTab === 'published' && post.facebook_status !== 'published') return false;
 
       // 2. Source filter

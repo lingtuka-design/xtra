@@ -346,11 +346,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
         </div>
       )}
 
-      {/* Action Error message if any */}
-      {actionError && (
-        <div className="mb-3 p-2.5 rounded-xl bg-red-950/40 border border-red-800/50 text-red-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
-          <span>{actionError}</span>
+      {/* Action or Background Error message */}
+      {(actionError || (isFailed && post.error_message)) && (
+        <div className="mb-3 p-3 rounded-xl bg-red-950/50 border border-red-800/60 text-red-200 text-xs flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400 mt-0.5" />
+          <div className="flex-1">
+            <span className="font-semibold block text-red-300">Facebook Post A Hlawhchham (Error):</span>
+            <span className="text-zinc-300 block mt-0.5">{actionError || post.error_message}</span>
+          </div>
         </div>
       )}
 
@@ -398,9 +401,31 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onImageClick, onPostUp
       <div className="flex items-center justify-between pt-3 border-t border-zinc-900 text-zinc-400 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {/* Facebook Curation Button */}
+          {/* Facebook Curation Button */}
           {!isPublished && (
             <>
-              {isQueued ? (
+              {isFailed ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    onClick={handlePublishNow}
+                    disabled={isPublishing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-colors shadow-sm disabled:opacity-50"
+                    title="Retry publishing now"
+                  >
+                    {isPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FacebookIcon className="w-3.5 h-3.5" />}
+                    <span>Retry FB Now</span>
+                  </button>
+                  <button
+                    onClick={() => handleToggleQueue('queued')}
+                    disabled={isQueueing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 text-xs font-medium transition-colors disabled:opacity-50"
+                    title="Re-add to queue"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Queue-ah dah leh rawh</span>
+                  </button>
+                </div>
+              ) : isQueued ? (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     onClick={handlePublishNow}
