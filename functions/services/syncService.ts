@@ -189,20 +189,13 @@ export class SyncService {
       results.push(syncResult);
     }
 
-    // 4. Process the next queued item for Facebook & WhatsApp (Strict 20-minute drip scheduler)
+    // 4. Process the next queued item for Facebook & WhatsApp
     try {
       if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
-        const MIN_POST_INTERVAL_MS = 20 * 60 * 1000; // Strictly 20 minutes gap
-        const SCHEDULED_START_TIME = new Date('2026-10-16T15:15:00.000Z').getTime(); // Tonight 8:45 PM IST
+        const MIN_POST_INTERVAL_MS = 20 * 60 * 1000; // Strictly 20 minutes gap between published posts
+        const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000; // 5 minutes initial buffer after queueing a post
 
         const now = Date.now();
-
-        // Check scheduled start time (8:45 PM tonight)
-        if (now < SCHEDULED_START_TIME) {
-          const minsLeft = Math.ceil((SCHEDULED_START_TIME - now) / 60000);
-          console.log(`[FB Queue Drip] Scheduled to start at 8:45 PM IST. Waiting ${minsLeft}m more.`);
-          return results;
-        }
 
         // Helper to parse SQLite UTC timestamps safely into milliseconds
         const parseSqliteUtc = (dateStr?: string | null): number => {
@@ -214,7 +207,7 @@ export class SyncService {
           return isNaN(t) ? 0 : t;
         };
 
-        // Condition 1: Check when the last Facebook post was published
+        // Condition 1: Check when the last post was published (must have 20 mins gap)
         const lastPublished = await env.DB.prepare(
           "SELECT updated_at FROM posts WHERE facebook_status = 'published' ORDER BY updated_at DESC LIMIT 1"
         ).first<{ updated_at: string }>();
@@ -225,18 +218,28 @@ export class SyncService {
           if (timeSinceLastPublish > 0 && timeSinceLastPublish < MIN_POST_INTERVAL_MS) {
             const minsLeft = Math.ceil((MIN_POST_INTERVAL_MS - timeSinceLastPublish) / 60000);
             console.log(
-              `[FB Queue Drip] Last Facebook post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 20m drip interval.`
+              `[FB Queue Drip] Last post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 20m drip interval.`
             );
             return results;
           }
         }
 
-        // Condition 2: Check the oldest queued item
+        // Condition 2: Check the oldest queued item (must have been queued for at least 5 mins)
         const nextQueued = await env.DB.prepare(
           "SELECT * FROM posts WHERE facebook_status = 'queued' ORDER BY updated_at ASC, id ASC LIMIT 1"
         ).first<any>();
 
         if (nextQueued) {
+          const queuedTime = parseSqliteUtc(nextQueued.updated_at || nextQueued.created_at);
+          const timeSinceQueued = now - queuedTime;
+          if (timeSinceQueued > 0 && timeSinceQueued < INITIAL_QUEUE_DELAY_MS) {
+            const minsLeft = Math.ceil((INITIAL_QUEUE_DELAY_MS - timeSinceQueued) / 60000);
+            console.log(
+              `[FB Queue Drip] Post #${nextQueued.id} was queued ${Math.floor(timeSinceQueued / 60000)}m ago. Waiting ${minsLeft}m more for 5m initial review buffer.`
+            );
+            return results;
+          }
+
           console.log(`[FB Queue Drip] Auto-publishing queued post #${nextQueued.id} to Facebook & WhatsApp...`);
           const fbRes = await facebookPoster.postNews(
             nextQueued.mizo_translation,

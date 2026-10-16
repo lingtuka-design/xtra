@@ -142,7 +142,7 @@ export default function App() {
   );
 
   const DRIP_INTERVAL_MS = 20 * 60 * 1000;
-  const SCHEDULED_START_TIME = new Date('2026-10-16T15:15:00.000Z').getTime(); // Tonight 8:45 PM IST
+  const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000;
 
   // Active queued posts sorted by FIFO order (updated_at ASC, id ASC)
   const queuedSortedList = useMemo(() => {
@@ -169,14 +169,20 @@ export default function App() {
     const lastPubTime = lastPublishedPost ? new Date(lastPublishedPost.updated_at).getTime() : 0;
     const timeSinceLastPub = lastPubTime ? nowTick - lastPubTime : DRIP_INTERVAL_MS;
 
-    let baseDelay = 1;
-    if (nowTick < SCHEDULED_START_TIME) {
-      // Waiting for scheduled 8:45 PM launch
-      baseDelay = Math.max(1, Math.ceil((SCHEDULED_START_TIME - nowTick) / 60000));
-    } else if (timeSinceLastPub < DRIP_INTERVAL_MS) {
-      // Waiting for 20-minute gap since last post
-      baseDelay = Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceLastPub) / 60000));
-    }
+    // 20-minute gap required from last published post
+    const pubWaitMins = (lastPubTime && timeSinceLastPub < DRIP_INTERVAL_MS)
+      ? Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceLastPub) / 60000))
+      : 1;
+
+    // First post delay: must also wait for 5-minute initial buffer from when it was queued
+    const firstPost = queuedSortedList[0];
+    const firstQueuedTime = new Date(firstPost.updated_at || firstPost.created_at).getTime();
+    const timeSinceFirstQueued = nowTick - firstQueuedTime;
+    const queueBufferMins = timeSinceFirstQueued < INITIAL_QUEUE_DELAY_MS
+      ? Math.max(1, Math.ceil((INITIAL_QUEUE_DELAY_MS - timeSinceFirstQueued) / 60000))
+      : 1;
+
+    const baseDelay = Math.max(pubWaitMins, queueBufferMins);
 
     queuedSortedList.forEach((post, index) => {
       // Each subsequent post in queue is spaced out by 20 minutes
@@ -328,7 +334,7 @@ export default function App() {
                 )}
               </div>
               <p className="text-stone-600 leading-relaxed text-[11px]">
-                Heta post awm ho hi **minute 20 danah 1 zelin** (Zanin 8:45 PM aṭangin) Facebook Page leh WhatsApp Channel-ah automatic-in a post chho zel dawn e. Post nghal duh chu **"Post to FB Now"** hmetin vawi 1 click-in i post nghal thei bawk e!
+                Post i queue veleh **minute 5 buffer** hnuah a chhuak hmasa ber ang a, a dawt leh zelte chu **minute 20 dan zelin** Facebook Page leh WhatsApp Channel-ah automatic-in an chhuak thla zel ang. Hmanhmawh thilah <strong>"Post to FB Now"</strong> hmetin instant-in a post nghal theih bawk e.
               </p>
             </div>
           )}
