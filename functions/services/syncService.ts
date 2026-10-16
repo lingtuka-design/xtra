@@ -61,8 +61,11 @@ export class SyncService {
 
         // 2. Filter strictly for FRESH tweets only (past 7 days) to discard ancient pinned tweets (2022-2024)
         const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const seenIds = new Set<string>();
         const freshTweets = tweets
           .filter((t) => {
+            if (seenIds.has(t.id)) return false;
+            seenIds.add(t.id);
             const time = new Date(t.createdAt).getTime();
             return !isNaN(time) && time >= sevenDaysAgo;
           })
@@ -111,7 +114,7 @@ export class SyncService {
 
           // 3. Save to Cloudflare D1 with facebook_status = 'none' (awaiting curation / editorial choice)
           await env.DB.prepare(
-            `INSERT INTO posts (
+            `INSERT OR IGNORE INTO posts (
               tweet_id, author_handle, author_name, author_avatar,
               original_text, mizo_translation, primary_image_url,
               media_urls, tweet_url, tweet_created_at, facebook_post_id,
