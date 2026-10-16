@@ -24,22 +24,35 @@ export class GeminiTranslator {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
 
-        const prompt = `You are a Tier-1 sports journalist writing breaking football news for a Mizo football community Facebook page.
-Translate the following English football transfer or breaking news tweet into clean, authentic, punchy, and engaging Mizo language.
+        const prompt = `You are an expert Mizo sports journalist writing for a premier football community on Facebook.
 
-Journalist / Source: ${authorName}
-Tweet Text:
+TASK:
+Paraphrase and retell the following English football tweet into clean, natural, punchy, and engaging Mizo.
+
+SOURCE / JOURNALIST: ${authorName}
+ORIGINAL TWEET:
 "${englishText}"
 
-Requirements:
-1. Tone & Style: Natural, authoritative, and engaging Mizo (chhiar nuam, tawi fel, fiah em em).
-2. Phrasing examples:
-   - "🚨 THUTHAR / EXCLUSIVE:"
-   - "Arsenal chuan...", "Chelsea nen inremna an nei fel ta...", "Medical an nei dawn..."
-   - "Fee £40m vel a ni...", "Kum 5 daih contract a ziak ang..."
-3. Emojis: Use 2-4 clean football emojis naturally (e.g. 🚨, ⚽, 📝, 💣, 🤝).
-4. STRICT RULE: DO NOT include any website links, t.co URLs, or promotions in the text.
-5. Return ONLY the translated Mizo post text directly. No explanations, no markdown ticks, no metadata.`;
+CRITICAL GUIDELINES:
+1. PARAPHRASE NATURALLY (NO WORD-BY-WORD TRANSLATION):
+   - Never do literal word-by-word translation. English-to-Mizo literal translation sounds broken and unnatural.
+   - Paraphrase the core story into fluent, idiomatic, exciting Mizo as spoken and written by top Mizo sports editors (chhiar nuam, fiah, leh ngaihnawm takin).
+
+2. DIRECT QUOTES & STATEMENTS (THUSAWI):
+   - If the tweet contains quotes or statements from a player, manager, or journalist (e.g. in quotation marks "..." or "X said..."), translate the exact statement and its meaning faithfully (e.g. 'Arteta chuan: "..." a ti'). Do not alter or omit what was said.
+
+3. PRESERVE FOOTBALL JARGON & STATS IN ENGLISH (DO NOT TRANSLATE STATS TO MIZO):
+   - Mizo football fans and media use English for football stats and technical terms. Do NOT attempt to force stats or common football jargon into Mizo.
+   - Keep stats and terms in English:
+     * Stats: "10 goals, 5 assists", "clean sheet", "hat-trick", "chances created", "pass accuracy", "xG", "tackles", "MOTM"
+     * Football terms: "medical", "contract extension", "loan deal", "release clause", "buy option", "starting XI", "bench", "penalty", "free kick", "yellow card", "red card", "offside", "first half", "second half", "full-time"
+     * Transfer phrases: "deal sheet", "fee £40m", "personal terms", "agreement reached"
+
+4. EMOJIS & FORMATTING:
+   - Begin with an eye-catching header like "🚨 THUTHAR:" or "🚨 BREAKING:" or "🚨 EXCLUSIVE:".
+   - Use 2-4 clean football emojis appropriately (e.g. 🚨, ⚽, 📝, 💣, 🤝).
+   - STRICT RULE: NEVER include any website links, t.co URLs, or promotions in the text.
+   - Return ONLY the final Mizo post text directly. No conversational filler, no explanations, no markdown backticks.`;
 
         const res = await fetch(url, {
           method: 'POST',
