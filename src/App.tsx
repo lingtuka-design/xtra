@@ -20,6 +20,7 @@ export default function App() {
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
   const [sources, setSources] = useState<{ id: string; name: string }[]>([
+    { id: 'FabrizioRomano', name: 'Fabrizio Romano' },
     { id: 'DeadlineDayLive', name: 'Deadline Day Live' },
     { id: 'TheAthleticFC', name: 'The Athletic FC' },
     { id: 'centregoals', name: 'CentreGoals' },
@@ -28,8 +29,6 @@ export default function App() {
     { id: 'UtdDistrict', name: 'United District' },
     { id: 'BBCSport', name: 'BBC Sport' },
     { id: 'David_Ornstein', name: 'David Ornstein' },
-    { id: 'footballontnt', name: 'TNT Sports' },
-    { id: 'ESPNUK', name: 'ESPN UK' },
   ]);
 
   // Fetch real posts from Cloudflare D1 via Pages Functions
