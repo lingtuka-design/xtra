@@ -29,7 +29,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       params.push(`%${search.trim()}%`, `%${search.trim()}%`);
     }
 
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    query += ' ORDER BY id DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     const stmt = env.DB.prepare(query);

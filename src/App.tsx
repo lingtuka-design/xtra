@@ -21,13 +21,15 @@ export default function App() {
 
   const [sources, setSources] = useState<{ id: string; name: string }[]>([
     { id: 'David_Ornstein', name: 'David Ornstein' },
+    { id: 'TheAthleticFC', name: 'The Athletic FC' },
+    { id: 'BBCSport', name: 'BBC Sport' },
+    { id: 'brfootball', name: 'B/R Football' },
+    { id: 'Squawka', name: 'Squawka' },
+    { id: 'UtdDistrict', name: 'United District' },
     { id: 'footballontnt', name: 'TNT Sports' },
     { id: 'ESPNUK', name: 'ESPN UK' },
     { id: '433', name: '433' },
     { id: 'MadridXtra', name: 'Madrid Xtra' },
-    { id: 'brfootball', name: 'B/R Football' },
-    { id: 'Squawka', name: 'Squawka' },
-    { id: 'UtdDistrict', name: 'United District' },
   ]);
 
   // Fetch real posts from Cloudflare D1 via Pages Functions

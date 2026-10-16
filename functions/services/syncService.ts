@@ -50,7 +50,7 @@ export class SyncService {
 
       try {
         // 1. Scrape latest tweets
-        const tweets = await twitterScraper.getRecentTweets(sourceHandle, 10);
+        const tweets = await twitterScraper.getRecentTweets(sourceHandle, 25);
         syncResult.tweetsFound = tweets.length;
 
         if (tweets.length === 0) {
@@ -59,10 +59,23 @@ export class SyncService {
           continue;
         }
 
-        // Process the freshest 6 tweets in chronological order so Gemini translation is fast and avoids timeouts
-        const sortedTweets = [...tweets].slice(0, 6).reverse();
+        // 2. Filter strictly for FRESH tweets only (past 7 days) to discard ancient pinned tweets (2022-2024)
+        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const freshTweets = tweets
+          .filter((t) => {
+            const time = new Date(t.createdAt).getTime();
+            return !isNaN(time) && time >= sevenDaysAgo;
+          })
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          .slice(-15); // process up to 15 freshest tweets
 
-        for (const tweet of sortedTweets) {
+        if (freshTweets.length === 0) {
+          syncResult.message = 'No new tweets from the past 7 days';
+          results.push(syncResult);
+          continue;
+        }
+
+        for (const tweet of freshTweets) {
           // Check D1 for duplicate
           const existing = await env.DB.prepare(
             'SELECT id FROM posts WHERE tweet_id = ?'
