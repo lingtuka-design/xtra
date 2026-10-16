@@ -187,23 +187,29 @@ app.get('/', (req, res) => {
  */
 async function resolveChannelJid(target) {
   if (!target) return null;
-  const trimmed = target.trim();
+  let trimmed = target.trim();
 
-  // If already ends with @newsletter
-  if (trimmed.endsWith('@newsletter')) return trimmed;
+  // If ends with @newsletter, check if the part before @ is pure digits
+  if (trimmed.endsWith('@newsletter')) {
+    const userPart = trimmed.split('@')[0];
+    if (/^\d{10,}$/.test(userPart)) {
+      return trimmed; // Real numeric JID e.g. 120363xxxxxxxxxx@newsletter
+    }
+    trimmed = userPart; // Strip @newsletter from invite code!
+  }
 
   // If numeric JID
   if (/^\d{10,}$/.test(trimmed)) return `${trimmed}@newsletter`;
 
   // If it's a WhatsApp channel link or invite code (e.g. 0029Va9TAJnKbYMRVbHZbQ1A)
   const match = trimmed.match(/channel\/([A-Za-z0-9_-]+)/) || trimmed.match(/^([A-Za-z0-9_-]{15,})$/);
-  const inviteCode = match ? match[1] : null;
+  const inviteCode = match ? match[1] : trimmed;
 
   if (inviteCode && sock && typeof sock.newsletterMetadata === 'function') {
     try {
       const meta = await sock.newsletterMetadata('invite', inviteCode);
       if (meta?.id) {
-        console.log(`[WhatsApp Bot] Resolved invite ${inviteCode} to JID: ${meta.id} (${meta.name || 'Channel'})`);
+        console.log(`[WhatsApp Bot] Resolved invite ${inviteCode} to REAL numeric JID: ${meta.id} (${meta.name || 'Channel'})`);
         return meta.id;
       }
     } catch (e) {
@@ -292,6 +298,20 @@ async function handleSend(req, res) {
 app.post('/send', handleSend);
 app.post('/messages/image', handleSend);
 app.post('/messages/text', handleSend);
+
+/**
+ * Resolve newsletter metadata from invite code
+ */
+app.get('/resolve', async (req, res) => {
+  const code = req.query.code || '0029Va9TAJnKbYMRVbHZbQ1A';
+  try {
+    if (!sock) return res.status(503).json({ error: 'Socket not connected' });
+    const meta = await sock.newsletterMetadata('invite', code);
+    return res.json({ success: true, meta });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 /**
  * Health check & Keep-alive endpoint

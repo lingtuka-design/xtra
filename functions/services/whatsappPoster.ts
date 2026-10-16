@@ -18,10 +18,10 @@ export class WhatsAppPoster {
     try {
       const baseUrl = apiUrl?.replace(/\/$/, '') || 'https://gate.whapi.cloud';
 
-      // Format channel identifier
+      // Format channel identifier (do not append @newsletter to alphanumeric invite codes)
       const cleanTarget = channelId.trim();
       const match = cleanTarget.match(/channel\/([A-Za-z0-9_-]+)/);
-      const to = match ? match[1] : (cleanTarget.includes('@') ? cleanTarget : `${cleanTarget}@newsletter`);
+      const to = match ? match[1] : cleanTarget;
 
       if (imageUrl) {
         // Send image message with caption
