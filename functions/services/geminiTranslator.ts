@@ -54,39 +54,58 @@ export class GeminiTranslator {
     if (primary) keys.push(primary);
     if (fallback && fallback !== primary) keys.push(fallback);
 
-    const systemPrompt = `You are an expert Mizo sports journalist and editor translating English football news tweets into natural, authentic, punchy Mizo.
+    const systemPrompt = `You are an expert Mizo language linguist, professional sports journalist, and content writer.
+Your task is to paraphrase English football short news and tweets into high-quality, authentic, and natural Mizo language.
 
-STRICT MIZO TRANSLATION & GRAMMAR RULES:
-1. Sentence Structure (SOV): Follow standard Mizo Subject-Object-Verb order. Adjectives must strictly follow the nouns they modify.
-2. Subject & Agent Markers:
-   - For individual humans: use "-n" / "-a'n" (e.g. Fabrizio Romano-a'n, Amorim-a'n, Rashford-a'n).
-   - For clubs, teams, organizations: use "-in" (e.g. Chelsea-in, Real Madrid-in, Arsenal-in).
-3. Hyphenation of Foreign Proper Nouns:
-   - Always attach Mizo case suffixes to foreign names and venues using hyphens (e.g. Old Trafford-ah, San Siro-ah, Pep Guardiola-a hnuaiah).
-4. Forbidden Words & Vocabulary Bans:
-   - STRICTLY BAN the fake word "rasmi": Never translate "official" as "rasmi". Use standard terms: thuchhuah an siam, an nemnghet, official, or puan a ni.
-   - No Fabricated Words: Do not invent synthetic Mizo words for common modern football terms. Keep recognized football jargon naturally (e.g. contract, deal, medical, loan, transfer).
-5. Transfer Verb Precision:
-   - Use "lak" for nouns/intentions (e.g. player lak tumna, lak an duh).
-   - Use "la" for active completed verbs (e.g. player thar an la tawh a).
-6. Match & Ground Terms:
-   - "Home match/ground" -> mahni mual
-   - "Away match/ground" -> khualmual
-7. Time Expressions:
-   - "this season" -> tun season (NEVER write "he season")
-   - "last season" -> season liam ta
-   - "this week" -> tun kar
-   - "today" -> vawiin
-8. Content & Formatting:
-   - Direct Quotes: Faithfully translate statements (e.g. 'Arteta chuan: "..." a ti').
-   - Keep recognized football stats/terms in English (e.g. 10 goals, 5 assists, clean sheet, hat-trick, xG, starting XI, yellow card, red card).
-   - Do NOT include any website URLs or t.co links in the translation.
-   - Return a valid JSON array of objects with the exact schema:
+================================================================================
+CRITICAL CONTEXT & MANDATE FOR THIS PIPELINE:
+This automated pipeline is for SHORT FOOTBALL NEWS AND TWEETS (news tawi te te).
+Synthesize each tweet into a punchy, crisp, natural Mizo short news report (a short, catchy Mizo headline + 1-2 clear, informative Mizo paragraphs).
+Go straight to the point (a nihna tak, a point-ah luh chat chat tur). Do NOT add filler sentences or invent external facts/rumors not mentioned in the source tweet.
+Strictly adhere 100% to the Ironclad Linguistic Directives and Mizo Grammar Standards below.
+================================================================================
+
+IRONCLAD ENFORCEMENT DIRECTIVES:
+1. HOLISTIC PARAPHRASING (DO NOT TRANSLATE WORD-FOR-WORD):
+   Read the entire tweet text first. Synthesize the whole message and paraphrase it holistically into natural Mizo. NEVER translate line-by-line or sentence-by-sentence.
+2. ABSOLUTE BAN ON INVENTED MIZO WORDS:
+   NEVER invent, fabricate, or create artificial Mizo words or phrasing (Mizo tawng thar phuah chawp phal a ni lo hrim hrim). Use standard, everyday Mizo spoken by native speakers (tawngkam tluang pangngai).
+3. STRICT BAN ON THE NON-MIZO WORD "rasmi":
+   Under NO circumstances use "rasmi" (which is Malay/Indonesian/Hindi/Arabic for official). Use natural Mizo: "thuchhuah an siam", "an nemnghet", "puanzar a ni", or simply "official" (e.g. "official thuchhuah").
+4. STRICT TIME EXPRESSIONS:
+   - "this week" -> "tun kar" (NEVER "kumin chawlhkar")
+   - "this year" -> "kumin"
+   - "this month" -> "tun thla"
+   - "this season" / "this term" / "this campaign" -> "tun season" (NEVER "he season")
+   - "last season" -> "season liam ta" or "season liamta"
+   - "today" -> "vawiin"
+5. STRICT TRANSFER VERB RULE ('lak' vs 'la'):
+   - Use "lak" when it functions as a noun/infinitive/intention (e.g. "player lak tumna", "lak an duh", "United chuan player lak luh tum an nei").
+   - Use "la" when it functions as an active verb action (e.g. "Chelsea aṭangin Andrey Santos £50m-in an la tawh a", "player thar an la fel ta", NEVER "an lak tawh a").
+6. STRICT MATCH & PITCH TERMINOLOGY:
+   - "home" / "home ground" / "home team" -> "mahni mual" or "mualneitu"
+   - "away" / "away ground" / "playing away" -> "khualmual" or "khualmualah"
+   - "two-legged tie" -> "home and away-a inhmachhawnna"
+7. STRICT MIZO GRAMMAR (K. ZAWLA):
+   - Sentence structure: Standard Subject-Object-Verb (SOV) order.
+   - Adjectives: Placed strictly AFTER the noun they describe (e.g. "sebawng dum", "player thar").
+   - Transitive Subject Markers: Add '-n' / "-a'n" for human proper nouns (e.g. "Fabrizio Romano-a'n", "Amorim-a'n", "Rashford-a'n", "Arteta-a'n"), and '-in' for teams, clubs, organizations, and associations (e.g. "Arsenal-in", "Chelsea-in", "Real Madrid-in", "Manchester United-in", "FIFA-in").
+   - Hyphenation of Foreign Proper Nouns: Always attach Mizo case suffixes/postpositions to foreign names, teams, and venues using hyphens (e.g. "Manchester United-in", "Old Trafford-ah", "San Siro-ah", "Mbeumo-a'n").
+   - Defeat Phrasing: "defeat to" or "suffered a [score] defeat to [opponent]" -> "[Opponent] laka [score]-a an tlawm" or "an chak loh".
+8. NATURAL FOOTBALL LOANWORDS & PHRASING:
+   - Keep recognized football terms in natural English loanwords: assist, counter attack, winger, midfielder, manager, striker, contract, deal, medical, loan, transfer, clean sheet, yellow card, red card.
+   - "target" / "main target" (transfer) -> "transfer bazar-a an lak luh tum ber" or "an lak luh tum zinga mi".
+   - "summer transfer market" -> "nipui transfer bazar" or "nipui transfer window".
+   - Direct Quotes: Represent faithfully inside quotation marks ("...").
+   - Do NOT include any website URLs or t.co links in the Mizo translation.
+
+OUTPUT FORMAT:
+Return a valid JSON array of objects with the exact schema:
 [
   {
     "id": "<tweet_or_news_id>",
-    "mizo_title": "<Short, catchy Mizo headline if applicable>",
-    "mizo_content": "<Flawless, natural Mizo translation adhering to all rules above>"
+    "mizo_title": "<Short, creative, catchy Mizo headline (max 10-12 words)>",
+    "mizo_content": "<Natural, high-quality Mizo short news report (1-2 crisp paragraphs) adhering strictly to all directives above>"
   }
 ]`;
 
@@ -101,7 +120,7 @@ STRICT MIZO TRANSLATION & GRAMMAR RULES:
         parts: [
           { text: systemPrompt },
           {
-            text: `Translate the following short football news tweets into the requested JSON array:\n${JSON.stringify(
+            text: `Translate and paraphrase the following short football news tweets into the requested JSON array:\n${JSON.stringify(
               userPayload,
               null,
               2
@@ -130,7 +149,7 @@ STRICT MIZO TRANSLATION & GRAMMAR RULES:
               contents,
               generationConfig: {
                 temperature: 0.3,
-                maxOutputTokens: 500,
+                maxOutputTokens: 800,
                 responseMimeType: 'application/json',
               },
             }),
@@ -166,24 +185,33 @@ STRICT MIZO TRANSLATION & GRAMMAR RULES:
             .trim();
           const parsed = JSON.parse(cleaned);
 
+          const extractEntry = (entry: any, fallbackId?: string) => {
+            if (!entry) return null;
+            const id = String(entry.id || fallbackId || '');
+            const title = entry.mizo_title || entry.mizoTitle || '';
+            const content =
+              entry.mizo_content ||
+              entry.mizoFullReport ||
+              entry.mizoSummary ||
+              '';
+            return { id, mizo_title: title.trim(), mizo_content: content.trim() };
+          };
+
           if (Array.isArray(parsed)) {
-            for (const entry of parsed) {
-              if (entry && entry.id) {
-                resultMap.set(String(entry.id), {
-                  id: String(entry.id),
-                  mizo_title: entry.mizo_title || '',
-                  mizo_content: entry.mizo_content || '',
-                });
+            for (let i = 0; i < parsed.length; i++) {
+              const entry = parsed[i];
+              const extracted = extractEntry(entry, items[i]?.id);
+              if (extracted && extracted.id) {
+                resultMap.set(extracted.id, extracted);
               }
             }
             return resultMap;
-          } else if (parsed && typeof parsed === 'object' && parsed.id) {
-            resultMap.set(String(parsed.id), {
-              id: String(parsed.id),
-              mizo_title: parsed.mizo_title || '',
-              mizo_content: parsed.mizo_content || '',
-            });
-            return resultMap;
+          } else if (parsed && typeof parsed === 'object') {
+            const extracted = extractEntry(parsed, items[0]?.id);
+            if (extracted && extracted.id) {
+              resultMap.set(extracted.id, extracted);
+              return resultMap;
+            }
           }
         } catch (err: any) {
           lastError = err;
