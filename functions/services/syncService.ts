@@ -79,41 +79,62 @@ export class SyncService {
           continue;
         }
 
+        // Deduplicate against D1 first to conserve API calls
+        const newTweetsToProcess: typeof freshTweets = [];
         for (const tweet of freshTweets) {
-          // Check D1 for duplicate
           const existing = await env.DB.prepare(
             'SELECT id FROM posts WHERE tweet_id = ?'
           )
             .bind(tweet.id)
             .first();
 
-          if (existing) {
-            // Already processed and saved
-            continue;
+          if (!existing) {
+            newTweetsToProcess.push(tweet);
+          }
+        }
+
+        if (newTweetsToProcess.length === 0) {
+          syncResult.message = 'All recent tweets are already translated and saved';
+          results.push(syncResult);
+          continue;
+        }
+
+        console.log(`Found ${newTweetsToProcess.length} new tweet(s) to translate for @${sourceHandle}`);
+
+        // Limit batch size to 5 tweets to fit comfortably within free tier token limits
+        const batchToTranslate = newTweetsToProcess.slice(0, 5);
+
+        // Batch translate in a single Gemini request
+        let translationsMap = new Map<string, { id: string; mizo_title?: string; mizo_content: string }>();
+        try {
+          translationsMap = await geminiTranslator.batchTranslate(
+            batchToTranslate.map((t) => ({
+              id: t.id,
+              text: t.text,
+              authorName: t.authorName,
+            })),
+            env.GEMINI_API_KEY,
+            env.GEMINI_API_KEY_FALLBACK
+          );
+        } catch (transErr: any) {
+          console.error(`Gemini batch translation error for @${sourceHandle}:`, transErr.message);
+        }
+
+        for (const tweet of batchToTranslate) {
+          const transResult = translationsMap.get(tweet.id);
+          let mizoText = transResult?.mizo_content || '';
+          if (
+            transResult?.mizo_title &&
+            transResult.mizo_title.trim() &&
+            !mizoText.includes(transResult.mizo_title.trim())
+          ) {
+            mizoText = `${transResult.mizo_title.trim()}\n\n${mizoText.trim()}`;
+          }
+          if (!mizoText.trim()) {
+            mizoText = tweet.text; // Fallback to raw text if model failed
           }
 
-          console.log(`New tweet found for @${sourceHandle}: ${tweet.id}`);
-
-          // 2. Translate with Gemini AI
-          let mizoText = '';
-          if (env.GEMINI_API_KEY) {
-            try {
-              mizoText = await geminiTranslator.translateToMizo(
-                tweet.text,
-                tweet.authorName,
-                env.GEMINI_API_KEY
-              );
-            } catch (transErr: any) {
-              console.error(`Gemini translation error for ${tweet.id}:`, transErr.message);
-              // Fallback to original text if translation fails
-              mizoText = tweet.text;
-            }
-          } else {
-            // If no Gemini API key set yet, use original text as placeholder
-            mizoText = tweet.text;
-          }
-
-          // 3. Save to Cloudflare D1 with facebook_status = 'none' (awaiting curation / editorial choice)
+          // Save to Cloudflare D1 with facebook_status = 'none' (awaiting editorial curation)
           await env.DB.prepare(
             `INSERT OR IGNORE INTO posts (
               tweet_id, author_handle, author_name, author_avatar,

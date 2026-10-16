@@ -21,7 +21,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const mizoText = await geminiTranslator.translateToMizo(
       body.englishText.trim(),
       body.authorName || 'Xtra Breaking News',
-      env.GEMINI_API_KEY
+      env.GEMINI_API_KEY,
+      env.GEMINI_API_KEY_FALLBACK
     );
 
     return Response.json({
