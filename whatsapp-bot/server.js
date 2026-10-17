@@ -133,8 +133,9 @@ async function startWhatsApp() {
     fs.mkdirSync(AUTH_DIR, { recursive: true });
   }
 
-  // If local directory is empty, restore credentials from Cloudflare D1
-  if (fs.readdirSync(AUTH_DIR).length === 0) {
+  // If local directory is empty or creds.json is missing, restore credentials from Cloudflare D1
+  const credsPath = path.join(AUTH_DIR, 'creds.json');
+  if (fs.readdirSync(AUTH_DIR).length === 0 || !fs.existsSync(credsPath)) {
     await restoreAuthFromD1();
   }
 
@@ -167,25 +168,23 @@ async function startWhatsApp() {
 
     if (connection === 'close') {
       isConnected = false;
-      currentQr = null;
       const statusCode = lastDisconnect?.error?.output?.statusCode;
-      reconnectAttempts++;
+      const isLoggedOut = statusCode === DisconnectReason.loggedOut;
 
       console.warn(
-        `[WhatsApp Bot] Connection closed. Reason code: ${statusCode}. Reconnect attempt #${reconnectAttempts}`
+        `[WhatsApp Bot] Connection closed. Reason code: ${statusCode}. Reconnecting: ${!isLoggedOut}`
       );
 
-      // If logged out or stuck in closed loop > 3 times, reset auth credentials to generate a fresh QR
-      if (statusCode === DisconnectReason.loggedOut || reconnectAttempts >= 3) {
-        console.error('[WhatsApp Bot] Session logged out or stale credentials. Clearing auth_info...');
-        reconnectAttempts = 0;
+      if (isLoggedOut) {
+        console.error('[WhatsApp Bot] Explicit logout from phone. Clearing credentials...');
         try {
           fs.rmSync(AUTH_DIR, { recursive: true, force: true });
         } catch {}
         await clearD1Backup();
         setTimeout(startWhatsApp, 2000);
       } else {
-        setTimeout(startWhatsApp, 3000);
+        // Normal transient network or restartRequired event: Reconnect cleanly using persistent D1 credentials
+        setTimeout(startWhatsApp, 2000);
       }
     } else if (connection === 'open') {
       isConnected = true;
