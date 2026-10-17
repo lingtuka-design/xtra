@@ -106,6 +106,27 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const tweetUrl = 'https://www.facebook.com/inkhel.Xtra';
     const initialStatus = body.publish_now ? 'pending' : (body.facebook_status || 'queued');
 
+    let queueTimeStr = new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+    if (initialStatus === 'queued') {
+      const maxRes = await env.DB.prepare(
+        "SELECT MAX(updated_at) as max_time FROM posts WHERE facebook_status = 'queued'"
+      ).first<{ max_time: string | null }>();
+
+      const parseSqliteUtc = (dateStr?: string | null): number => {
+        if (!dateStr) return 0;
+        const iso = dateStr.includes('T')
+          ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z')
+          : dateStr.replace(' ', 'T') + 'Z';
+        const t = new Date(iso).getTime();
+        return isNaN(t) ? 0 : t;
+      };
+
+      const tNow = Date.now();
+      const tMax = parseSqliteUtc(maxRes?.max_time);
+      const queueTimeMs = Math.max(tNow, tMax + 1000);
+      queueTimeStr = new Date(queueTimeMs).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+    }
+
     // Insert into D1
     const insertRes = await env.DB.prepare(
       `INSERT INTO posts (
@@ -113,7 +134,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         original_text, mizo_translation, primary_image_url,
         media_urls, tweet_url, tweet_created_at, facebook_post_id,
         facebook_status, error_message, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, NULL, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, NULL, ?, NULL, CURRENT_TIMESTAMP, ?)`
     )
       .bind(
         tweetId,
@@ -125,7 +146,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         photoUrl,
         photoUrl ? JSON.stringify([{ url: photoUrl, hd_url: photoUrl, type: 'photo' }]) : JSON.stringify([]),
         tweetUrl,
-        initialStatus
+        initialStatus,
+        queueTimeStr
       )
       .run();
 
@@ -298,13 +320,44 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     if (body.facebook_status !== undefined) {
       updates.push('facebook_status = ?');
       params.push(body.facebook_status);
+
+      if (body.facebook_status === 'queued') {
+        // Guarantee newly queued post is placed at the very end of the schedule
+        const maxRes = await env.DB.prepare(
+          "SELECT MAX(updated_at) as max_time FROM posts WHERE facebook_status = 'queued' AND id != ?"
+        ).bind(body.id).first<{ max_time: string | null }>();
+
+        const parseSqliteUtc = (dateStr?: string | null): number => {
+          if (!dateStr) return 0;
+          const iso = dateStr.includes('T')
+            ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z')
+            : dateStr.replace(' ', 'T') + 'Z';
+          const t = new Date(iso).getTime();
+          return isNaN(t) ? 0 : t;
+        };
+
+        const formatSqliteUtc = (ms: number): string => {
+          const d = new Date(ms);
+          return d.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+        };
+
+        const tNow = Date.now();
+        const tMax = parseSqliteUtc(maxRes?.max_time);
+        const queueTimeMs = Math.max(tNow, tMax + 1000);
+        const queueTimeStr = formatSqliteUtc(queueTimeMs);
+
+        updates.push('updated_at = ?');
+        params.push(queueTimeStr);
+      }
     }
 
     if (updates.length === 0) {
       return Response.json({ success: false, error: 'No fields to update' }, { status: 400 });
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP');
+    if (body.facebook_status !== 'queued') {
+      updates.push('updated_at = CURRENT_TIMESTAMP');
+    }
     params.push(body.id);
 
     const sql = `UPDATE posts SET ${updates.join(', ')} WHERE id = ?`;

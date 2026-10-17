@@ -185,7 +185,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         throw new Error(data.error || 'Failed to update queue');
       }
 
-      if (onPostUpdated) {
+      if (onPostUpdated && data.post) {
+        onPostUpdated(data.post);
+      } else if (onPostUpdated) {
         onPostUpdated({ ...post, facebook_status: targetStatus });
       }
     } catch (err: any) {
