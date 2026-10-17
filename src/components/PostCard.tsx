@@ -7,6 +7,8 @@ import {
   Check, 
   ChevronDown, 
   ChevronUp, 
+  ArrowUp,
+  ArrowDown,
   Share2, 
   Sparkles,
   Maximize2,
@@ -33,6 +35,10 @@ interface PostCardProps {
   onPostDeleted?: (id: number) => void;
   queuePosition?: number;
   queueEstimatedMinutes?: number;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -42,6 +48,10 @@ export const PostCard: React.FC<PostCardProps> = ({
   onPostDeleted,
   queuePosition,
   queueEstimatedMinutes,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false,
 }) => {
   const [showOriginal, setShowOriginal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -320,15 +330,47 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         </div>
 
-        <a
-          href={post.tweet_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-stone-400 hover:text-stone-700 transition-colors p-1.5 rounded-lg hover:bg-stone-100 flex-shrink-0"
-          title="Open original tweet on X"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Queue Reorder buttons (Move Up / Move Down in Schedule) */}
+          {isQueued && (onMoveUp || onMoveDown) && (
+            <div className="flex items-center bg-stone-100 hover:bg-stone-200/60 border border-stone-200 rounded-lg p-0.5 transition-colors">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveUp?.();
+                }}
+                disabled={!canMoveUp}
+                className="p-1 rounded text-stone-600 hover:text-stone-900 hover:bg-white disabled:opacity-25 disabled:cursor-not-allowed transition-all"
+                title={canMoveUp ? "A hmasa zawk tura sawn chhohna (Move Up)" : "A chung berah a awm tawh"}
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveDown?.();
+                }}
+                disabled={!canMoveDown}
+                className="p-1 rounded text-stone-600 hover:text-stone-900 hover:bg-white disabled:opacity-25 disabled:cursor-not-allowed transition-all"
+                title={canMoveDown ? "A hnuhnung zawk tura sawn thlakna (Move Down)" : "A hnuaiah midang an awm lo"}
+              >
+                <ArrowDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          <a
+            href={post.tweet_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-stone-400 hover:text-stone-700 transition-colors p-1.5 rounded-lg hover:bg-stone-100 flex-shrink-0"
+            title="Open original tweet on X"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
       </div>
 
       {/* Mizo Translated News (Main Highlight or Inline Editor) */}

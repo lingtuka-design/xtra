@@ -266,6 +266,82 @@ export default function App() {
     return list;
   }, [posts, activeTab, selectedSource, searchQuery, queueInfoMap]);
 
+  // Handle reordering of queued posts (Move Up / Move Down)
+  const handleReorderQueue = async (id: number, direction: 'up' | 'down') => {
+    const currentIndex = queuedSortedList.findIndex((p) => p.id === id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= queuedSortedList.length) return;
+
+    const currentPost = queuedSortedList[currentIndex];
+    const targetPost = queuedSortedList[targetIndex];
+
+    const formatSqlite = (ms: number): string => {
+      return new Date(ms).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+    };
+
+    const tCurrent = parseSqliteDate(currentPost.updated_at || currentPost.created_at);
+    const tTarget = parseSqliteDate(targetPost.updated_at || targetPost.created_at);
+
+    let newCurrentTime: string;
+    let newTargetTime: string;
+
+    if (direction === 'up') {
+      if (tCurrent > tTarget) {
+        newCurrentTime = targetPost.updated_at || formatSqlite(tTarget);
+        newTargetTime = currentPost.updated_at || formatSqlite(tCurrent);
+      } else {
+        newCurrentTime = formatSqlite(tTarget - 1000);
+        newTargetTime = targetPost.updated_at || formatSqlite(tTarget);
+      }
+    } else {
+      if (tTarget > tCurrent) {
+        newCurrentTime = targetPost.updated_at || formatSqlite(tTarget);
+        newTargetTime = currentPost.updated_at || formatSqlite(tCurrent);
+      } else {
+        newTargetTime = formatSqlite(tCurrent - 1000);
+        newCurrentTime = currentPost.updated_at || formatSqlite(tCurrent);
+      }
+    }
+
+    // Immediate optimistic update so UI reorders with 0 lag
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id === currentPost.id) return { ...p, updated_at: newCurrentTime };
+        if (p.id === targetPost.id) return { ...p, updated_at: newTargetTime };
+        return p;
+      })
+    );
+
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reorder_queue',
+          id,
+          direction,
+        }),
+      });
+
+      if (res.ok) {
+        const json = (await res.json()) as any;
+        if (json.success && Array.isArray(json.updatedPosts) && json.updatedPosts.length > 0) {
+          setPosts((prev) =>
+            prev.map((p) => {
+              const matched = json.updatedPosts.find((up: Post) => up.id === p.id);
+              return matched ? { ...p, ...matched } : p;
+            })
+          );
+        }
+      } else {
+        fetchPosts(true);
+      }
+    } catch {
+      fetchPosts(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F6F0] text-stone-900 flex flex-col font-sans">
       <Header
@@ -450,17 +526,28 @@ export default function App() {
                 <p className="text-sm font-medium text-stone-500">Chanchin thar lakkhawm mek a ni...</p>
               </div>
             ) : filteredPosts.length > 0 ? (
-              filteredPosts.map((post) => (
-                <PostCard
-                  key={post.id || post.tweet_id}
-                  post={post}
-                  onImageClick={(url) => setSelectedImage(url)}
-                  onPostUpdated={handlePostUpdated}
-                  onPostDeleted={handlePostDeleted}
-                  queuePosition={queueInfoMap.get(post.id)?.position}
-                  queueEstimatedMinutes={queueInfoMap.get(post.id)?.estimatedMinutes}
-                />
-              ))
+              filteredPosts.map((post) => {
+                const qPos = queueInfoMap.get(post.id)?.position;
+                const isQ = post.facebook_status === 'queued';
+                const canMoveUp = isQ && typeof qPos === 'number' && qPos > 1;
+                const canMoveDown = isQ && typeof qPos === 'number' && qPos < queuedSortedList.length;
+
+                return (
+                  <PostCard
+                    key={post.id || post.tweet_id}
+                    post={post}
+                    onImageClick={(url) => setSelectedImage(url)}
+                    onPostUpdated={handlePostUpdated}
+                    onPostDeleted={handlePostDeleted}
+                    queuePosition={qPos}
+                    queueEstimatedMinutes={queueInfoMap.get(post.id)?.estimatedMinutes}
+                    onMoveUp={() => handleReorderQueue(post.id, 'up')}
+                    onMoveDown={() => handleReorderQueue(post.id, 'down')}
+                    canMoveUp={canMoveUp}
+                    canMoveDown={canMoveDown}
+                  />
+                );
+              })
             ) : (
               <div className="p-12 text-center text-stone-500 space-y-3">
                 <AlertCircle className="w-8 h-8 mx-auto text-stone-400" />
