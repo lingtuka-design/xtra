@@ -8,7 +8,7 @@ interface SyncModalProps {
 }
 
 export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, onSyncSuccess }) => {
-  const [source, setSource] = useState('David_Ornstein');
+  const [source, setSource] = useState('');
   const [secret, setSecret] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -72,14 +72,19 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, onSyncSuc
               className="w-full bg-[#FCFAF6] focus:bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-sm text-stone-900 focus:outline-none focus:border-amber-500 shadow-xs"
             >
               <option value="">⚡ All Active Sources (Batch Sync)</option>
+              <option value="tg:fabrizioromano">📢 @fabrizioromano (Fabrizio Romano Telegram)</option>
+              <option value="TheAthleticFC">@TheAthleticFC (The Athletic FC)</option>
+              <option value="DeadlineDayLive">@DeadlineDayLive (Deadline Day Live)</option>
+              <option value="UtdDistrict">@UtdDistrict (United District)</option>
+              <option value="Squawka">@Squawka (Squawka Stats)</option>
+              <option value="BBCSport">@BBCSport (BBC Sport)</option>
+              <option value="centregoals">@centregoals (CentreGoals)</option>
               <option value="David_Ornstein">@David_Ornstein (The Athletic - Premier League)</option>
-              <option value="footballontnt">@footballontnt (TNT Sports Football)</option>
               <option value="ESPNUK">@ESPNUK (ESPN UK)</option>
+              <option value="footballontnt">@footballontnt (TNT Sports Football)</option>
               <option value="433">@433 (Global Football)</option>
               <option value="MadridXtra">@MadridXtra (Real Madrid)</option>
               <option value="brfootball">@brfootball (B/R Football)</option>
-              <option value="Squawka">@Squawka (Squawka Stats)</option>
-              <option value="UtdDistrict">@UtdDistrict (United District)</option>
             </select>
           </div>
 
