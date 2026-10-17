@@ -6,11 +6,10 @@ import { ImageModal } from './components/ImageModal';
 import { SyncModal } from './components/SyncModal';
 import { CreatePostCard } from './components/CreatePostCard';
 import { Post } from './types';
-import { INITIAL_POSTS } from './mockData';
 import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, Trash2, PenSquare } from 'lucide-react';
 
 export default function App() {
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [syncModalOpen, setSyncModalOpen] = useState<boolean>(false);
@@ -40,17 +39,12 @@ export default function App() {
       const res = await fetch('/api/posts?limit=100');
       if (res.ok) {
         const data = (await res.json()) as any;
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        if (data.success && Array.isArray(data.data)) {
           setPosts(data.data);
-        } else if (!silent) {
-          setPosts(INITIAL_POSTS);
         }
-      } else if (!silent) {
-        setPosts(INITIAL_POSTS);
       }
     } catch (err) {
-      console.warn('API /api/posts unavailable, using sample data:', err);
-      if (!silent) setPosts(INITIAL_POSTS);
+      console.warn('API /api/posts error:', err);
     } finally {
       if (!silent) setLoading(false);
     }
@@ -450,7 +444,12 @@ export default function App() {
 
           {/* Feed Container */}
           <div className="border border-stone-200/90 rounded-2xl overflow-hidden bg-white divide-y divide-stone-200/80 shadow-xs">
-            {filteredPosts.length > 0 ? (
+            {loading && posts.length === 0 ? (
+              <div className="p-12 text-center text-stone-500 space-y-3">
+                <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-stone-200 border-t-amber-500" />
+                <p className="text-sm font-medium text-stone-500">Chanchin thar lakkhawm mek a ni...</p>
+              </div>
+            ) : filteredPosts.length > 0 ? (
               filteredPosts.map((post) => (
                 <PostCard
                   key={post.id || post.tweet_id}
