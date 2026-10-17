@@ -134,6 +134,10 @@ export default function App() {
     () => posts.filter((p) => p.facebook_status === 'published').length,
     [posts]
   );
+  const feedCount = useMemo(
+    () => posts.filter((p) => p.facebook_status !== 'queued').length,
+    [posts]
+  );
 
   const DRIP_INTERVAL_MS = 20 * 60 * 1000;
   const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000;
@@ -233,8 +237,12 @@ export default function App() {
   // Filter posts
   const filteredPosts = useMemo(() => {
     let list = posts.filter((post) => {
-      // 1. Tab filter (include both queued and failed posts in the Queue view)
+      // 1. Tab filter
+      // In FEED view ('all'): do not show scheduled/queued posts
+      if (activeTab === 'all' && post.facebook_status === 'queued') return false;
+      // In QUEUE view ('queue'): only show queued and failed posts
       if (activeTab === 'queue' && post.facebook_status !== 'queued' && post.facebook_status !== 'failed') return false;
+      // In PUBLISHED view ('published'): only show published posts
       if (activeTab === 'published' && post.facebook_status !== 'published') return false;
 
       // 2. Source filter
@@ -363,7 +371,7 @@ export default function App() {
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              FEED ({posts.length})
+              FEED ({feedCount})
             </button>
 
             <button
@@ -490,9 +498,14 @@ export default function App() {
                 All Sources
               </button>
               {sources.map((s) => {
-                const count = posts.filter(
-                  (p) => p.author_handle.toLowerCase() === s.id.toLowerCase()
-                ).length;
+                const count = posts.filter((p) => {
+                  const matchSource = p.author_handle.toLowerCase() === s.id.toLowerCase();
+                  if (!matchSource) return false;
+                  if (activeTab === 'all') return p.facebook_status !== 'queued';
+                  if (activeTab === 'queue') return p.facebook_status === 'queued' || p.facebook_status === 'failed';
+                  if (activeTab === 'published') return p.facebook_status === 'published';
+                  return true;
+                }).length;
                 const isSelected = selectedSource.toLowerCase() === s.id.toLowerCase();
                 return (
                   <button
