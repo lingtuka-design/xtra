@@ -130,14 +130,6 @@ export default function App() {
     () => posts.filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'failed').length,
     [posts]
   );
-  const publishedCount = useMemo(
-    () => posts.filter((p) => p.facebook_status === 'published').length,
-    [posts]
-  );
-  const feedCount = useMemo(
-    () => posts.filter((p) => p.facebook_status !== 'queued').length,
-    [posts]
-  );
 
   const DRIP_INTERVAL_MS = 20 * 60 * 1000;
   const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000;
@@ -361,7 +353,7 @@ export default function App() {
       <div className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-4 sm:py-6 flex gap-6">
         {/* Main Feed Column */}
         <main className="flex-1 min-w-0 max-w-2xl mx-auto w-full">
-          {/* Top Primary Tabs: FEED vs SCHEDULED vs CREATE vs PUBLISHED */}
+          {/* Top Primary Tabs: FEED vs CREATE vs SCHEDULED vs PUBLISHED */}
           <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-bold uppercase tracking-wide">
             <button
               onClick={() => setActiveTab('all')}
@@ -371,7 +363,19 @@ export default function App() {
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              FEED ({feedCount})
+              FEED
+            </button>
+
+            <button
+              onClick={() => setActiveTab('create')}
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
+                activeTab === 'create'
+                  ? 'bg-amber-500 text-stone-950 shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <PenSquare className="w-3.5 h-3.5" />
+              <span>CREATE</span>
             </button>
 
             <button
@@ -397,18 +401,6 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveTab('create')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
-                activeTab === 'create'
-                  ? 'bg-amber-500 text-stone-950 shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              <PenSquare className="w-3.5 h-3.5" />
-              <span>CREATE</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('published')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
                 activeTab === 'published'
@@ -417,17 +409,6 @@ export default function App() {
               }`}
             >
               <span>PUBLISHED</span>
-              {publishedCount > 0 && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    activeTab === 'published'
-                      ? 'bg-white text-emerald-700'
-                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                  }`}
-                >
-                  {publishedCount}
-                </span>
-              )}
             </button>
           </div>
 
