@@ -230,10 +230,19 @@ export default function App() {
   const filteredPosts = useMemo(() => {
     let list = posts.filter((post) => {
       // 1. Tab filter
-      // In FEED view ('all'): do not show scheduled/queued posts
-      if (activeTab === 'all' && post.facebook_status === 'queued') return false;
+      // In FEED view ('all'):
+      if (activeTab === 'all') {
+        // Never show posts created from the Create tab (manual posts)
+        const isManual = post.tweet_id?.startsWith('manual_') || post.author_handle === 'inkhel_xtra';
+        if (isManual) return false;
+
+        // Never show scheduled/queued posts or already published posts in feed
+        if (post.facebook_status === 'queued' || post.facebook_status === 'published') return false;
+      }
+
       // In QUEUE view ('queue'): only show queued and failed posts
       if (activeTab === 'queue' && post.facebook_status !== 'queued' && post.facebook_status !== 'failed') return false;
+
       // In PUBLISHED view ('published'): only show published posts
       if (activeTab === 'published' && post.facebook_status !== 'published') return false;
 
@@ -482,7 +491,11 @@ export default function App() {
                 const count = posts.filter((p) => {
                   const matchSource = p.author_handle.toLowerCase() === s.id.toLowerCase();
                   if (!matchSource) return false;
-                  if (activeTab === 'all') return p.facebook_status !== 'queued';
+                  if (activeTab === 'all') {
+                    const isManual = p.tweet_id?.startsWith('manual_') || p.author_handle === 'inkhel_xtra';
+                    if (isManual) return false;
+                    return p.facebook_status !== 'queued' && p.facebook_status !== 'published';
+                  }
                   if (activeTab === 'queue') return p.facebook_status === 'queued' || p.facebook_status === 'failed';
                   if (activeTab === 'published') return p.facebook_status === 'published';
                   return true;
