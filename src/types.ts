@@ -12,6 +12,7 @@ export interface Post {
   tweet_created_at?: string;
   facebook_post_id?: string;
   facebook_status: 'none' | 'queued' | 'published' | 'failed' | 'skipped' | 'pending';
+  publish_source?: 'queue' | 'direct';
   error_message?: string;
   created_at: string;
   updated_at: string;

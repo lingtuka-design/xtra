@@ -46,10 +46,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }, { status: 500 });
     }
 
+    // Determine whether this was a scheduled queue item or a direct publish
+    const publishSource = post.facebook_status === 'queued' ? 'queue' : 'direct';
+
     // Update DB with published status & Facebook post ID
     await env.DB.prepare(
-      "UPDATE posts SET facebook_status = 'published', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-    ).bind(fbResult.postId, post.id).run();
+      "UPDATE posts SET facebook_status = 'published', publish_source = ?, facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    ).bind(publishSource, fbResult.postId, post.id).run();
 
     // Simultaneously publish to WhatsApp Channel
     let waNotice = '';

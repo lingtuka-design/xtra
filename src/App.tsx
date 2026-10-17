@@ -181,9 +181,9 @@ export default function App() {
       return timestampMs;
     };
 
-    // Find the last published post
+    // Find the last published post from scheduled queue (ignore direct publishes so queue timer isn't reset)
     const lastPublishedPost = posts
-      .filter((p) => p.facebook_status === 'published' && p.updated_at)
+      .filter((p) => p.facebook_status === 'published' && p.publish_source !== 'direct' && p.updated_at)
       .sort((a, b) => parseSqliteDate(b.updated_at) - parseSqliteDate(a.updated_at))[0];
 
     const lastPubTime = lastPublishedPost ? parseSqliteDate(lastPublishedPost.updated_at) : 0;

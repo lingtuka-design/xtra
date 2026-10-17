@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS posts (
   tweet_created_at TEXT,
   facebook_post_id TEXT,             -- Meta Graph API photo post ID
   facebook_status TEXT DEFAULT 'pending', -- 'published', 'failed', 'skipped'
+  publish_source TEXT DEFAULT 'queue',   -- 'queue' or 'direct'
   error_message TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

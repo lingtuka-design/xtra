@@ -159,12 +159,6 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  const handleShareToWhatsApp = () => {
-    const text = encodeURIComponent(post.mizo_translation);
-    const waUrl = `https://api.whatsapp.com/send?text=${text}`;
-    window.open(waUrl, '_blank');
-  };
-
   // Toggle in/out of Facebook Queue
   const handleToggleQueue = async (targetStatus: 'queued' | 'none') => {
     setIsQueueing(true);
@@ -542,19 +536,35 @@ export const PostCard: React.FC<PostCardProps> = ({
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => handleToggleQueue('queued')}
-                  disabled={isQueueing}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50"
-                  title="Add to Facebook queue (will auto-drip every 15m or post now)"
-                >
-                  {isQueueing ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
-                  )}
-                  <span>+ Schedule</span>
-                </button>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    onClick={handlePublishNow}
+                    disabled={isPublishing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
+                    title="1-Click immediate publish to Facebook Page"
+                  >
+                    {isPublishing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isPublishing ? 'Posting...' : 'Post to FB Now'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleToggleQueue('queued')}
+                    disabled={isQueueing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50"
+                    title="Add to Facebook queue (will auto-drip every 20m)"
+                  >
+                    {isQueueing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
+                    )}
+                    <span>+ Schedule</span>
+                  </button>
+                </div>
               )}
             </>
           )}
@@ -565,15 +575,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               Posted to Facebook
             </span>
           )}
-
-          <button
-            onClick={handleShareToWhatsApp}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-medium transition-colors"
-            title="Share directly to WhatsApp Channel or Group"
-          >
-            <Send className="w-3.5 h-3.5 text-emerald-600" />
-            <span>WhatsApp</span>
-          </button>
 
           <button
             onClick={handleCopy}

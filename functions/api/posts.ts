@@ -169,7 +169,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
       if (fbRes.success) {
         await env.DB.prepare(
-          "UPDATE posts SET facebook_status = 'published', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+          "UPDATE posts SET facebook_status = 'published', publish_source = 'direct', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
         ).bind(fbRes.postId, newPostId).run();
         publishResult = { success: true, postId: fbRes.postId };
 
@@ -322,6 +322,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       params.push(body.facebook_status);
 
       if (body.facebook_status === 'queued') {
+        updates.push("publish_source = 'queue'");
         // Guarantee newly queued post is placed at the very end of the schedule
         const maxRes = await env.DB.prepare(
           "SELECT MAX(updated_at) as max_time FROM posts WHERE facebook_status = 'queued' AND id != ?"

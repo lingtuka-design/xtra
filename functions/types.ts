@@ -45,7 +45,8 @@ export interface PostRecord {
   tweet_url: string;
   tweet_created_at?: string;
   facebook_post_id?: string;
-  facebook_status: 'published' | 'failed' | 'skipped' | 'pending';
+  facebook_status: 'published' | 'failed' | 'skipped' | 'pending' | 'queued' | 'none';
+  publish_source?: 'queue' | 'direct';
   error_message?: string;
   created_at: string;
   updated_at: string;

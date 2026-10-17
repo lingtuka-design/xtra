@@ -264,9 +264,10 @@ export class SyncService {
           return results;
         }
 
-        // Condition 1: Check when the last post was published (must have 20 mins gap)
+        // Condition 1: Check when the last post was published via the queue (must have 20 mins gap)
+        // Direct publishes do not delay or reset the scheduled drip queue!
         const lastPublished = await env.DB.prepare(
-          "SELECT updated_at FROM posts WHERE facebook_status = 'published' ORDER BY updated_at DESC LIMIT 1"
+          "SELECT updated_at FROM posts WHERE facebook_status = 'published' AND (publish_source IS NULL OR publish_source != 'direct') ORDER BY updated_at DESC LIMIT 1"
         ).first<{ updated_at: string }>();
 
         if (lastPublished && lastPublished.updated_at) {
@@ -275,7 +276,7 @@ export class SyncService {
           if (timeSinceLastPublish > 0 && timeSinceLastPublish < MIN_POST_INTERVAL_MS) {
             const minsLeft = Math.ceil((MIN_POST_INTERVAL_MS - timeSinceLastPublish) / 60000);
             console.log(
-              `[FB Queue Drip] Last post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 20m drip interval.`
+              `[FB Queue Drip] Last queued post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 20m drip interval.`
             );
             return results;
           }
@@ -307,7 +308,7 @@ export class SyncService {
 
           if (fbRes.success) {
             await env.DB.prepare(
-              "UPDATE posts SET facebook_status = 'published', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+              "UPDATE posts SET facebook_status = 'published', publish_source = 'queue', facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
             ).bind(fbRes.postId, nextQueued.id).run();
             console.log(`[FB Queue Drip] Post #${nextQueued.id} successfully published to Facebook.`);
 
