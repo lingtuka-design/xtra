@@ -6,7 +6,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 250);
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10), 0);
   const source = url.searchParams.get('source');
   const search = url.searchParams.get('search');
@@ -37,6 +37,25 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const stmt = env.DB.prepare(query);
     const { results } = await stmt.bind(...params).all<PostRecord>();
 
+    // When fetching general feed, always include all queued posts so they never vanish from the queue tab
+    let finalData = results || [];
+    if (!fbStatus && (!source || source === 'all') && (!search || !search.trim())) {
+      const { results: allQueued } = await env.DB.prepare(
+        "SELECT * FROM posts WHERE facebook_status = 'queued' ORDER BY updated_at ASC, id ASC"
+      ).all<PostRecord>();
+
+      if (allQueued && allQueued.length > 0) {
+        const map = new Map<number, PostRecord>();
+        for (const p of finalData) {
+          map.set(p.id, p);
+        }
+        for (const q of allQueued) {
+          map.set(q.id, q);
+        }
+        finalData = Array.from(map.values()).sort((a, b) => b.id - a.id);
+      }
+    }
+
     // Count total matching
     let countQuery = 'SELECT COUNT(*) as total FROM posts WHERE 1=1';
     const countParams: any[] = [];
@@ -59,7 +78,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     return Response.json({
       success: true,
-      data: results || [],
+      data: finalData,
       queueCount: queueCountRes?.count || 0,
       pagination: {
         total: countRes?.total || 0,
