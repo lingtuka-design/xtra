@@ -103,7 +103,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const formatQueueTime = (mins?: number) => {
-    if (mins === undefined || mins === null) return 'Drip 20m';
+    if (mins === undefined || mins === null) return 'Drip 30m';
     if (mins <= 1) return '~1 min left';
     if (mins < 60) return `~${mins} mins left`;
     const h = Math.floor(mins / 60);
@@ -585,7 +585,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     onClick={() => handleToggleQueue('queued')}
                     disabled={isQueueing}
                     className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50 whitespace-nowrap min-w-0"
-                    title="Add to Facebook queue (will auto-drip every 20m)"
+                    title="Add to Facebook queue (will auto-drip every 30m)"
                   >
                     {isQueueing ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />

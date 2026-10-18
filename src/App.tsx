@@ -131,7 +131,7 @@ export default function App() {
     [posts]
   );
 
-  const DRIP_INTERVAL_MS = 20 * 60 * 1000;
+  const DRIP_INTERVAL_MS = 30 * 60 * 1000;
   const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000;
 
   const parseSqliteDate = (dateStr?: string | null): number => {
@@ -209,7 +209,7 @@ export default function App() {
 
     queuedSortedList.forEach((post, index) => {
       if (index > 0) {
-        currentDispatchTime = shiftIfNightPause(currentDispatchTime + 20 * 60000);
+        currentDispatchTime = shiftIfNightPause(currentDispatchTime + DRIP_INTERVAL_MS);
       }
 
       const diffMs = currentDispatchTime - nowTick;
@@ -449,7 +449,7 @@ export default function App() {
                 )}
               </div>
               <p className="text-stone-600 leading-relaxed text-[11px]">
-                Post i queue veleh **minute 5 buffer** hnuah a chhuak hmasa ber ang a, a dawt leh zelte chu **minute 20 dan zelin** Facebook Page leh WhatsApp Channel-ah automatic-in an chhuak thla zel ang. (Active hours: <strong>7:00 AM – 11:00 PM IST</strong>; zan dar 11:00 PM hnuah pause a ni ang a, zing dar 7:00 AM-ah automatic-in a in-post chhunzawm leh ang).
+                Post i queue veleh **minute 5 buffer** hnuah a chhuak hmasa ber ang a, a dawt leh zelte chu **minute 30 dan zelin** Facebook Page leh WhatsApp Channel-ah automatic-in an chhuak thla zel ang. (Active hours: <strong>7:00 AM – 11:00 PM IST</strong>; zan dar 11:00 PM hnuah pause a ni ang a, zing dar 7:00 AM-ah automatic-in a in-post chhunzawm leh ang).
               </p>
             </div>
           )}
