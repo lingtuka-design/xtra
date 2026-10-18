@@ -6,7 +6,7 @@ import { ImageModal } from './components/ImageModal';
 import { SyncModal } from './components/SyncModal';
 import { CreatePostCard } from './components/CreatePostCard';
 import { Post } from './types';
-import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, Trash2, PenSquare } from 'lucide-react';
+import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, PenSquare } from 'lucide-react';
 
 export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -96,26 +96,6 @@ export default function App() {
 
   const handlePostDeleted = (id: number) => {
     setPosts((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const handleClearAllQueue = async () => {
-    if (
-      !window.confirm(
-        `FB Queue-a post awm zawng zawng (${queueCount}) hi i paihfai (remove) vek duh tak tak em?`
-      )
-    ) {
-      return;
-    }
-    try {
-      const res = await fetch('/api/posts?clear_queue=true', { method: 'DELETE' });
-      if (res.ok) {
-        setPosts((prev) =>
-          prev.map((p) => (p.facebook_status === 'queued' ? { ...p, facebook_status: 'none' } : p))
-        );
-      }
-    } catch (e) {
-      console.error('Failed to clear queue:', e);
-    }
   };
 
   // Real-time ticker (updates countdowns every 30s)
@@ -431,28 +411,18 @@ export default function App() {
             <>
               {/* FB Queue Explainer Banner when on Queue tab */}
               {activeTab === 'queue' && (
-            <div className="p-3.5 mb-4 rounded-2xl bg-blue-50/90 border border-blue-200 text-xs text-blue-950 space-y-2 shadow-xs">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-1.5 font-bold text-blue-900 text-[13px]">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span>Facebook Auto-Drip Scheduler Active ({queueCount} in queue)</span>
+                <div className="p-3 mb-4 rounded-xl bg-blue-50/80 border border-blue-200/80 flex items-center justify-between gap-3 text-xs text-blue-900 shadow-xs">
+                  <div className="flex items-center gap-2 font-medium min-w-0">
+                    <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <span className="truncate sm:whitespace-normal">
+                      <strong>Schedule Post:</strong> Minute 30 dan zelin a in-post ang (Active hours: 7:00 AM – 11:00 PM IST)
+                    </span>
+                  </div>
+                  <span className="font-semibold text-blue-700 bg-white border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] whitespace-nowrap flex-shrink-0 shadow-2xs">
+                    {queueCount} queued
+                  </span>
                 </div>
-                {queueCount > 0 && (
-                  <button
-                    onClick={handleClearAllQueue}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 border border-rose-300 text-rose-800 text-[11px] font-semibold transition-colors"
-                    title="Remove all posts from FB queue"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                    <span>Queue zawng zawng paihfai rawh</span>
-                  </button>
-                )}
-              </div>
-              <p className="text-stone-600 leading-relaxed text-[11px]">
-                Post i queue veleh **minute 5 buffer** hnuah a chhuak hmasa ber ang a, a dawt leh zelte chu **minute 30 dan zelin** Facebook Page leh WhatsApp Channel-ah automatic-in an chhuak thla zel ang. (Active hours: <strong>7:00 AM – 11:00 PM IST</strong>; zan dar 11:00 PM hnuah pause a ni ang a, zing dar 7:00 AM-ah automatic-in a in-post chhunzawm leh ang).
-              </p>
-            </div>
-          )}
+              )}
 
           {/* Search & Filter Bar */}
           <div className="mb-4 space-y-2.5">
