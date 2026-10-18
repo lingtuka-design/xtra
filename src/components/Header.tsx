@@ -1,5 +1,5 @@
-import React from 'react';
-import { Zap, RefreshCw, Radio } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Zap, RefreshCw, Radio, Download } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSync: () => void;
@@ -8,6 +8,31 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenSync, isSyncing, totalPosts }) => {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      alert("App anga dah turin: Browser menu-ah kal la, 'Install app' emaw 'Add to Home screen' tih thlang rawh le!");
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
   return (
     <header className="sticky top-0 z-30 bg-[#FBF9F5]/90 backdrop-blur-md border-b border-stone-200/90 shadow-xs">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -37,6 +62,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSync, isSyncing, totalPost
             <span className="text-stone-300">•</span>
             <span className="text-stone-900 font-bold">{totalPosts} Posts</span>
           </div>
+
+          {deferredPrompt && (
+            <button
+              onClick={handleInstallClick}
+              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs sm:text-sm px-3.5 py-1.5 rounded-full shadow-xs hover:shadow transition-all"
+              title="Install Xtra on your device as an App"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Install App</span>
+            </button>
+          )}
 
           <button
             onClick={onOpenSync}
