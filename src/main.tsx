@@ -10,10 +10,21 @@ if ('serviceWorker' in navigator) {
       .register('/sw.js')
       .then((reg) => {
         console.log('Xtra PWA ServiceWorker active:', reg.scope);
+        // Force check for updates
+        reg.update();
       })
       .catch((err) => {
         console.warn('Xtra PWA ServiceWorker registration error:', err);
       });
+
+    // Reload page once if a new service worker takes over
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
   });
 }
 
