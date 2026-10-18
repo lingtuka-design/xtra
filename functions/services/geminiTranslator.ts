@@ -22,12 +22,13 @@ export class GeminiTranslator {
       ? process.env?.GEMINI_API_KEY_2 || process.env?.GEMINI_API_KEY_FALLBACK
       : '') || '';
 
-  // Primary model and fallback chain
+  // Primary model and fallback chain (using active high-capacity models)
   private modelChain = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
+    'gemini-3.5-flash-lite',
+    'gemini-flash-lite-latest',
+    'gemini-3.5-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-3-flash-preview',
     'gemini-flash-latest',
   ];
 

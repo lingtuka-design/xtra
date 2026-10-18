@@ -64,20 +64,18 @@ export class TelegramScraper {
         .replace(/<[^>]+>/g, '')
         .trim();
 
-      // STRICT USER RULE: Do NOT scrape posts with website links or URLs
-      if (
-        /https?:\/\/|www\.|\bt\.me\/|\bt\.co\/|\bbit\.ly\/|\.(com|co\.uk|org|net|io|app|me)\//i.test(
-          rawText
-        )
-      ) {
-        continue;
-      }
+      // Sanitize text by stripping URLs so translation contains no links
+      const cleanedText = rawText
+        .replace(/https?:\/\/\S+/gi, '')
+        .replace(/\b(www\.\S+|t\.me\/\S+|bit\.ly\/\S+)/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 
       // Skip spam, betting, crypto or trivial length posts
       if (
-        rawText.length < 20 ||
+        cleanedText.length < 20 ||
         /\b(bet|betting|fixed match|crypto|bitcoin|usdt|airdrop|casino)\b/i.test(
-          rawText
+          cleanedText
         )
       ) {
         continue;
@@ -108,7 +106,7 @@ export class TelegramScraper {
         authorHandle: cleanChannel,
         authorName: channelName,
         authorAvatar: channelAvatar || '',
-        text: rawText,
+        text: cleanedText,
         createdAt,
         tweetUrl: postUrl,
         photos,
