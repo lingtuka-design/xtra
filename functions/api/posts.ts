@@ -91,6 +91,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       author_handle?: string;
       facebook_status?: 'queued' | 'none';
       publish_now?: boolean;
+      skip_whatsapp?: boolean;
     };
 
     if (!body.mizo_translation || !body.mizo_translation.trim()) {
@@ -173,19 +174,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         ).bind(fbRes.postId, newPostId).run();
         publishResult = { success: true, postId: fbRes.postId };
 
-        // Also broadcast to WhatsApp Channel
-        try {
-          console.log('Broadcasting manual post to WhatsApp Channel...');
-          const waRes = await whatsappPoster.postNews(
-            mizoCaption,
-            photoUrl || undefined,
-            env.WHATSAPP_API_TOKEN,
-            env.WHATSAPP_CHANNEL_ID,
-            env.WHATSAPP_API_URL
-          );
-          console.log('WhatsApp broadcast result:', waRes);
-        } catch (waErr: any) {
-          console.error('WhatsApp broadcast failed:', waErr.message);
+        // Also broadcast to WhatsApp Channel unless skip_whatsapp is true
+        if (!body.skip_whatsapp) {
+          try {
+            console.log('Broadcasting manual post to WhatsApp Channel...');
+            const waRes = await whatsappPoster.postNews(
+              mizoCaption,
+              photoUrl || undefined,
+              env.WHATSAPP_API_TOKEN,
+              env.WHATSAPP_CHANNEL_ID,
+              env.WHATSAPP_API_URL
+            );
+            console.log('WhatsApp broadcast result:', waRes);
+          } catch (waErr: any) {
+            console.error('WhatsApp broadcast failed:', waErr.message);
+          }
         }
       } else {
         await env.DB.prepare(

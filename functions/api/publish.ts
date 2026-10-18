@@ -6,7 +6,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
   try {
-    const body = (await request.json()) as { id: number };
+    const body = (await request.json()) as { id: number; skip_whatsapp?: boolean };
 
     if (!body.id) {
       return Response.json({ success: false, error: 'Post ID is required' }, { status: 400 });
@@ -54,23 +54,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       "UPDATE posts SET facebook_status = 'published', publish_source = ?, facebook_post_id = ?, error_message = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
     ).bind(publishSource, fbResult.postId, post.id).run();
 
-    // Simultaneously publish to WhatsApp Channel
+    // Simultaneously publish to WhatsApp Channel unless skip_whatsapp is true
     let waNotice = '';
-    try {
-      const waRes = await whatsappPoster.postNews(
-        post.mizo_translation,
-        post.primary_image_url,
-        env.WHATSAPP_API_TOKEN,
-        env.WHATSAPP_CHANNEL_ID,
-        env.WHATSAPP_API_URL
-      );
-      if (waRes.success) {
-        waNotice = ' & WhatsApp Channel';
-      } else {
-        console.warn('WhatsApp broadcast failed:', waRes.error);
+    if (!body.skip_whatsapp) {
+      try {
+        const waRes = await whatsappPoster.postNews(
+          post.mizo_translation,
+          post.primary_image_url,
+          env.WHATSAPP_API_TOKEN,
+          env.WHATSAPP_CHANNEL_ID,
+          env.WHATSAPP_API_URL
+        );
+        if (waRes.success) {
+          waNotice = ' & WhatsApp Channel';
+        } else {
+          console.warn('WhatsApp broadcast failed:', waRes.error);
+        }
+      } catch (waErr: any) {
+        console.warn('WhatsApp broadcast error:', waErr.message);
       }
-    } catch (waErr: any) {
-      console.warn('WhatsApp broadcast error:', waErr.message);
     }
 
     return Response.json({

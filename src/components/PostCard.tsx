@@ -28,6 +28,12 @@ const FacebookIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
   </svg>
 );
 
+const WhatsAppIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.275.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.072.043.419-.101.824zM12 2C6.477 2 2 6.477 2 12c0 1.891.524 3.662 1.435 5.176L2 22l4.957-1.397C8.411 21.493 10.147 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
+  </svg>
+);
+
 interface PostCardProps {
   post: Post;
   onImageClick: (url: string) => void;
@@ -63,7 +69,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   // Queue and publishing states
   const [isQueueing, setIsQueueing] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishingTarget, setPublishingTarget] = useState<'both' | 'fb_only' | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -191,16 +197,18 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  // 1-Click Instant Post to Facebook Page
-  const handlePublishNow = async () => {
-    setIsPublishing(true);
+  // 1-Click Instant Post (either to FB Only, or to Both FB & WhatsApp)
+  const handlePublishNow = async (target: 'both' | 'fb_only' = 'both') => {
+    setPublishingTarget(target);
     setActionError(null);
+
+    const skipWhatsApp = target === 'fb_only';
 
     try {
       const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: post.id }),
+        body: JSON.stringify({ id: post.id, skip_whatsapp: skipWhatsApp }),
       });
 
       const data = (await res.json()) as any;
@@ -218,7 +226,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     } catch (err: any) {
       setActionError(err.message || 'Publishing failed');
     } finally {
-      setIsPublishing(false);
+      setPublishingTarget(null);
     }
   };
 
@@ -487,12 +495,12 @@ export const PostCard: React.FC<PostCardProps> = ({
               {isFailed ? (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
-                    onClick={handlePublishNow}
-                    disabled={isPublishing}
+                    onClick={() => handlePublishNow('both')}
+                    disabled={publishingTarget !== null}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-colors shadow-xs disabled:opacity-50"
                     title="Retry publishing now"
                   >
-                    {isPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FacebookIcon className="w-3.5 h-3.5" />}
+                    {publishingTarget !== null ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FacebookIcon className="w-3.5 h-3.5" />}
                     <span>Retry FB Now</span>
                   </button>
                   <button
@@ -508,17 +516,20 @@ export const PostCard: React.FC<PostCardProps> = ({
               ) : isQueued ? (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
-                    onClick={handlePublishNow}
-                    disabled={isPublishing}
+                    onClick={() => handlePublishNow('both')}
+                    disabled={publishingTarget !== null}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
-                    title="1-Click immediate publish to Facebook Page"
+                    title="1-Click immediate publish to Facebook & WhatsApp"
                   >
-                    {isPublishing ? (
+                    {publishingTarget === 'both' ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Send className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-1">
+                        <FacebookIcon className="w-3.5 h-3.5" />
+                        <WhatsAppIcon className="w-3.5 h-3.5" />
+                      </div>
                     )}
-                    <span>{isPublishing ? 'Posting...' : 'Post to FB Now'}</span>
+                    <span>{publishingTarget === 'both' ? 'Posting...' : 'Post Now'}</span>
                   </button>
 
                   <button
@@ -537,18 +548,37 @@ export const PostCard: React.FC<PostCardProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Post to FB Only */}
                   <button
-                    onClick={handlePublishNow}
-                    disabled={isPublishing}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
-                    title="1-Click immediate publish to Facebook Page"
+                    onClick={() => handlePublishNow('fb_only')}
+                    disabled={publishingTarget !== null}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
+                    title="Facebook Page chiaha post na (No WhatsApp)"
                   >
-                    {isPublishing ? (
+                    {publishingTarget === 'fb_only' ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Send className="w-3.5 h-3.5" />
+                      <FacebookIcon className="w-3.5 h-3.5" />
                     )}
-                    <span>{isPublishing ? 'Posting...' : 'Post to FB Now'}</span>
+                    <span>Post to FB</span>
+                  </button>
+
+                  {/* Post to FB & WhatsApp */}
+                  <button
+                    onClick={() => handlePublishNow('both')}
+                    disabled={publishingTarget !== null}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
+                    title="Facebook Page leh WhatsApp Channel-a post rualna"
+                  >
+                    {publishingTarget === 'both' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <FacebookIcon className="w-3.5 h-3.5" />
+                        <WhatsAppIcon className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                    <span>FB & WhatsApp</span>
                   </button>
 
                   <button

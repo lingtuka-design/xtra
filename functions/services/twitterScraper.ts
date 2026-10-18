@@ -227,22 +227,15 @@ export class TwitterScraper {
               }
             }
 
-            // Check if tweet contains external website URLs or links (per user requirement: do not scrape tweets with links/websites)
-            const hasExternalEntitiesUrl =
-              Array.isArray(legacy.entities?.urls) && legacy.entities.urls.length > 0;
-
-            // Clean up trailing photo link from text (e.g. https://t.co/...)
+            // Clean up trailing and embedded URLs from text so translation is clean without links
             const cleanedText = fullText
-              .replace(/https:\/\/t\.co\/[a-zA-Z0-9]+$/g, '')
+              .replace(/https?:\/\/t\.co\/[a-zA-Z0-9]+/gi, '')
+              .replace(/https?:\/\/\S+/gi, '')
+              .replace(/\s+/g, ' ')
               .trim();
 
-            const hasWebsiteLink =
-              /https?:\/\/|www\.|\bt\.co\/|\bbit\.ly\/|\.(com|co\.uk|org|net|io|app|me)\//i.test(
-                cleanedText
-              );
-
-            if (hasExternalEntitiesUrl || hasWebsiteLink) {
-              // Skip tweets linking to external articles or websites
+            // Only skip if the tweet text itself was just an empty URL
+            if (!cleanedText || cleanedText.length < 10) {
               continue;
             }
 

@@ -84,12 +84,14 @@ export class SyncService {
             const time = new Date(t.createdAt).getTime();
             if (isNaN(time) || time < sevenDaysAgo) return false;
 
-            // Exclude tweets containing external websites or links per user directive
-            const hasWebsiteOrLink =
-              /https?:\/\/|www\.|\bt\.co\/|\bbit\.ly\/|\.(com|co\.uk|org|net|io|app|me)\//i.test(
-                t.text
-              );
-            if (hasWebsiteOrLink) return false;
+            // Sanitize text by removing URLs so translation contains no links
+            const cleanText = t.text
+              .replace(/https?:\/\/t\.co\/[a-zA-Z0-9]+/gi, '')
+              .replace(/https?:\/\/\S+/gi, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+            if (cleanText.length < 10) return false;
+            t.text = cleanText;
 
             return true;
           })
