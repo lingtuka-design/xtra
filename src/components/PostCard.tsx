@@ -547,12 +547,12 @@ export const PostCard: React.FC<PostCardProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
                   {/* Post to FB Only */}
                   <button
                     onClick={() => handlePublishNow('fb_only')}
                     disabled={publishingTarget !== null}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50 whitespace-nowrap min-w-0"
                     title="Facebook Page chiaha post na (No WhatsApp)"
                   >
                     {publishingTarget === 'fb_only' ? (
@@ -567,7 +567,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   <button
                     onClick={() => handlePublishNow('both')}
                     disabled={publishingTarget !== null}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50 whitespace-nowrap min-w-0"
                     title="Facebook Page leh WhatsApp Channel-a post rualna"
                   >
                     {publishingTarget === 'both' ? (
@@ -584,7 +584,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   <button
                     onClick={() => handleToggleQueue('queued')}
                     disabled={isQueueing}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50 whitespace-nowrap min-w-0"
                     title="Add to Facebook queue (will auto-drip every 20m)"
                   >
                     {isQueueing ? (

@@ -451,21 +451,22 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-2.5 pt-2 flex-wrap">
+        {/* Action Buttons: 1 Single Line on Mobile */}
+        <div className="grid grid-cols-3 gap-2 pt-2 sm:flex sm:items-center sm:justify-end sm:gap-2.5">
+          {/* + Schedule */}
           <button
             type="button"
             onClick={handleAddToQueue}
             disabled={isQueueing || publishingTarget !== null || !mizoCaption.trim()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs"
+            className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs whitespace-nowrap min-w-0"
             title="Add to Facebook scheduled queue"
           >
             {isQueueing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin flex-shrink-0" />
             ) : (
-              <Clock className="w-4 h-4 text-amber-700" />
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-700 flex-shrink-0" />
             )}
-            <span>+ Schedule</span>
+            <span className="truncate">+ Schedule</span>
           </button>
 
           {/* Post to Facebook Only (FB logo only) */}
@@ -473,18 +474,18 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             type="button"
             onClick={() => handlePublishNow('fb_only')}
             disabled={publishingTarget !== null || isQueueing || !mizoCaption.trim()}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs"
+            className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs whitespace-nowrap min-w-0"
             title="Facebook chiaha post na (No WhatsApp)"
           >
             {publishingTarget === 'fb_only' ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>FB-ah a post mek...</span>
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin flex-shrink-0" />
+                <span className="truncate text-[11px] sm:text-sm">FB-ah...</span>
               </>
             ) : (
               <>
-                <FacebookIcon className="w-4 h-4" />
-                <span>Post to FB</span>
+                <FacebookIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate">Post to FB</span>
               </>
             )}
           </button>
@@ -494,21 +495,21 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             type="button"
             onClick={() => handlePublishNow('both')}
             disabled={publishingTarget !== null || isQueueing || !mizoCaption.trim()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs"
+            className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs whitespace-nowrap min-w-0"
             title="Facebook Page leh WhatsApp Channel-a post rualna"
           >
             {publishingTarget === 'both' ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>A post mek...</span>
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin flex-shrink-0" />
+                <span className="truncate text-[11px] sm:text-sm">Posting...</span>
               </>
             ) : (
               <>
-                <div className="flex items-center gap-1.5">
-                  <FacebookIcon className="w-4 h-4" />
-                  <WhatsAppIcon className="w-4 h-4" />
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <FacebookIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
-                <span>FB & WhatsApp</span>
+                <span className="truncate">FB & WhatsApp</span>
               </>
             )}
           </button>
