@@ -27,6 +27,24 @@ const WhatsAppIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
   </svg>
 );
 
+const QUICK_EMOJIS = [
+  '🚨',
+  '⚽',
+  '🎯',
+  '🟨',
+  '🟥',
+  '🏆',
+  '😭',
+  '🤡',
+  '🤝',
+  '✍️',
+  '🫡',
+  '📌',
+  '💰',
+  '💸',
+  '🤣',
+];
+
 interface CreatePostCardProps {
   onPostCreated: (newPost: Post) => void;
   onSwitchToQueue: () => void;
@@ -50,6 +68,27 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Quick insert emoji at current cursor position in Mizo caption
+  const handleInsertEmoji = (emoji: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setMizoCaption((prev) => prev + emoji);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? mizoCaption.length;
+    const end = textarea.selectionEnd ?? mizoCaption.length;
+    const updated = mizoCaption.substring(0, start) + emoji + mizoCaption.substring(end);
+    setMizoCaption(updated);
+
+    setTimeout(() => {
+      textarea.focus();
+      const nextPos = start + emoji.length;
+      textarea.setSelectionRange(nextPos, nextPos);
+    }, 0);
+  };
 
   // Paraphrase English text to Mizo using Gemini AI
   const handleParaphrase = async () => {
@@ -349,7 +388,24 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
               {mizoCaption.length} characters
             </span>
           </div>
+
+          {/* Quick Emoji Bar */}
+          <div className="flex items-center gap-1 mb-2 overflow-x-auto pb-1 pt-0.5 scrollbar-none">
+            {QUICK_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => handleInsertEmoji(emoji)}
+                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg bg-stone-100 hover:bg-stone-200 active:scale-95 text-sm sm:text-base border border-stone-200/80 transition-all shadow-2xs flex-shrink-0 cursor-pointer"
+                title={`Insert ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+
           <textarea
+            ref={textareaRef}
             value={mizoCaption}
             onChange={(e) => setMizoCaption(e.target.value)}
             rows={7}
