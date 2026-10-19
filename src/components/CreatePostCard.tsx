@@ -29,6 +29,8 @@ const WhatsAppIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
 
 const QUICK_EMOJIS = [
   '🚨',
+  '🗣️',
+  '🎙️',
   '⚽',
   '🎯',
   '🟨',
