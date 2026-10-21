@@ -5,10 +5,24 @@ import { Sidebar } from './components/Sidebar';
 import { ImageModal } from './components/ImageModal';
 import { SyncModal } from './components/SyncModal';
 import { CreatePostCard } from './components/CreatePostCard';
+import { LoginModal } from './components/LoginModal';
 import { Post } from './types';
 import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, PenSquare } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem('xtra_auth_user');
+      const token = localStorage.getItem('xtra_auth_token');
+      if (saved && token) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -18,6 +32,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'all' | 'queue' | 'create' | 'published'>('all');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem('xtra_auth_token');
+    localStorage.removeItem('xtra_auth_user');
+    setCurrentUser(null);
+  };
 
   const [sources, setSources] = useState<{ id: string; name: string }[]>([
     { id: 'FabrizioRomano', name: 'Fabrizio Romano' },
@@ -333,10 +353,20 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8F6F0] text-stone-900 flex flex-col font-sans">
+      {!currentUser && (
+        <LoginModal
+          onLoginSuccess={(token, user) => {
+            setCurrentUser(user);
+          }}
+        />
+      )}
+
       <Header
         onOpenSync={() => setSyncModalOpen(true)}
         isSyncing={isSyncing}
         totalPosts={posts.length}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       <div className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-4 sm:py-6 flex gap-6">

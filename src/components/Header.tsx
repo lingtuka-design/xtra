@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, RefreshCw, Radio, Download } from 'lucide-react';
+import { Zap, RefreshCw, Radio, Download, LogOut, User } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSync: () => void;
   isSyncing: boolean;
   totalPosts: number;
+  currentUser?: { username: string } | null;
+  onLogout?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSync, isSyncing, totalPosts }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onOpenSync,
+  isSyncing,
+  totalPosts,
+  currentUser,
+  onLogout,
+}) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
@@ -55,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSync, isSyncing, totalPost
         </div>
 
         {/* Status & Sync Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden md:flex items-center gap-2 text-xs text-stone-600 bg-white border border-stone-200 px-3 py-1.5 rounded-full shadow-xs">
             <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
             <span>Cloudflare Cron Active</span>
@@ -83,6 +91,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSync, isSyncing, totalPost
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
             <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
           </button>
+
+          {currentUser && onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 bg-stone-200/70 hover:bg-rose-100 text-stone-700 hover:text-rose-700 border border-stone-300/80 font-medium text-xs px-2.5 sm:px-3 py-1.5 rounded-full transition-all cursor-pointer"
+              title={`Logged in as ${currentUser.username} - Hmet la chhuak rawh`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline font-semibold">{currentUser.username}</span>
+              <LogOut className="w-3.5 h-3.5 ml-0.5" />
+            </button>
+          )}
         </div>
       </div>
     </header>
