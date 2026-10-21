@@ -548,7 +548,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             )}
           </button>
 
-          {/* Post to FB & WhatsApp (FB + WhatsApp logos together) */}
+          {/* Post to FB & WhatsApp */}
           <button
             type="button"
             onClick={() => handlePublishNow('both')}
@@ -562,13 +562,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
                 <span className="truncate text-[11px] sm:text-sm">Posting...</span>
               </>
             ) : (
-              <>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <FacebookIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-                <span className="truncate">FB & WhatsApp</span>
-              </>
+              <span className="truncate">Xtra/Whatsapp</span>
             )}
           </button>
         </div>

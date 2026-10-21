@@ -570,15 +570,10 @@ export const PostCard: React.FC<PostCardProps> = ({
                     className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50 whitespace-nowrap min-w-0"
                     title="Facebook Page leh WhatsApp Channel-a post rualna"
                   >
-                    {publishingTarget === 'both' ? (
+                    {publishingTarget === 'both' && (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <FacebookIcon className="w-3.5 h-3.5" />
-                        <WhatsAppIcon className="w-3.5 h-3.5" />
-                      </div>
                     )}
-                    <span>FB & WhatsApp</span>
+                    <span>Xtra/Whatsapp</span>
                   </button>
 
                   <button
