@@ -301,23 +301,6 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
 
   return (
     <div className="bg-white border border-stone-200/90 rounded-2xl p-4 sm:p-6 shadow-xs mb-6">
-      {/* Title */}
-      <div className="flex items-center justify-between pb-4 mb-5 border-b border-stone-200">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 font-bold">
-            ✍️
-          </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-stone-900">
-              Post Thar Siamna (Manual Post Creator)
-            </h2>
-            <p className="text-xs text-stone-500">
-              English news copy-paste la Gemini-in a letling ang, emaw Mizo-in type lut tawp rawh.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Notifications */}
       {statusMessage && (
         <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm flex items-center gap-2">
@@ -334,26 +317,12 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
       )}
 
       <div className="space-y-4">
-        {/* Source / Author Name */}
-        <div>
-          <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-            Source / Hming (Optional):
-          </label>
-          <input
-            type="text"
-            value={authorName}
-            onChange={(e) => setAuthorName(e.target.value)}
-            placeholder="e.g. Fabrizio Romano, David Ornstein, Sky Sports"
-            className="w-full bg-[#FCFAF6] focus:bg-white border border-stone-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 transition-colors shadow-xs"
-          />
-        </div>
-
         {/* Section 1: English News + Gemini Paraphraser */}
         <div className="p-3.5 sm:p-4 rounded-xl bg-[#FAF8F5] border border-stone-200 space-y-2.5">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <label className="text-xs font-semibold text-stone-700 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-stone-500" />
-              <span>1. English News Copy-Paste Rawh (Optional):</span>
+              <span>English News Copy-Paste Rawh:</span>
             </label>
             <button
               onClick={handleParaphrase}
@@ -388,7 +357,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
               <span>✏️</span>
-              <span>2. Facebook Post Caption (Mizo ṭawng - A hnuaia mi hi a in-post tur a ni):</span>
+              <span>Facebook Post Caption (Mizo ṭawng - A hnuaia mi hi a in-post tur a ni):</span>
             </label>
             <span className="text-[11px] text-stone-500">
               {mizoCaption.length} characters
