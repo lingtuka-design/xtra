@@ -250,78 +250,88 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       // 1. Check Confirmed Lineups: Auto-Post if announced before kickoff (or at match start)
       if (summary.lineups && (summary.status.state === 'pre' || match.status !== 'FT')) {
         const lineupEventId = `lineup_${match.event_id}`;
-        const alreadyPostedLineup = await env.DB.prepare(
-          'SELECT id FROM posted_match_events WHERE match_event_id = ?'
-        ).bind(lineupEventId).first();
-
-        // Only auto-post if match hasn't been deep in play (pre-match or early start)
-        if (!alreadyPostedLineup && summary.status.state === 'pre') {
-          const fbLineup = formatLineupPost(
-            summary.lineups.home.team || match.home_team,
-            summary.lineups.away.team || match.away_team,
-            summary.lineups.home.formation,
-            summary.lineups.away.formation,
-            summary.lineups.home.starters,
-            summary.lineups.away.starters,
-            leagueName
-          );
-
-          const waLineup = formatWhatsAppLineup(
-            summary.lineups.home.team || match.home_team,
-            summary.lineups.away.team || match.away_team,
-            summary.lineups.home.formation,
-            summary.lineups.away.formation,
-            summary.lineups.home.starters,
-            summary.lineups.away.starters,
-            leagueName
-          );
-
-          // 1. Post to Facebook Page
-          if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
-            try {
-              await facebookPoster.postNews(
-                fbLineup,
-                undefined,
-                env.FB_PAGE_ID,
-                env.FB_PAGE_ACCESS_TOKEN
-              );
-            } catch (fbErr: any) {
-              console.error('FB Lineup Post error:', fbErr.message);
-            }
-          }
-
-          // 2. Post to WhatsApp Channel
+        
+        if (summary.status.state === 'pre') {
+          // Atomic claim: Try inserting lock into D1 first. If already inserted, skip immediately!
+          let claimed = false;
           try {
-            await whatsappPoster.postNews(
-              waLineup,
-              undefined,
-              env.WHATSAPP_API_TOKEN,
-              env.WHATSAPP_CHANNEL_ID,
-              env.WHATSAPP_API_URL
-            );
-          } catch (waErr: any) {
-            console.error('WhatsApp Lineup Post error:', waErr.message);
+            const insertLock = await env.DB.prepare(
+              'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+            ).bind(match.event_id, lineupEventId, 'lineup', 'Pre-Match', 'Confirmed Lineups').run();
+            claimed = Boolean(insertLock.success);
+          } catch {
+            claimed = false; // Duplicate blocked by unique index!
           }
 
-          // Save to posted_match_events in D1 so it never posts twice
-          await env.DB.prepare(
-            'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-          ).bind(match.event_id, lineupEventId, 'lineup', 'Pre-Match', 'Confirmed Lineups').run();
+          if (claimed) {
+            const fbLineup = formatLineupPost(
+              summary.lineups.home.team || match.home_team,
+              summary.lineups.away.team || match.away_team,
+              summary.lineups.home.formation,
+              summary.lineups.away.formation,
+              summary.lineups.home.starters,
+              summary.lineups.away.starters,
+              leagueName
+            );
 
-          totalPosted++;
-          logDetails.push(`Lineup posted: ${match.home_team} vs ${match.away_team}`);
+            const waLineup = formatWhatsAppLineup(
+              summary.lineups.home.team || match.home_team,
+              summary.lineups.away.team || match.away_team,
+              summary.lineups.home.formation,
+              summary.lineups.away.formation,
+              summary.lineups.home.starters,
+              summary.lineups.away.starters,
+              leagueName
+            );
+
+            // 1. Post to Facebook Page
+            if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+              try {
+                await facebookPoster.postNews(
+                  fbLineup,
+                  undefined,
+                  env.FB_PAGE_ID,
+                  env.FB_PAGE_ACCESS_TOKEN
+                );
+              } catch (fbErr: any) {
+                console.error('FB Lineup Post error:', fbErr.message);
+              }
+            }
+
+            // 2. Post to WhatsApp Channel
+            try {
+              await whatsappPoster.postNews(
+                waLineup,
+                undefined,
+                env.WHATSAPP_API_TOKEN,
+                env.WHATSAPP_CHANNEL_ID,
+                env.WHATSAPP_API_URL
+              );
+            } catch (waErr: any) {
+              console.error('WhatsApp Lineup Post error:', waErr.message);
+            }
+
+            totalPosted++;
+            logDetails.push(`Lineup posted: ${match.home_team} vs ${match.away_team}`);
+          }
         }
       }
 
       // 2. Check all events in this match (Goals)
       for (const ev of summary.events) {
         if (ev.type.toLowerCase().includes('goal') || ev.scoringPlay) {
-          // Check if we already posted this event
-          const alreadyPosted = await env.DB.prepare(
-            'SELECT id FROM posted_match_events WHERE match_event_id = ?'
-          ).bind(ev.id).first();
+          // Atomic claim: Try inserting lock into D1 first.
+          let claimed = false;
+          try {
+            const insertLock = await env.DB.prepare(
+              'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+            ).bind(match.event_id, ev.id, 'goal', ev.minute, ev.text).run();
+            claimed = Boolean(insertLock.success);
+          } catch {
+            claimed = false; // Duplicate blocked!
+          }
 
-          if (!alreadyPosted) {
+          if (claimed) {
             // New Goal! Auto-Post to Inkhel Xtra Facebook + WhatsApp Channel!
             const fbCaption = formatGoalPost(
               match.home_team,
@@ -370,11 +380,6 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               console.error('WhatsApp Live Goal Post error:', waErr.message);
             }
 
-            // Save to posted_match_events in D1 so it never duplicates
-            await env.DB.prepare(
-              'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-            ).bind(match.event_id, ev.id, 'goal', ev.minute, ev.text).run();
-
             totalPosted++;
             logDetails.push(`Goal posted: ${ev.athleteName || 'Goal'} (${ev.minute}) - ${match.home_team} vs ${match.away_team}`);
           }
@@ -384,11 +389,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       // 3. Check Half Time Stats
       if (summary.status.isHalftime) {
         const htEventId = `ht_${match.event_id}`;
-        const alreadyPostedHT = await env.DB.prepare(
-          'SELECT id FROM posted_match_events WHERE match_event_id = ?'
-        ).bind(htEventId).first();
+        let claimed = false;
+        try {
+          const insertLock = await env.DB.prepare(
+            'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+          ).bind(match.event_id, htEventId, 'half_time', 'HT', 'Half Time Stats').run();
+          claimed = Boolean(insertLock.success);
+        } catch {
+          claimed = false; // Duplicate blocked!
+        }
 
-        if (!alreadyPostedHT) {
+        if (claimed) {
           const goalEvents = summary.events.filter((ev: any) => ev.type.toLowerCase().includes('goal') || ev.scoringPlay);
           const scorersText = goalEvents.map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`).join(', ');
 
@@ -466,10 +477,6 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             console.error('WA HT Stats error:', waErr.message);
           }
 
-          await env.DB.prepare(
-            'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-          ).bind(match.event_id, htEventId, 'half_time', 'HT', 'Half Time Stats').run();
-
           totalPosted++;
           logDetails.push(`Half Time stats posted: ${match.home_team} vs ${match.away_team}`);
         }
@@ -478,11 +485,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       // 4. Check Full Time Stats & Final Result
       if (summary.status.isFullTime) {
         const ftEventId = `ft_${match.event_id}`;
-        const alreadyPostedFT = await env.DB.prepare(
-          'SELECT id FROM posted_match_events WHERE match_event_id = ?'
-        ).bind(ftEventId).first();
+        let claimed = false;
+        try {
+          const insertLock = await env.DB.prepare(
+            'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+          ).bind(match.event_id, ftEventId, 'full_time', 'FT', 'Full Time Result & Stats').run();
+          claimed = Boolean(insertLock.success);
+        } catch {
+          claimed = false; // Duplicate blocked!
+        }
 
-        if (!alreadyPostedFT) {
+        if (claimed) {
           const goalEvents = summary.events.filter((ev: any) => ev.type.toLowerCase().includes('goal') || ev.scoringPlay);
           const scorersText = goalEvents.map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`).join(', ');
 
@@ -559,10 +572,6 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           } catch (waErr: any) {
             console.error('WA FT Stats error:', waErr.message);
           }
-
-          await env.DB.prepare(
-            'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-          ).bind(match.event_id, ftEventId, 'full_time', 'FT', 'Full Time Result & Stats').run();
 
           totalPosted++;
           logDetails.push(`Full Time stats posted: ${match.home_team} vs ${match.away_team}`);

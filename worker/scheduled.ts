@@ -10,30 +10,16 @@ export default {
     const minute = scheduledDate.getUTCMinutes();
 
     // 1. Live Goal Auto-Check (Runs every minute in the background)
-    const checkLiveGoals = async () => {
-      try {
-        const res = await fetch('https://xtra-byd.pages.dev/api/live/poll', {
-          method: 'POST',
-          headers: { 'User-Agent': 'Xtra-Cron-Worker/1.0' },
-        });
-        const text = await res.text();
-        console.log(`[Xtra Cron] Live Goal Poll: HTTP ${res.status} - ${text.substring(0, 100)}`);
-      } catch (err: any) {
-        console.warn('[Xtra Cron] Live Goal Poll warning:', err.message);
-      }
-    };
-
-    // First check immediately
-    ctx.waitUntil(checkLiveGoals());
-
-    // Second check ~28 seconds later within the same minute for sub-minute live goal alerts
     ctx.waitUntil(
-      new Promise<void>((resolve) => {
-        setTimeout(async () => {
-          await checkLiveGoals();
-          resolve();
-        }, 28000);
+      fetch('https://xtra-byd.pages.dev/api/live/poll', {
+        method: 'POST',
+        headers: { 'User-Agent': 'Xtra-Cron-Worker/1.0' },
       })
+        .then(async (res) => {
+          const text = await res.text();
+          console.log(`[Xtra Cron] Live Goal Poll: HTTP ${res.status} - ${text.substring(0, 100)}`);
+        })
+        .catch((err) => console.warn('[Xtra Cron] Live Goal Poll warning:', err.message))
     );
 
     // 2. Transfer News Sync & Queue Drip (Runs every 5 minutes: :00, :05, :10, etc.)
