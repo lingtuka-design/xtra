@@ -5,9 +5,10 @@ import { Sidebar } from './components/Sidebar';
 import { ImageModal } from './components/ImageModal';
 import { SyncModal } from './components/SyncModal';
 import { CreatePostCard } from './components/CreatePostCard';
+import { LiveMatchesPanel } from './components/LiveMatchesPanel';
 import { LoginModal } from './components/LoginModal';
 import { Post } from './types';
-import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, PenSquare } from 'lucide-react';
+import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, PenSquare, Radio } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
@@ -29,7 +30,7 @@ export default function App() {
   const [syncModalOpen, setSyncModalOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'all' | 'queue' | 'create' | 'published'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'live' | 'queue' | 'create' | 'published'>('all');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
@@ -372,11 +373,11 @@ export default function App() {
       <div className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-4 sm:py-6 flex gap-6">
         {/* Main Feed Column */}
         <main className="flex-1 min-w-0 max-w-2xl mx-auto w-full">
-          {/* Top Primary Tabs: FEED vs CREATE vs SCHEDULED vs PUBLISHED */}
-          <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-bold uppercase tracking-wide">
+          {/* Top Primary Tabs: FEED vs LIVE vs CREATE vs SCHEDULED vs PUBLISHED */}
+          <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-bold uppercase tracking-wide overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab('all')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center font-bold uppercase tracking-wide ${
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center font-bold uppercase tracking-wide whitespace-nowrap ${
                 activeTab === 'all'
                   ? 'bg-white text-stone-900 shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
@@ -386,8 +387,20 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => setActiveTab('live')}
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
+                activeTab === 'live'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <Radio className={`w-3.5 h-3.5 ${activeTab === 'live' ? 'animate-pulse' : 'text-rose-600'}`} />
+              <span>LIVE</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('create')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
                 activeTab === 'create'
                   ? 'bg-amber-500 text-stone-950 shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
@@ -399,7 +412,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('queue')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
                 activeTab === 'queue'
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
@@ -421,7 +434,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('published')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide ${
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
                 activeTab === 'published'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
@@ -431,14 +444,20 @@ export default function App() {
             </button>
           </div>
 
-          {/* Conditional: Create Post Screen vs Feed Views */}
-          {activeTab === 'create' ? (
+          {/* Conditional: Create Post Screen vs Live Matches vs Feed Views */}
+          {activeTab === 'live' ? (
+            <LiveMatchesPanel />
+          ) : activeTab === 'create' ? (
             <CreatePostCard
               onPostCreated={handlePostCreated}
               onSwitchToQueue={() => setActiveTab('queue')}
             />
           ) : (
             <>
+              {/* On FEED Home page, render Live Matches Panel at the top */}
+              {activeTab === 'all' && (
+                <LiveMatchesPanel />
+              )}
               {/* FB Queue Explainer Banner when on Queue tab */}
               {activeTab === 'queue' && (
                 <div className="p-3 mb-4 rounded-xl bg-blue-50/80 border border-blue-200/80 flex items-center justify-between gap-3 text-xs text-blue-900 shadow-xs">

@@ -23,6 +23,23 @@ export default {
         })
     );
 
+    // Also trigger live goal check if any matches are actively tracked
+    ctx.waitUntil(
+      fetch('https://xtra-byd.pages.dev/api/live/poll', {
+        method: 'POST',
+        headers: {
+          'User-Agent': 'Xtra-Cron-Worker/1.0',
+        },
+      })
+        .then(async (res) => {
+          const body = await res.text();
+          console.log(`[Xtra Cron] Live Poll completed with HTTP ${res.status}: ${body.substring(0, 150)}`);
+        })
+        .catch((err) => {
+          console.warn('[Xtra Cron] Error triggering live poll:', err);
+        })
+    );
+
     // Keep-alive ping for Render.com WhatsApp Bot microservice so it never sleeps
     if (env.WHATSAPP_API_URL) {
       ctx.waitUntil(
