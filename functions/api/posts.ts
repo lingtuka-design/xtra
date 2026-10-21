@@ -209,6 +209,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             console.error('WhatsApp broadcast failed:', waErr.message);
           }
         }
+
+        // Also broadcast to Main Inkhel.com FB Page if requested (TRIO mode)
+        const publishMainFb = (body as any).publish_main_fb === true;
+        if (publishMainFb) {
+          if (env.MAIN_FB_PAGE_ID && env.MAIN_FB_PAGE_ACCESS_TOKEN) {
+            try {
+              console.log('Broadcasting manual post to Inkhel.com Main FB Page...');
+              const mainFbRes = await facebookPoster.postNews(
+                mizoCaption,
+                photoUrl || undefined,
+                env.MAIN_FB_PAGE_ID,
+                env.MAIN_FB_PAGE_ACCESS_TOKEN
+              );
+              console.log('Main FB broadcast result:', mainFbRes);
+            } catch (mainFbErr: any) {
+              console.error('Main FB broadcast failed:', mainFbErr.message);
+            }
+          }
+        }
       } else {
         await env.DB.prepare(
           "UPDATE posts SET facebook_status = 'failed', error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"

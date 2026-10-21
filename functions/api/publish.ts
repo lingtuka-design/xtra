@@ -75,10 +75,35 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
+    // Publish to Inkhel.com Main FB Page if requested (TRIO mode)
+    let mainFbNotice = '';
+    const publishToMainFb = (body as any).publish_main_fb === true;
+    if (publishToMainFb) {
+      if (env.MAIN_FB_PAGE_ID && env.MAIN_FB_PAGE_ACCESS_TOKEN) {
+        try {
+          const mainFbResult = await facebookPoster.postNews(
+            post.mizo_translation,
+            post.primary_image_url,
+            env.MAIN_FB_PAGE_ID,
+            env.MAIN_FB_PAGE_ACCESS_TOKEN
+          );
+          if (mainFbResult.success) {
+            mainFbNotice = ' & Inkhel.com FB';
+          } else {
+            console.warn('Main FB Page publish failed:', mainFbResult.error);
+          }
+        } catch (mainFbErr: any) {
+          console.warn('Main FB Page publish error:', mainFbErr.message);
+        }
+      } else {
+        console.warn('MAIN_FB_PAGE_ID or MAIN_FB_PAGE_ACCESS_TOKEN not configured');
+      }
+    }
+
     return Response.json({
       success: true,
       postId: fbResult.postId,
-      message: `Successfully published to Facebook Page${waNotice}!`,
+      message: `Successfully published to Facebook Page${mainFbNotice}${waNotice}!`,
     });
   } catch (err: any) {
     return Response.json(

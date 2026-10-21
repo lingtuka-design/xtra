@@ -5,6 +5,8 @@ export interface Env {
   GEMINI_API_KEY_FALLBACK?: string;
   FB_PAGE_ACCESS_TOKEN?: string;
   FB_PAGE_ID?: string;
+  MAIN_FB_PAGE_ACCESS_TOKEN?: string;
+  MAIN_FB_PAGE_ID?: string;
   CRON_SECRET?: string;
   DEFAULT_SOURCES?: string;
   WHATSAPP_API_TOKEN?: string;

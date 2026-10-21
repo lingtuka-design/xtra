@@ -69,7 +69,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   // Queue and publishing states
   const [isQueueing, setIsQueueing] = useState(false);
-  const [publishingTarget, setPublishingTarget] = useState<'both' | 'fb_only' | null>(null);
+  const [publishingTarget, setPublishingTarget] = useState<'both' | 'fb_only' | 'trio' | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -197,18 +197,23 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  // 1-Click Instant Post (either to FB Only, or to Both FB & WhatsApp)
-  const handlePublishNow = async (target: 'both' | 'fb_only' = 'both') => {
+  // 1-Click Instant Post (either to FB Only, Both FB & WhatsApp, or TRIO)
+  const handlePublishNow = async (target: 'both' | 'fb_only' | 'trio' = 'both') => {
     setPublishingTarget(target);
     setActionError(null);
 
     const skipWhatsApp = target === 'fb_only';
+    const publishMainFb = target === 'trio';
 
     try {
       const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: post.id, skip_whatsapp: skipWhatsApp }),
+        body: JSON.stringify({
+          id: post.id,
+          skip_whatsapp: skipWhatsApp,
+          publish_main_fb: publishMainFb,
+        }),
       });
 
       const data = (await res.json()) as any;
@@ -548,6 +553,33 @@ export const PostCard: React.FC<PostCardProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                  {/* TRIO: Post to Inkhel Xtra FB + Inkhel.com Main FB + WhatsApp */}
+                  <button
+                    onClick={() => handlePublishNow('trio')}
+                    disabled={publishingTarget !== null}
+                    className="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 whitespace-nowrap min-w-0"
+                    title="Xtra Facebook + Inkhel.com Facebook + WhatsApp Channel a ruala post na"
+                  >
+                    {publishingTarget === 'trio' && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    )}
+                    <span>TRIO</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleToggleQueue('queued')}
+                    disabled={isQueueing}
+                    className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50 whitespace-nowrap min-w-0"
+                    title="Add to Facebook queue (will auto-drip every 30m)"
+                  >
+                    {isQueueing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
+                    )}
+                    <span>+ Schedule</span>
+                  </button>
+
                   {/* Post to FB Only */}
                   <button
                     onClick={() => handlePublishNow('fb_only')}
@@ -574,20 +606,6 @@ export const PostCard: React.FC<PostCardProps> = ({
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     )}
                     <span>Xtra/Whatsapp</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleToggleQueue('queued')}
-                    disabled={isQueueing}
-                    className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50 whitespace-nowrap min-w-0"
-                    title="Add to Facebook queue (will auto-drip every 30m)"
-                  >
-                    {isQueueing ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
-                    )}
-                    <span>+ Schedule</span>
                   </button>
                 </div>
               )}
