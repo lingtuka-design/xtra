@@ -102,11 +102,15 @@ export const espnService = {
     return allMatches;
   },
 
-  // Fetch live match events (goals, cards, period changes) for a specific match
+  // Fetch live match events (goals, cards, period changes) and confirmed lineups for a specific match
   async getMatchSummary(leagueSlug: string, eventId: string): Promise<{
     score: { home: string; away: string };
     status: { state: string; clock: string; detail: string };
     events: MatchEvent[];
+    lineups?: {
+      home: { team: string; formation?: string; starters: string[] };
+      away: { team: string; formation?: string; starters: string[] };
+    };
   }> {
     const res = await fetch(
       `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueSlug}/summary?event=${eventId}`,
@@ -132,6 +136,46 @@ export const espnService = {
       scoringPlay: Boolean(ke.scoringPlay),
     }));
 
+    // Extract official confirmed lineups if available (Both teams must have 11 starters)
+    let lineups: {
+      home: { team: string; formation?: string; starters: string[] };
+      away: { team: string; formation?: string; starters: string[] };
+    } | undefined = undefined;
+
+    if (Array.isArray(data.rosters) && data.rosters.length >= 2) {
+      const homeRoster =
+        data.rosters.find((r: any) => (home?.team?.id && r.team?.id === home.team.id) || r.homeAway === 'home') ||
+        data.rosters[0];
+      const awayRoster =
+        data.rosters.find((r: any) => (away?.team?.id && r.team?.id === away.team.id) || r.homeAway === 'away') ||
+        data.rosters[1];
+
+      const homeStarters = (homeRoster?.roster || [])
+        .filter((p: any) => p.starter)
+        .map((p: any) => p.athlete?.displayName || p.athlete?.shortName)
+        .filter(Boolean);
+
+      const awayStarters = (awayRoster?.roster || [])
+        .filter((p: any) => p.starter)
+        .map((p: any) => p.athlete?.displayName || p.athlete?.shortName)
+        .filter(Boolean);
+
+      if (homeStarters.length === 11 && awayStarters.length === 11) {
+        lineups = {
+          home: {
+            team: homeRoster.team?.displayName || home?.team?.displayName || 'Home Team',
+            formation: homeRoster.formation,
+            starters: homeStarters,
+          },
+          away: {
+            team: awayRoster.team?.displayName || away?.team?.displayName || 'Away Team',
+            formation: awayRoster.formation,
+            starters: awayStarters,
+          },
+        };
+      }
+    }
+
     return {
       score: {
         home: home?.score || '0',
@@ -143,6 +187,7 @@ export const espnService = {
         detail: comp?.status?.type?.shortDetail || '',
       },
       events,
+      lineups,
     };
   },
 };
