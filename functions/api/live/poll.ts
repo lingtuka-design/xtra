@@ -210,6 +210,50 @@ ${scorersSection}${statsSection}🏆 *${leagueName}*
 👉 _Inkhel WhatsApp Channel_`;
 }
 
+// Helper to format VAR Disallowed Goal Alert for Facebook
+function formatVarDisallowedPost(
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: string,
+  awayScore: string,
+  minute: string,
+  reason: string | undefined,
+  leagueName: string
+): string {
+  const reasonText = reason ? ` (${reason})` : '';
+  return `❌ GOAL DISALLOWED! (VAR) 🖥️
+
+${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (${minute})
+
+VAR-in endik a nih hnuah goal hi pawm a ni ta lo${reasonText}. Score a ngai: ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}.
+
+🏆 ${leagueName}
+
+#InkhelxtraLive #VAR #PremierLeague #ChampionsLeague`;
+}
+
+// Helper to format WhatsApp VAR Disallowed Goal Alert
+function formatWhatsAppVarDisallowed(
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: string,
+  awayScore: string,
+  minute: string,
+  reason: string | undefined,
+  leagueName: string
+): string {
+  const reasonText = reason ? ` _(${reason})_` : '';
+  return `❌ *GOAL DISALLOWED! (VAR)* 🖥️
+
+*${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}* (${minute})
+
+VAR-in endik a nih hnuah goal hi pawm a ni ta lo${reasonText}. Score a ngai: *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}*.
+
+🏆 *${leagueName}*
+
+👉 _Inkhel WhatsApp Channel_`;
+}
+
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   return handlePoll(context);
@@ -439,6 +483,153 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
         }
       }
+
+      // 2b. Check VAR Disallowed Goal Events
+      for (const ev of summary.events) {
+        const textLower = (ev.text || '').toLowerCase();
+        const typeLower = (ev.type || '').toLowerCase();
+        const isVarDisallowed =
+          (typeLower.includes('var') && (textLower.includes('no goal') || textLower.includes('disallowed') || textLower.includes('overturned'))) ||
+          textLower.includes('goal disallowed') ||
+          textLower.includes('disallowed goal') ||
+          textLower.includes('var decision: no goal') ||
+          textLower.includes('decision: no goal');
+
+        if (isVarDisallowed) {
+          const varEventId = `var_${match.event_id}_${ev.id}`;
+          let claimed = false;
+          try {
+            const insertLock = await env.DB.prepare(
+              'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+            ).bind(match.event_id, varEventId, 'var_disallowed', ev.minute, ev.text).run();
+            claimed = Boolean(insertLock.success);
+          } catch {
+            claimed = false; // Duplicate blocked!
+          }
+
+          if (claimed) {
+            let reason = 'Offside/Foul';
+            if (textLower.includes('offside')) reason = 'Offside';
+            else if (textLower.includes('handball')) reason = 'Handball';
+            else if (textLower.includes('foul')) reason = 'Foul';
+
+            const fbVar = formatVarDisallowedPost(
+              match.home_team,
+              match.away_team,
+              summary.score.home,
+              summary.score.away,
+              ev.minute || 'VAR',
+              reason,
+              leagueName
+            );
+
+            const waVar = formatWhatsAppVarDisallowed(
+              match.home_team,
+              match.away_team,
+              summary.score.home,
+              summary.score.away,
+              ev.minute || 'VAR',
+              reason,
+              leagueName
+            );
+
+            if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+              try {
+                await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+              } catch (fbErr: any) {
+                console.error('FB VAR Alert error:', fbErr.message);
+              }
+            }
+
+            try {
+              await whatsappPoster.postNews(
+                waVar,
+                undefined,
+                env.WHATSAPP_API_TOKEN,
+                env.WHATSAPP_CHANNEL_ID,
+                env.WHATSAPP_API_URL
+              );
+            } catch (waErr: any) {
+              console.error('WhatsApp VAR Alert error:', waErr.message);
+            }
+
+            totalPosted++;
+            logDetails.push(`VAR Disallowed Goal posted: ${match.home_team} vs ${match.away_team} (${ev.minute})`);
+          }
+        }
+      }
+
+      // 2c. Check Score Decrement (Score dropped after a previously posted goal was overturned)
+      if (match.last_score && match.last_score.includes('-')) {
+        const [prevHStr, prevAStr] = match.last_score.split('-');
+        const prevH = parseInt(prevHStr, 10) || 0;
+        const prevA = parseInt(prevAStr, 10) || 0;
+        const curH = parseInt(summary.score.home, 10) || 0;
+        const curA = parseInt(summary.score.away, 10) || 0;
+
+        if ((curH < prevH || curA < prevA) && (prevH > 0 || prevA > 0)) {
+          const varDropEventId = `var_drop_${match.event_id}_${curH}_${curA}`;
+          let claimed = false;
+          try {
+            const insertLock = await env.DB.prepare(
+              'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+            ).bind(match.event_id, varDropEventId, 'var_disallowed', summary.status.clock, `Score drop from ${match.last_score} to ${curH}-${curA}`).run();
+            claimed = Boolean(insertLock.success);
+          } catch {
+            claimed = false;
+          }
+
+          if (claimed) {
+            const fbVar = formatVarDisallowedPost(
+              match.home_team,
+              match.away_team,
+              summary.score.home,
+              summary.score.away,
+              summary.status.clock || 'VAR',
+              'Overturned by VAR',
+              leagueName
+            );
+
+            const waVar = formatWhatsAppVarDisallowed(
+              match.home_team,
+              match.away_team,
+              summary.score.home,
+              summary.score.away,
+              summary.status.clock || 'VAR',
+              'Overturned by VAR',
+              leagueName
+            );
+
+            if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+              try {
+                await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+              } catch (fbErr: any) {
+                console.error('FB Score Drop VAR Alert error:', fbErr.message);
+              }
+            }
+
+            try {
+              await whatsappPoster.postNews(
+                waVar,
+                undefined,
+                env.WHATSAPP_API_TOKEN,
+                env.WHATSAPP_CHANNEL_ID,
+                env.WHATSAPP_API_URL
+              );
+            } catch (waErr: any) {
+              console.error('WA Score Drop VAR Alert error:', waErr.message);
+            }
+
+            totalPosted++;
+            logDetails.push(`VAR Score Decrement posted: ${match.home_team} vs ${match.away_team}`);
+          }
+        }
+      }
+
+      // Always update last_score in live_tracked_matches
+      await env.DB.prepare(
+        'UPDATE live_tracked_matches SET last_score = ? WHERE event_id = ?'
+      ).bind(`${summary.score.home}-${summary.score.away}`, match.event_id).run();
 
       // 3. Check Half Time Stats
       if (summary.status.isHalftime) {
