@@ -138,7 +138,7 @@ function formatWhatsAppHalfTime(
   stats: any,
   leagueName: string
 ): string {
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '';
   const statsSection = stats
     ? `📊 *Match Stats (HT):*
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -193,7 +193,7 @@ function formatWhatsAppFullTime(
   stats: any,
   leagueName: string
 ): string {
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '';
   const statsSection = stats
     ? `📊 *Final Match Stats:*
 Possession: ${stats.home.possession} - ${stats.away.possession}
