@@ -543,7 +543,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             ) : (
               <>
                 <FacebookIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span className="truncate">Post to FB</span>
+                <span className="truncate">Xtra FB</span>
               </>
             )}
           </button>
