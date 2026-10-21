@@ -318,7 +318,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       }
 
       // 2. Check all events in this match (Goals)
-      for (const ev of summary.events) {
+      for (let i = 0; i < summary.events.length; i++) {
+        const ev = summary.events[i];
         if (ev.type.toLowerCase().includes('goal') || ev.scoringPlay) {
           // Atomic claim: Try inserting lock into D1 first.
           let claimed = false;
@@ -332,12 +333,65 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
 
           if (claimed) {
+            // Calculate accurate running score up to this goal:
+            // ESPN scoreboard header score often lags 30-60s behind live event feed.
+            // We compute score from:
+            // 1) Timeline goal count up to this event
+            const goalsUpToNow = summary.events
+              .slice(0, i + 1)
+              .filter((e) => e.type.toLowerCase().includes('goal') || e.scoringPlay);
+
+            let homeGoalsCount = 0;
+            let awayGoalsCount = 0;
+
+            if (summary.homeTeamId && summary.awayTeamId) {
+              homeGoalsCount = goalsUpToNow.filter((e) => e.teamId === summary.homeTeamId).length;
+              awayGoalsCount = goalsUpToNow.filter((e) => e.teamId === summary.awayTeamId).length;
+            }
+
+            // 2) Parse score from event text if present (e.g. "Goal! Como 4, Manchester United 0...")
+            let parsedHome: number | null = null;
+            let parsedAway: number | null = null;
+            const textMatch = ev.text.match(/Goal!\s+(.+?)\s+(\d+),\s+(.+?)\s+(\d+)/i);
+            if (textMatch) {
+              const team1 = textMatch[1].trim().toLowerCase();
+              const score1 = parseInt(textMatch[2], 10);
+              const score2 = parseInt(textMatch[4], 10);
+              const homeName = (match.home_team || '').toLowerCase();
+              if (homeName.includes(team1) || team1.includes(homeName)) {
+                parsedHome = score1;
+                parsedAway = score2;
+              } else {
+                parsedHome = score2;
+                parsedAway = score1;
+              }
+            }
+
+            // 3) Resolve the most accurate non-lagging score
+            let finalHomeScore = Math.max(
+              parseInt(summary.score.home || '0', 10),
+              homeGoalsCount,
+              parsedHome !== null ? parsedHome : 0
+            );
+            let finalAwayScore = Math.max(
+              parseInt(summary.score.away || '0', 10),
+              awayGoalsCount,
+              parsedAway !== null ? parsedAway : 0
+            );
+
+            if (ev.teamId === summary.homeTeamId && finalHomeScore === 0) {
+              finalHomeScore = 1;
+            }
+            if (ev.teamId === summary.awayTeamId && finalAwayScore === 0) {
+              finalAwayScore = 1;
+            }
+
             // New Goal! Auto-Post to Inkhel Xtra Facebook + WhatsApp Channel!
             const fbCaption = formatGoalPost(
               match.home_team,
               match.away_team,
-              summary.score.home,
-              summary.score.away,
+              String(finalHomeScore),
+              String(finalAwayScore),
               ev.athleteName,
               ev.minute || 'Goal',
               leagueName
@@ -346,8 +400,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             const waCaption = formatWhatsAppGoal(
               match.home_team,
               match.away_team,
-              summary.score.home,
-              summary.score.away,
+              String(finalHomeScore),
+              String(finalAwayScore),
               ev.athleteName,
               ev.minute || 'Goal',
               leagueName
