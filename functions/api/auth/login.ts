@@ -41,15 +41,40 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const username = (body.username || '').trim();
     const password = body.password || '';
 
+    // Extract Cloudflare client IP & geo location details
+    const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'unknown';
+    const city = (request as any).cf?.city || 'unknown';
+    const region = (request as any).cf?.region || (request as any).cf?.regionCode || 'unknown';
+    const country = (request as any).cf?.country || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
     if (username === VALID_USER && password === VALID_PASS) {
       const secret = env.CRON_SECRET || 'xtra_default_secret_key_2026';
       const token = await generateToken(username, secret);
+
+      // Record successful login
+      try {
+        await env.DB.prepare(
+          'INSERT INTO access_logs (ip, city, region, country, user_agent, action) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(ip, city, region, country, userAgent, 'login_success').run();
+      } catch (logErr) {
+        console.warn('Logging error:', logErr);
+      }
 
       return Response.json({
         success: true,
         user: { username: VALID_USER },
         token,
       });
+    }
+
+    // Record failed login attempt
+    try {
+      await env.DB.prepare(
+        'INSERT INTO access_logs (ip, city, region, country, user_agent, action) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(ip, city, region, country, userAgent, `failed_login: user=${username}`).run();
+    } catch (logErr) {
+      console.warn('Logging error:', logErr);
     }
 
     return Response.json(
