@@ -412,9 +412,43 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             leagueName
           );
 
+          const statsSummary = summary.stats
+            ? `Possession: ${summary.stats.home.possession} - ${summary.stats.away.possession}  •  Shots (Target): ${summary.stats.home.shots}(${summary.stats.home.shotsOnTarget}) - ${summary.stats.away.shots}(${summary.stats.away.shotsOnTarget})`
+            : '';
+
+          // Facebook Image: ESPN Match photo if available, otherwise dynamic branded graphic
+          const fbImage =
+            summary.matchImage ||
+            `https://api.microlink.io/?url=${encodeURIComponent(
+              `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
+                match.away_team
+              )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=HT&league=${encodeURIComponent(
+                leagueName
+              )}&scorers=${encodeURIComponent(scorersText)}&homeLogo=${encodeURIComponent(
+                match.home_logo || ''
+              )}&awayLogo=${encodeURIComponent(match.away_logo || '')}&stats=${encodeURIComponent(
+                statsSummary
+              )}&channel=fb`
+            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=675`;
+
+          // WhatsApp Image: ESPN Match photo if available, otherwise dynamic branded graphic
+          const waImage =
+            summary.matchImage ||
+            `https://api.microlink.io/?url=${encodeURIComponent(
+              `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
+                match.away_team
+              )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=HT&league=${encodeURIComponent(
+                leagueName
+              )}&scorers=${encodeURIComponent(scorersText)}&homeLogo=${encodeURIComponent(
+                match.home_logo || ''
+              )}&awayLogo=${encodeURIComponent(match.away_logo || '')}&stats=${encodeURIComponent(
+                statsSummary
+              )}&channel=wa`
+            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=675`;
+
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {
-              await facebookPoster.postNews(fbHT, summary.matchImage, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+              await facebookPoster.postNews(fbHT, fbImage, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
             } catch (fbErr: any) {
               console.error('FB HT Stats error:', fbErr.message);
             }
@@ -423,7 +457,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           try {
             await whatsappPoster.postNews(
               waHT,
-              summary.matchImage,
+              waImage,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
               env.WHATSAPP_API_URL
@@ -472,9 +506,43 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             leagueName
           );
 
+          const statsSummary = summary.stats
+            ? `Possession: ${summary.stats.home.possession} - ${summary.stats.away.possession}  •  Shots (Target): ${summary.stats.home.shots}(${summary.stats.home.shotsOnTarget}) - ${summary.stats.away.shots}(${summary.stats.away.shotsOnTarget})`
+            : '';
+
+          // Facebook Image: ESPN Match photo if available, otherwise dynamic branded graphic
+          const fbImage =
+            summary.matchImage ||
+            `https://api.microlink.io/?url=${encodeURIComponent(
+              `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
+                match.away_team
+              )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=FT&league=${encodeURIComponent(
+                leagueName
+              )}&scorers=${encodeURIComponent(scorersText)}&homeLogo=${encodeURIComponent(
+                match.home_logo || ''
+              )}&awayLogo=${encodeURIComponent(match.away_logo || '')}&stats=${encodeURIComponent(
+                statsSummary
+              )}&channel=fb`
+            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=675`;
+
+          // WhatsApp Image: ESPN Match photo if available, otherwise dynamic branded graphic
+          const waImage =
+            summary.matchImage ||
+            `https://api.microlink.io/?url=${encodeURIComponent(
+              `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
+                match.away_team
+              )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=FT&league=${encodeURIComponent(
+                leagueName
+              )}&scorers=${encodeURIComponent(scorersText)}&homeLogo=${encodeURIComponent(
+                match.home_logo || ''
+              )}&awayLogo=${encodeURIComponent(match.away_logo || '')}&stats=${encodeURIComponent(
+                statsSummary
+              )}&channel=wa`
+            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=675`;
+
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {
-              await facebookPoster.postNews(fbFT, summary.matchImage, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+              await facebookPoster.postNews(fbFT, fbImage, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
             } catch (fbErr: any) {
               console.error('FB FT Stats error:', fbErr.message);
             }
@@ -483,7 +551,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           try {
             await whatsappPoster.postNews(
               waFT,
-              summary.matchImage,
+              waImage,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
               env.WHATSAPP_API_URL
