@@ -19,7 +19,7 @@ function formatGoalPost(
 
 🔴 ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} 🔵
 
-${scorerLine}🏆 Competition: ${leagueName}
+${scorerLine}🏆 ${leagueName}
 
 #InkhelxtraLive #PremierLeague #ChampionsLeague #FootballUpdate`;
 }
@@ -39,9 +39,7 @@ function formatWhatsAppGoal(
   return `⚽ *GOAAALLL!!* (${minute})
 ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-${scorerLine}🏆 *${leagueName}*
-
-#InkhelLive`;
+${scorerLine}🏆 *${leagueName}*`;
 }
 
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
