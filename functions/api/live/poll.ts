@@ -17,7 +17,7 @@ function formatGoalPost(
 
   return `🚨 GOAAALLL!! ⚽ (${minute})
 
-🔴 ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} 🔵
+${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
 ${scorerLine}🏆 ${leagueName}
 
