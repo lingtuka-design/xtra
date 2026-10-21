@@ -132,7 +132,7 @@ export default function App() {
     [posts]
   );
 
-  const DRIP_INTERVAL_MS = 60 * 60 * 1000;
+  const DRIP_INTERVAL_MS = 45 * 60 * 1000;
   const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000;
 
   const parseSqliteDate = (dateStr?: string | null): number => {
@@ -460,7 +460,7 @@ export default function App() {
                   <div className="flex items-center gap-2 font-medium min-w-0">
                     <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <span className="truncate sm:whitespace-normal">
-                      <strong>Schedule Post:</strong> Darkar 1 (Minute 60) dan zelin a in-post ang (Active hours: 7:00 AM – 11:00 PM IST)
+                      <strong>Schedule Post:</strong> Minute 45 dan zelin a in-post ang (Active hours: 7:00 AM – 11:00 PM IST)
                     </span>
                   </div>
                   <span className="font-semibold text-blue-700 bg-white border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] whitespace-nowrap flex-shrink-0 shadow-2xs">
