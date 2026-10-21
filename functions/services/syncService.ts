@@ -224,7 +224,7 @@ export class SyncService {
     // 4. Process the next queued item for Facebook & WhatsApp
     try {
       if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
-        const MIN_POST_INTERVAL_MS = 30 * 60 * 1000; // Strictly 30 minutes gap between published posts
+        const MIN_POST_INTERVAL_MS = 60 * 60 * 1000; // Strictly 60 minutes (1 hour) gap between published posts
         const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000; // 5 minutes initial buffer after queueing a post
 
         const now = Date.now();
@@ -278,7 +278,7 @@ export class SyncService {
           if (timeSinceLastPublish > 0 && timeSinceLastPublish < MIN_POST_INTERVAL_MS) {
             const minsLeft = Math.ceil((MIN_POST_INTERVAL_MS - timeSinceLastPublish) / 60000);
             console.log(
-              `[FB Queue Drip] Last queued post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 30m drip interval.`
+              `[FB Queue Drip] Last queued post was published ${Math.floor(timeSinceLastPublish / 60000)}m ago. Waiting ${minsLeft}m more to maintain 60m drip interval.`
             );
             return results;
           }
