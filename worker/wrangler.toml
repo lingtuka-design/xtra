@@ -3,4 +3,4 @@ main = "scheduled.ts"
 compatibility_date = "2026-04-01"
 
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["* * * * *"]
