@@ -21,7 +21,7 @@ function formatGoalPost(
 
 ${scorerLine}🏆 Competition: ${leagueName}
 
-#InkhelLive #PremierLeague #ChampionsLeague #FootballUpdate`;
+#InkhelxtraLive #PremierLeague #ChampionsLeague #FootballUpdate`;
 }
 
 // Helper to format WhatsApp Goal Alert
