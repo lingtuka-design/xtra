@@ -403,6 +403,16 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           const goalEvents = summary.events.filter((ev: any) => ev.type.toLowerCase().includes('goal') || ev.scoringPlay);
           const scorersText = goalEvents.map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`).join(', ');
 
+          const homeScorers = goalEvents
+            .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : true))
+            .map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`)
+            .join(',');
+
+          const awayScorers = goalEvents
+            .filter((ev: any) => (summary.awayTeamId && ev.teamId ? ev.teamId === summary.awayTeamId : false))
+            .map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`)
+            .join(',');
+
           const fbHT = formatHalfTimePost(
             match.home_team,
             match.away_team,
@@ -427,7 +437,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             ? `Possession: ${summary.stats.home.possession} - ${summary.stats.away.possession}  •  Shots (Target): ${summary.stats.home.shots}(${summary.stats.home.shotsOnTarget}) - ${summary.stats.away.shots}(${summary.stats.away.shotsOnTarget})`
             : '';
 
-          // Facebook Image: ESPN Match photo if available, otherwise dynamic branded graphic
+          // Facebook Image: ESPN Match photo if available, otherwise dynamic branded graphic (4:3 ratio: 1200x900)
           const fbImage =
             summary.matchImage ||
             `https://api.microlink.io/?url=${encodeURIComponent(
@@ -435,14 +445,14 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 match.away_team
               )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=HT&league=${encodeURIComponent(
                 leagueName
-              )}&scorers=${encodeURIComponent(scorersText)}&homeLogo=${encodeURIComponent(
-                match.home_logo || ''
-              )}&awayLogo=${encodeURIComponent(match.away_logo || '')}&stats=${encodeURIComponent(
-                statsSummary
-              )}&channel=fb`
-            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=675`;
+              )}&homeScorers=${encodeURIComponent(homeScorers)}&awayScorers=${encodeURIComponent(
+                awayScorers
+              )}&homeLogo=${encodeURIComponent(match.home_logo || '')}&awayLogo=${encodeURIComponent(
+                match.away_logo || ''
+              )}&stats=${encodeURIComponent(statsSummary)}&channel=fb`
+            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
 
-          // WhatsApp Image: ESPN Match photo if available, otherwise dynamic branded graphic
+          // WhatsApp Image: ESPN Match photo if available, otherwise dynamic branded graphic (4:3 ratio: 1200x900)
           const waImage =
             summary.matchImage ||
             `https://api.microlink.io/?url=${encodeURIComponent(
@@ -450,12 +460,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 match.away_team
               )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=HT&league=${encodeURIComponent(
                 leagueName
-              )}&scorers=${encodeURIComponent(scorersText)}&homeLogo=${encodeURIComponent(
-                match.home_logo || ''
-              )}&awayLogo=${encodeURIComponent(match.away_logo || '')}&stats=${encodeURIComponent(
-                statsSummary
-              )}&channel=wa`
-            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=675`;
+              )}&homeScorers=${encodeURIComponent(homeScorers)}&awayScorers=${encodeURIComponent(
+                awayScorers
+              )}&homeLogo=${encodeURIComponent(match.home_logo || '')}&awayLogo=${encodeURIComponent(
+                match.away_logo || ''
+              )}&stats=${encodeURIComponent(statsSummary)}&channel=wa`
+            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
 
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {
@@ -499,6 +509,16 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           const goalEvents = summary.events.filter((ev: any) => ev.type.toLowerCase().includes('goal') || ev.scoringPlay);
           const scorersText = goalEvents.map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`).join(', ');
 
+          const homeScorers = goalEvents
+            .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : true))
+            .map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`)
+            .join(',');
+
+          const awayScorers = goalEvents
+            .filter((ev: any) => (summary.awayTeamId && ev.teamId ? ev.teamId === summary.awayTeamId : false))
+            .map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`)
+            .join(',');
+
           const fbFT = formatFullTimePost(
             match.home_team,
             match.away_team,
@@ -523,7 +543,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             ? `Possession: ${summary.stats.home.possession} - ${summary.stats.away.possession}  •  Shots (Target): ${summary.stats.home.shots}(${summary.stats.home.shotsOnTarget}) - ${summary.stats.away.shots}(${summary.stats.away.shotsOnTarget})`
             : '';
 
-          // Facebook Image: ESPN Match photo if available, otherwise dynamic branded graphic
+          // Facebook Image: ESPN Match photo if available, otherwise dynamic branded graphic (4:3 ratio: 1200x900)
           const fbImage =
             summary.matchImage ||
             `https://api.microlink.io/?url=${encodeURIComponent(
@@ -531,14 +551,14 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 match.away_team
               )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=FT&league=${encodeURIComponent(
                 leagueName
-              )}&scorers=${encodeURIComponent(scorersText)}&homeLogo=${encodeURIComponent(
-                match.home_logo || ''
-              )}&awayLogo=${encodeURIComponent(match.away_logo || '')}&stats=${encodeURIComponent(
-                statsSummary
-              )}&channel=fb`
-            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=675`;
+              )}&homeScorers=${encodeURIComponent(homeScorers)}&awayScorers=${encodeURIComponent(
+                awayScorers
+              )}&homeLogo=${encodeURIComponent(match.home_logo || '')}&awayLogo=${encodeURIComponent(
+                match.away_logo || ''
+              )}&stats=${encodeURIComponent(statsSummary)}&channel=fb`
+            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
 
-          // WhatsApp Image: ESPN Match photo if available, otherwise dynamic branded graphic
+          // WhatsApp Image: ESPN Match photo if available, otherwise dynamic branded graphic (4:3 ratio: 1200x900)
           const waImage =
             summary.matchImage ||
             `https://api.microlink.io/?url=${encodeURIComponent(
@@ -546,12 +566,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 match.away_team
               )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=FT&league=${encodeURIComponent(
                 leagueName
-              )}&scorers=${encodeURIComponent(scorersText)}&homeLogo=${encodeURIComponent(
-                match.home_logo || ''
-              )}&awayLogo=${encodeURIComponent(match.away_logo || '')}&stats=${encodeURIComponent(
-                statsSummary
-              )}&channel=wa`
-            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=675`;
+              )}&homeScorers=${encodeURIComponent(homeScorers)}&awayScorers=${encodeURIComponent(
+                awayScorers
+              )}&homeLogo=${encodeURIComponent(match.home_logo || '')}&awayLogo=${encodeURIComponent(
+                match.away_logo || ''
+              )}&stats=${encodeURIComponent(statsSummary)}&channel=wa`
+            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
 
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {

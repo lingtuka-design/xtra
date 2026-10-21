@@ -105,6 +105,8 @@ export const espnService = {
   // Fetch live match events (goals, cards, period changes), confirmed lineups and stats for a specific match
   async getMatchSummary(leagueSlug: string, eventId: string): Promise<{
     score: { home: string; away: string };
+    homeTeamId?: string;
+    awayTeamId?: string;
     status: {
       state: string;
       clock: string;
@@ -273,6 +275,8 @@ export const espnService = {
         home: home?.score || '0',
         away: away?.score || '0',
       },
+      homeTeamId: home?.team?.id,
+      awayTeamId: away?.team?.id,
       status: {
         state: statusState,
         clock: comp?.status?.displayClock || "0'",
