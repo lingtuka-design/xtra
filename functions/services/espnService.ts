@@ -124,6 +124,7 @@ export const espnService = {
       away: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
     };
     matchImage?: string;
+    matchImages?: string[];
   }> {
     const res = await fetch(
       `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueSlug}/summary?event=${eventId}`,
@@ -244,31 +245,45 @@ export const espnService = {
       statusDesc.toLowerCase() === 'full time' ||
       statusDesc.toLowerCase() === 'final';
 
-    // Extract match photo from ESPN news articles if available
-    let matchImage: string | undefined = undefined;
+    // Extract match photos from ESPN news articles if available
+    const matchImages: string[] = [];
     if (Array.isArray(data.news?.articles)) {
       const homeName = (home?.team?.displayName || '').toLowerCase();
       const awayName = (away?.team?.displayName || '').toLowerCase();
       const homeShort = (home?.team?.shortDisplayName || '').toLowerCase();
       const awayShort = (away?.team?.shortDisplayName || '').toLowerCase();
 
-      const matchedArticle = data.news.articles.find((a: any) => {
+      for (const a of data.news.articles) {
         const headline = (a.headline || '').toLowerCase();
         const desc = (a.description || '').toLowerCase();
-        return (
+        const isMatch =
           (homeName && headline.includes(homeName)) ||
           (awayName && headline.includes(awayName)) ||
           (homeShort && headline.includes(homeShort)) ||
           (awayShort && headline.includes(awayShort)) ||
           (homeName && desc.includes(homeName)) ||
-          (awayName && desc.includes(awayName))
-        );
-      }) || data.news.articles[0];
+          (awayName && desc.includes(awayName));
 
-      if (matchedArticle?.images?.[0]?.url) {
-        matchImage = matchedArticle.images[0].url;
+        if (isMatch && Array.isArray(a.images)) {
+          for (const img of a.images) {
+            if (img.url && !matchImages.includes(img.url)) {
+              matchImages.push(img.url);
+            }
+          }
+        }
+      }
+
+      // If no explicit match article found, fallback to first article's images
+      if (matchImages.length === 0 && data.news.articles[0]?.images) {
+        for (const img of data.news.articles[0].images) {
+          if (img.url && !matchImages.includes(img.url)) {
+            matchImages.push(img.url);
+          }
+        }
       }
     }
+
+    const matchImage = matchImages[0] || undefined;
 
     return {
       score: {
@@ -288,6 +303,7 @@ export const espnService = {
       lineups,
       stats,
       matchImage,
+      matchImages,
     };
   },
 };

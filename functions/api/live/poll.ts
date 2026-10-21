@@ -444,10 +444,11 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       if (summary.status.isHalftime) {
         const htEventId = `ht_${match.event_id}`;
         let claimed = false;
+        const htPhotoToUse = summary.matchImages?.[0] || summary.matchImage || '';
         try {
           const insertLock = await env.DB.prepare(
             'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-          ).bind(match.event_id, htEventId, 'half_time', 'HT', 'Half Time Stats').run();
+          ).bind(match.event_id, htEventId, 'half_time', 'HT', htPhotoToUse).run();
           claimed = Boolean(insertLock.success);
         } catch {
           claimed = false; // Duplicate blocked!
@@ -491,9 +492,9 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             ? `Possession: ${summary.stats.home.possession} - ${summary.stats.away.possession}  •  Shots (Target): ${summary.stats.home.shots}(${summary.stats.home.shotsOnTarget}) - ${summary.stats.away.shots}(${summary.stats.away.shotsOnTarget})`
             : '';
 
-          // Facebook Image: ESPN Match photo if available, otherwise dynamic branded graphic (4:3 ratio: 1200x900)
+          // Facebook Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const fbImage =
-            summary.matchImage ||
+            htPhotoToUse ||
             `https://api.microlink.io/?url=${encodeURIComponent(
               `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
                 match.away_team
@@ -506,9 +507,9 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               )}&stats=${encodeURIComponent(statsSummary)}&channel=fb`
             )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
 
-          // WhatsApp Image: ESPN Match photo if available, otherwise dynamic branded graphic (4:3 ratio: 1200x900)
+          // WhatsApp Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const waImage =
-            summary.matchImage ||
+            htPhotoToUse ||
             `https://api.microlink.io/?url=${encodeURIComponent(
               `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
                 match.away_team
@@ -597,9 +598,27 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             ? `Possession: ${summary.stats.home.possession} - ${summary.stats.away.possession}  •  Shots (Target): ${summary.stats.home.shots}(${summary.stats.home.shotsOnTarget}) - ${summary.stats.away.shots}(${summary.stats.away.shotsOnTarget})`
             : '';
 
-          // Facebook Image: ESPN Match photo if available, otherwise dynamic branded graphic (4:3 ratio: 1200x900)
+          // Determine FT Photo:
+          // Check if Half Time had a photo stored in D1
+          let htPhoto = '';
+          try {
+            const htRow = await env.DB.prepare(
+              'SELECT text FROM posted_match_events WHERE match_event_id = ?'
+            ).bind(`ht_${match.event_id}`).first<{ text: string }>();
+            if (htRow?.text && htRow.text.startsWith('http')) {
+              htPhoto = htRow.text;
+            }
+          } catch {}
+
+          const availablePhotos = summary.matchImages || (summary.matchImage ? [summary.matchImage] : []);
+          // Prefer a photo that is different from Half Time photo
+          const diffPhoto = availablePhotos.find((p) => p !== htPhoto);
+          // If a new/different photo exists, use it! Otherwise, reuse the match photo (as requested)
+          const chosenPhoto = diffPhoto || availablePhotos[0] || summary.matchImage || '';
+
+          // Facebook Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const fbImage =
-            summary.matchImage ||
+            chosenPhoto ||
             `https://api.microlink.io/?url=${encodeURIComponent(
               `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
                 match.away_team
@@ -612,9 +631,9 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               )}&stats=${encodeURIComponent(statsSummary)}&channel=fb`
             )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
 
-          // WhatsApp Image: ESPN Match photo if available, otherwise dynamic branded graphic (4:3 ratio: 1200x900)
+          // WhatsApp Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const waImage =
-            summary.matchImage ||
+            chosenPhoto ||
             `https://api.microlink.io/?url=${encodeURIComponent(
               `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
                 match.away_team
