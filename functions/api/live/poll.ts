@@ -3,6 +3,18 @@ import { espnService } from '../../services/espnService';
 import { facebookPoster } from '../../services/facebookPoster';
 import { whatsappPoster } from '../../services/whatsappPoster';
 
+// Dynamic hashtag generator based on match competition
+function getLeagueHashtag(leagueName: string): string {
+  const l = (leagueName || '').toLowerCase();
+  if (l.includes('premier')) {
+    return '#PremierLeague';
+  }
+  if (l.includes('champions') || l.includes('ucl')) {
+    return '#ChampionsLeague #UCL';
+  }
+  return '#Football';
+}
+
 // Helper to format Mizo Goal Alert
 function formatGoalPost(
   homeTeam: string,
@@ -21,7 +33,7 @@ ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
 ${scorerLine}🏆 ${leagueName}
 
-#InkhelxtraLive #PremierLeague #ChampionsLeague #FootballUpdate`;
+#InkhelxtraLive ${getLeagueHashtag(leagueName)} #FootballUpdate`;
 }
 
 // Helper to format WhatsApp Goal Alert
@@ -69,7 +81,7 @@ ${awayStarters.join(', ')}
 
 🏆 ${leagueName}
 
-#InkhelxtraLive #PremierLeague #ChampionsLeague #Lineup`;
+#InkhelxtraLive ${getLeagueHashtag(leagueName)} #Lineup`;
 }
 
 // Helper to format WhatsApp Lineup Alert
@@ -114,7 +126,7 @@ function formatHalfTimePost(
   const statsSection = stats
     ? `📊 Match Stats (HT):
 Possession: ${stats.home.possession} - ${stats.away.possession}
-Shots (On Target): ${stats.home.shots} (${stats.home.shotsOnTarget}) - ${stats.away.shots} (${stats.away.shotsOnTarget})
+Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
 Corners: ${stats.home.corners} - ${stats.away.corners}
 Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
     : '';
@@ -125,7 +137,7 @@ ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
 ${scorersSection}${statsSection}🏆 ${leagueName}
 
-#InkhelxtraLive #PremierLeague #ChampionsLeague #HalfTime`;
+#InkhelxtraLive ${getLeagueHashtag(leagueName)} #HalfTime`;
 }
 
 // Helper to format WhatsApp Half Time post
@@ -142,7 +154,7 @@ function formatWhatsAppHalfTime(
   const statsSection = stats
     ? `📊 *Match Stats (HT):*
 Possession: ${stats.home.possession} - ${stats.away.possession}
-Shots (On Target): ${stats.home.shots} (${stats.home.shotsOnTarget}) - ${stats.away.shots} (${stats.away.shotsOnTarget})
+Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
 Corners: ${stats.home.corners} - ${stats.away.corners}
 Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
     : '';
@@ -169,7 +181,7 @@ function formatFullTimePost(
   const statsSection = stats
     ? `📊 Final Match Stats:
 Possession: ${stats.home.possession} - ${stats.away.possession}
-Shots (On Target): ${stats.home.shots} (${stats.home.shotsOnTarget}) - ${stats.away.shots} (${stats.away.shotsOnTarget})
+Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
 Corners: ${stats.home.corners} - ${stats.away.corners}
 Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
     : '';
@@ -180,7 +192,7 @@ ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
 ${scorersSection}${statsSection}🏆 ${leagueName}
 
-#InkhelxtraLive #PremierLeague #ChampionsLeague #FullTime`;
+#InkhelxtraLive ${getLeagueHashtag(leagueName)} #FullTime`;
 }
 
 // Helper to format WhatsApp Full Time post
@@ -197,7 +209,7 @@ function formatWhatsAppFullTime(
   const statsSection = stats
     ? `📊 *Final Match Stats:*
 Possession: ${stats.home.possession} - ${stats.away.possession}
-Shots (On Target): ${stats.home.shots} (${stats.home.shotsOnTarget}) - ${stats.away.shots} (${stats.away.shotsOnTarget})
+Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
 Corners: ${stats.home.corners} - ${stats.away.corners}
 Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
     : '';
@@ -229,7 +241,7 @@ VAR-in endik a nih hnuah goal hi pawm a ni ta lo${reasonText}. Score a ngai: ${h
 
 🏆 ${leagueName}
 
-#InkhelxtraLive #VAR #PremierLeague #ChampionsLeague`;
+#InkhelxtraLive #VAR ${getLeagueHashtag(leagueName)}`;
 }
 
 // Helper to format WhatsApp VAR Disallowed Goal Alert
