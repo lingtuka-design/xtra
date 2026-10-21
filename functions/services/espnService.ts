@@ -102,14 +102,24 @@ export const espnService = {
     return allMatches;
   },
 
-  // Fetch live match events (goals, cards, period changes) and confirmed lineups for a specific match
+  // Fetch live match events (goals, cards, period changes), confirmed lineups and stats for a specific match
   async getMatchSummary(leagueSlug: string, eventId: string): Promise<{
     score: { home: string; away: string };
-    status: { state: string; clock: string; detail: string };
+    status: {
+      state: string;
+      clock: string;
+      detail: string;
+      isHalftime: boolean;
+      isFullTime: boolean;
+    };
     events: MatchEvent[];
     lineups?: {
       home: { team: string; formation?: string; starters: string[] };
       away: { team: string; formation?: string; starters: string[] };
+    };
+    stats?: {
+      home: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
+      away: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
     };
   }> {
     const res = await fetch(
@@ -176,18 +186,74 @@ export const espnService = {
       }
     }
 
+    // Extract match statistics (Possession, Shots, Shots on target, Corners, Fouls)
+    let stats: {
+      home: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
+      away: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
+    } | undefined = undefined;
+
+    const boxTeams = data.boxscore?.teams;
+    if (Array.isArray(boxTeams) && boxTeams.length >= 2) {
+      const getStat = (t: any, name: string) => {
+        return String(t?.statistics?.find((s: any) => s.name === name)?.displayValue || '0');
+      };
+
+      const homeBox = boxTeams.find((t: any) => (home?.team?.id && t.team?.id === home.team.id) || t.homeAway === 'home') || boxTeams[0];
+      const awayBox = boxTeams.find((t: any) => (away?.team?.id && t.team?.id === away.team.id) || t.homeAway === 'away') || boxTeams[1];
+
+      const homePoss = getStat(homeBox, 'possessionPct');
+      const awayPoss = getStat(awayBox, 'possessionPct');
+
+      stats = {
+        home: {
+          possession: homePoss.includes('%') ? homePoss : `${Math.round(parseFloat(homePoss) || 50)}%`,
+          shots: getStat(homeBox, 'totalShots'),
+          shotsOnTarget: getStat(homeBox, 'shotsOnTarget'),
+          corners: getStat(homeBox, 'wonCorners'),
+          fouls: getStat(homeBox, 'foulsCommitted'),
+        },
+        away: {
+          possession: awayPoss.includes('%') ? awayPoss : `${Math.round(parseFloat(awayPoss) || 50)}%`,
+          shots: getStat(awayBox, 'totalShots'),
+          shotsOnTarget: getStat(awayBox, 'shotsOnTarget'),
+          corners: getStat(awayBox, 'wonCorners'),
+          fouls: getStat(awayBox, 'foulsCommitted'),
+        },
+      };
+    }
+
+    const statusType = comp?.status?.type || {};
+    const statusState = statusType.state || 'pre';
+    const statusName = statusType.name || '';
+    const statusDesc = statusType.description || '';
+    const shortDetail = statusType.shortDetail || '';
+
+    const isHalftime =
+      statusName === 'STATUS_HALFTIME' ||
+      statusDesc.toLowerCase().includes('half') ||
+      shortDetail === 'HT';
+
+    const isFullTime =
+      statusState === 'post' ||
+      statusName === 'STATUS_FINAL' ||
+      shortDetail === 'FT' ||
+      statusDesc.toLowerCase().includes('final');
+
     return {
       score: {
         home: home?.score || '0',
         away: away?.score || '0',
       },
       status: {
-        state: comp?.status?.type?.state || 'pre',
+        state: statusState,
         clock: comp?.status?.displayClock || "0'",
-        detail: comp?.status?.type?.shortDetail || '',
+        detail: shortDetail || statusDesc || '',
+        isHalftime,
+        isFullTime,
       },
       events,
       lineups,
+      stats,
     };
   },
 };

@@ -96,6 +96,112 @@ ${awayStarters.join(', ')}
 🏆 *${leagueName}*`;
 }
 
+// Helper to format Half Time post for Facebook
+function formatHalfTimePost(
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: string,
+  awayScore: string,
+  scorersText: string,
+  stats: any,
+  leagueName: string
+): string {
+  const scorersSection = scorersText ? `⚽ Scorers: ${scorersText}\n\n` : '';
+  const statsSection = stats
+    ? `📊 Match Stats (HT):
+Possession: ${stats.home.possession} - ${stats.away.possession}
+Shots (On Target): ${stats.home.shots} (${stats.home.shotsOnTarget}) - ${stats.away.shots} (${stats.away.shotsOnTarget})
+Corners: ${stats.home.corners} - ${stats.away.corners}
+Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
+    : '';
+
+  return `⏸️ HALF TIME
+
+${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+
+${scorersSection}${statsSection}🏆 ${leagueName}
+
+#InkhelxtraLive #PremierLeague #ChampionsLeague #HalfTime`;
+}
+
+// Helper to format WhatsApp Half Time post
+function formatWhatsAppHalfTime(
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: string,
+  awayScore: string,
+  scorersText: string,
+  stats: any,
+  leagueName: string
+): string {
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
+  const statsSection = stats
+    ? `📊 *Match Stats (HT):*
+Possession: ${stats.home.possession} - ${stats.away.possession}
+Shots (On Target): ${stats.home.shots} (${stats.home.shotsOnTarget}) - ${stats.away.shots} (${stats.away.shotsOnTarget})
+Corners: ${stats.home.corners} - ${stats.away.corners}
+Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
+    : '';
+
+  return `⏸️ *HALF TIME*
+
+*${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}*
+${scorersSection}${statsSection}🏆 *${leagueName}*`;
+}
+
+// Helper to format Full Time post for Facebook
+function formatFullTimePost(
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: string,
+  awayScore: string,
+  scorersText: string,
+  stats: any,
+  leagueName: string
+): string {
+  const scorersSection = scorersText ? `⚽ Scorers: ${scorersText}\n\n` : '';
+  const statsSection = stats
+    ? `📊 Final Match Stats:
+Possession: ${stats.home.possession} - ${stats.away.possession}
+Shots (On Target): ${stats.home.shots} (${stats.home.shotsOnTarget}) - ${stats.away.shots} (${stats.away.shotsOnTarget})
+Corners: ${stats.home.corners} - ${stats.away.corners}
+Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
+    : '';
+
+  return `🏁 FULL TIME RESULT!
+
+${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+
+${scorersSection}${statsSection}🏆 ${leagueName}
+
+#InkhelxtraLive #PremierLeague #ChampionsLeague #FullTime`;
+}
+
+// Helper to format WhatsApp Full Time post
+function formatWhatsAppFullTime(
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: string,
+  awayScore: string,
+  scorersText: string,
+  stats: any,
+  leagueName: string
+): string {
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
+  const statsSection = stats
+    ? `📊 *Final Match Stats:*
+Possession: ${stats.home.possession} - ${stats.away.possession}
+Shots (On Target): ${stats.home.shots} (${stats.home.shotsOnTarget}) - ${stats.away.shots} (${stats.away.shotsOnTarget})
+Corners: ${stats.home.corners} - ${stats.away.corners}
+Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
+    : '';
+
+  return `🏁 *FULL TIME RESULT!*
+
+*${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}*
+${scorersSection}${statsSection}🏆 *${leagueName}*`;
+}
+
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   return handlePoll(context);
@@ -267,8 +373,126 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         }
       }
 
-      // If match is completed, auto untrack
-      if (summary.status.state === 'post') {
+      // 3. Check Half Time Stats
+      if (summary.status.isHalftime) {
+        const htEventId = `ht_${match.event_id}`;
+        const alreadyPostedHT = await env.DB.prepare(
+          'SELECT id FROM posted_match_events WHERE match_event_id = ?'
+        ).bind(htEventId).first();
+
+        if (!alreadyPostedHT) {
+          const goalEvents = summary.events.filter((ev: any) => ev.type.toLowerCase().includes('goal') || ev.scoringPlay);
+          const scorersText = goalEvents.map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`).join(', ');
+
+          const fbHT = formatHalfTimePost(
+            match.home_team,
+            match.away_team,
+            summary.score.home,
+            summary.score.away,
+            scorersText,
+            summary.stats,
+            leagueName
+          );
+
+          const waHT = formatWhatsAppHalfTime(
+            match.home_team,
+            match.away_team,
+            summary.score.home,
+            summary.score.away,
+            scorersText,
+            summary.stats,
+            leagueName
+          );
+
+          if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+            try {
+              await facebookPoster.postNews(fbHT, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+            } catch (fbErr: any) {
+              console.error('FB HT Stats error:', fbErr.message);
+            }
+          }
+
+          try {
+            await whatsappPoster.postNews(
+              waHT,
+              undefined,
+              env.WHATSAPP_API_TOKEN,
+              env.WHATSAPP_CHANNEL_ID,
+              env.WHATSAPP_API_URL
+            );
+          } catch (waErr: any) {
+            console.error('WA HT Stats error:', waErr.message);
+          }
+
+          await env.DB.prepare(
+            'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+          ).bind(match.event_id, htEventId, 'half_time', 'HT', 'Half Time Stats').run();
+
+          totalPosted++;
+          logDetails.push(`Half Time stats posted: ${match.home_team} vs ${match.away_team}`);
+        }
+      }
+
+      // 4. Check Full Time Stats & Final Result
+      if (summary.status.isFullTime) {
+        const ftEventId = `ft_${match.event_id}`;
+        const alreadyPostedFT = await env.DB.prepare(
+          'SELECT id FROM posted_match_events WHERE match_event_id = ?'
+        ).bind(ftEventId).first();
+
+        if (!alreadyPostedFT) {
+          const goalEvents = summary.events.filter((ev: any) => ev.type.toLowerCase().includes('goal') || ev.scoringPlay);
+          const scorersText = goalEvents.map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`).join(', ');
+
+          const fbFT = formatFullTimePost(
+            match.home_team,
+            match.away_team,
+            summary.score.home,
+            summary.score.away,
+            scorersText,
+            summary.stats,
+            leagueName
+          );
+
+          const waFT = formatWhatsAppFullTime(
+            match.home_team,
+            match.away_team,
+            summary.score.home,
+            summary.score.away,
+            scorersText,
+            summary.stats,
+            leagueName
+          );
+
+          if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+            try {
+              await facebookPoster.postNews(fbFT, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+            } catch (fbErr: any) {
+              console.error('FB FT Stats error:', fbErr.message);
+            }
+          }
+
+          try {
+            await whatsappPoster.postNews(
+              waFT,
+              undefined,
+              env.WHATSAPP_API_TOKEN,
+              env.WHATSAPP_CHANNEL_ID,
+              env.WHATSAPP_API_URL
+            );
+          } catch (waErr: any) {
+            console.error('WA FT Stats error:', waErr.message);
+          }
+
+          await env.DB.prepare(
+            'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+          ).bind(match.event_id, ftEventId, 'full_time', 'FT', 'Full Time Result & Stats').run();
+
+          totalPosted++;
+          logDetails.push(`Full Time stats posted: ${match.home_team} vs ${match.away_team}`);
+        }
+
+        // Auto untrack completed match
         await env.DB.prepare(
           'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
         ).bind(match.event_id).run();
