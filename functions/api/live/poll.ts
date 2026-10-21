@@ -39,7 +39,9 @@ function formatWhatsAppGoal(
   return `⚽ *GOAAALLL!!* (${minute})
 ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
 
-${scorerLine}🏆 *${leagueName}*`;
+${scorerLine}🏆 *${leagueName}*
+
+👉 _Inkhel WhatsApp Channel_`;
 }
 
 // Helper to format Mizo Lineup Alert for Facebook
@@ -93,7 +95,9 @@ ${homeStarters.join(', ')}
 *${awayHeader}:*
 ${awayStarters.join(', ')}
 
-🏆 *${leagueName}*`;
+🏆 *${leagueName}*
+
+👉 _Inkhel WhatsApp Channel_`;
 }
 
 // Helper to format Half Time post for Facebook
@@ -146,7 +150,9 @@ Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
   return `⏸️ *HALF TIME*
 
 *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}*
-${scorersSection}${statsSection}🏆 *${leagueName}*`;
+${scorersSection}${statsSection}🏆 *${leagueName}*
+
+👉 _Inkhel WhatsApp Channel_`;
 }
 
 // Helper to format Full Time post for Facebook
@@ -199,7 +205,9 @@ Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
   return `🏁 *FULL TIME RESULT!*
 
 *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}*
-${scorersSection}${statsSection}🏆 *${leagueName}*`;
+${scorersSection}${statsSection}🏆 *${leagueName}*
+
+👉 _Inkhel WhatsApp Channel_`;
 }
 
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
