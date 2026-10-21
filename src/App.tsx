@@ -454,10 +454,6 @@ export default function App() {
             />
           ) : (
             <>
-              {/* On FEED Home page, render Live Matches Panel at the top */}
-              {activeTab === 'all' && (
-                <LiveMatchesPanel />
-              )}
               {/* FB Queue Explainer Banner when on Queue tab */}
               {activeTab === 'queue' && (
                 <div className="p-3 mb-4 rounded-xl bg-blue-50/80 border border-blue-200/80 flex items-center justify-between gap-3 text-xs text-blue-900 shadow-xs">
