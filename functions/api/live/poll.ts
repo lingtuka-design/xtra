@@ -414,7 +414,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {
-              await facebookPoster.postNews(fbHT, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+              await facebookPoster.postNews(fbHT, summary.matchImage, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
             } catch (fbErr: any) {
               console.error('FB HT Stats error:', fbErr.message);
             }
@@ -423,7 +423,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           try {
             await whatsappPoster.postNews(
               waHT,
-              undefined,
+              summary.matchImage,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
               env.WHATSAPP_API_URL
@@ -474,7 +474,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {
-              await facebookPoster.postNews(fbFT, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+              await facebookPoster.postNews(fbFT, summary.matchImage, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
             } catch (fbErr: any) {
               console.error('FB FT Stats error:', fbErr.message);
             }
@@ -483,7 +483,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           try {
             await whatsappPoster.postNews(
               waFT,
-              undefined,
+              summary.matchImage,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
               env.WHATSAPP_API_URL

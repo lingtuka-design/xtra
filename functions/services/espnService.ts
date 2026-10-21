@@ -121,6 +121,7 @@ export const espnService = {
       home: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
       away: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
     };
+    matchImage?: string;
   }> {
     const res = await fetch(
       `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueSlug}/summary?event=${eventId}`,
@@ -241,6 +242,32 @@ export const espnService = {
       statusDesc.toLowerCase() === 'full time' ||
       statusDesc.toLowerCase() === 'final';
 
+    // Extract match photo from ESPN news articles if available
+    let matchImage: string | undefined = undefined;
+    if (Array.isArray(data.news?.articles)) {
+      const homeName = (home?.team?.displayName || '').toLowerCase();
+      const awayName = (away?.team?.displayName || '').toLowerCase();
+      const homeShort = (home?.team?.shortDisplayName || '').toLowerCase();
+      const awayShort = (away?.team?.shortDisplayName || '').toLowerCase();
+
+      const matchedArticle = data.news.articles.find((a: any) => {
+        const headline = (a.headline || '').toLowerCase();
+        const desc = (a.description || '').toLowerCase();
+        return (
+          (homeName && headline.includes(homeName)) ||
+          (awayName && headline.includes(awayName)) ||
+          (homeShort && headline.includes(homeShort)) ||
+          (awayShort && headline.includes(awayShort)) ||
+          (homeName && desc.includes(homeName)) ||
+          (awayName && desc.includes(awayName))
+        );
+      }) || data.news.articles[0];
+
+      if (matchedArticle?.images?.[0]?.url) {
+        matchImage = matchedArticle.images[0].url;
+      }
+    }
+
     return {
       score: {
         home: home?.score || '0',
@@ -256,6 +283,7 @@ export const espnService = {
       events,
       lineups,
       stats,
+      matchImage,
     };
   },
 };
