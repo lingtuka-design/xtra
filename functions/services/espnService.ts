@@ -230,14 +230,16 @@ export const espnService = {
 
     const isHalftime =
       statusName === 'STATUS_HALFTIME' ||
-      statusDesc.toLowerCase().includes('half') ||
+      statusDesc.toLowerCase() === 'halftime' ||
+      statusDesc.toLowerCase() === 'half time' ||
       shortDetail === 'HT';
 
     const isFullTime =
       statusState === 'post' ||
       statusName === 'STATUS_FINAL' ||
       shortDetail === 'FT' ||
-      statusDesc.toLowerCase().includes('final');
+      statusDesc.toLowerCase() === 'full time' ||
+      statusDesc.toLowerCase() === 'final';
 
     return {
       score: {
