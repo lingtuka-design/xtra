@@ -8,9 +8,7 @@ import {
   Image as ImageIcon,
   Sliders,
   CheckCircle2,
-  Check,
   AlertCircle,
-  Eye,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -199,8 +197,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
   const [brandLogo, setBrandLogo] = useState<'fb' | 'wa'>('fb');
 
   // Generation & Download States
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(0.44);
 
@@ -233,7 +230,6 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
     const reader = new FileReader();
     reader.onload = () => {
       setter(String(reader.result));
-      setGeneratedImageUrl(null);
     };
     reader.readAsDataURL(file);
   };
@@ -242,59 +238,67 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
   const getSafeImageSrc = (url: string) => {
     if (!url) return '';
     if (url.startsWith('data:') || url.startsWith('blob:')) return url;
-    // Proxied image to guarantee CORS compatibility with html-to-image
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
   };
 
-  // Generate Image Directly in Browser using html-to-image
-  const handleGenerate = async () => {
+  // Direct 1-Click HD Download Handler: What you see in Live Preview is downloaded directly as unscaled 819x1024 PNG
+  const handleDirectDownload = async () => {
     if (!cardRef.current) return;
-    setIsGenerating(true);
+    setIsDownloading(true);
     setErrorMsg(null);
 
-    try {
-      // Use html-to-image to snapshot the cardRef element at exact 819x1024
-      const dataUrl = await toPng(cardRef.current, {
-        cacheBust: true,
-        pixelRatio: 1,
-        width: 819,
-        height: 1024,
-        quality: 0.98,
-      });
-
-      setGeneratedImageUrl(dataUrl);
-    } catch (err: any) {
-      console.error('Snapshot failed:', err);
-      // Fallback attempt without cacheBust
-      try {
-        const fallbackUrl = await toPng(cardRef.current, {
-          pixelRatio: 1,
-          width: 819,
-          height: 1024,
-        });
-        setGeneratedImageUrl(fallbackUrl);
-      } catch (fallbackErr: any) {
-        setErrorMsg('Image generate-na a buai deuh: ' + (fallbackErr?.message || 'Error occurred'));
-      }
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // Direct download handler (Zero lag, instant PNG file saving)
-  const handleDownloadImage = () => {
-    if (!generatedImageUrl) return;
     const fileName = `${homeTeam.trim()}-vs-${awayTeam.trim()}-${status.replace(/\s+/g, '')}-${brandLogo === 'fb' ? 'Xtra' : 'Inkhel'}.png`.replace(
       /[^a-zA-Z0-9-_\.]/g,
       '_'
     );
 
-    const a = document.createElement('a');
-    a.href = generatedImageUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    try {
+      // Snapshot cardRef unscaled at exact 819x1024 with no scale distortion
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        pixelRatio: 1,
+        width: 819,
+        height: 1024,
+        quality: 1,
+        style: {
+          transform: 'none',
+          transformOrigin: 'top left',
+          margin: '0',
+          top: '0',
+          left: '0',
+        },
+      });
+
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Download snapshot failed:', err);
+      try {
+        const fallbackUrl = await toPng(cardRef.current, {
+          pixelRatio: 1,
+          width: 819,
+          height: 1024,
+          style: {
+            transform: 'none',
+            transformOrigin: 'top left',
+          },
+        });
+        const a = document.createElement('a');
+        a.href = fallbackUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (fallbackErr: any) {
+        setErrorMsg('Image download a buai deuh: ' + (fallbackErr?.message || 'Error occurred'));
+      }
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   // Stats calculation
@@ -335,7 +339,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
             </h2>
           </div>
           <p className="text-xs text-stone-300 font-medium">
-            Mizoram local football leh match result graphic duang la, browser chhungah 0.2s chhungin HD PNG-in download nghal rawh.
+            Match score leh stats te duang la, a hnuaia "Download HD Scorecard" hmetin 0.2s chhungin i khawl-ah direct-in download nghal rawh.
           </p>
         </div>
 
@@ -347,10 +351,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
           <div className="flex items-center bg-stone-800/90 p-1 rounded-2xl border border-stone-700 text-xs font-bold">
             <button
               type="button"
-              onClick={() => {
-                setBrandLogo('fb');
-                setGeneratedImageUrl(null);
-              }}
+              onClick={() => setBrandLogo('fb')}
               className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
                 brandLogo === 'fb'
                   ? 'bg-rose-600 text-white shadow-xs'
@@ -362,10 +363,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setBrandLogo('wa');
-                setGeneratedImageUrl(null);
-              }}
+              onClick={() => setBrandLogo('wa')}
               className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
                 brandLogo === 'wa'
                   ? 'bg-emerald-600 text-white shadow-xs'
@@ -394,7 +392,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
         </div>
       )}
 
-      {/* Two Column Layout: Controls (Left) & Live Preview (Right) */}
+      {/* Two Column Layout: Controls (Left) & Live Preview + Instant Download (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Form Controls */}
         <div className="lg:col-span-7 space-y-4">
@@ -412,10 +410,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
               <input
                 type="text"
                 value={league}
-                onChange={(e) => {
-                  setLeague(e.target.value);
-                  setGeneratedImageUrl(null);
-                }}
+                onChange={(e) => setLeague(e.target.value)}
                 placeholder="e.g. MIZORAM PREMIER LEAGUE"
                 className="w-full bg-[#FAF8F5] border border-stone-300 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-900 focus:outline-none focus:border-stone-900"
               />
@@ -424,10 +419,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <button
                     key={p}
                     type="button"
-                    onClick={() => {
-                      setLeague(p);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onClick={() => setLeague(p)}
                     className={`text-[10px] px-2 py-0.5 rounded-lg border font-semibold transition ${
                       league === p
                         ? 'bg-stone-900 text-white border-stone-900'
@@ -445,10 +437,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
               <div className="flex items-center bg-stone-100 p-0.5 rounded-xl border border-stone-200 text-xs font-bold">
                 <button
                   type="button"
-                  onClick={() => {
-                    setStatus('FULL TIME');
-                    setGeneratedImageUrl(null);
-                  }}
+                  onClick={() => setStatus('FULL TIME')}
                   className={`px-3 py-1 rounded-lg transition ${
                     status === 'FULL TIME'
                       ? 'bg-rose-600 text-white shadow-2xs'
@@ -459,10 +448,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setStatus('HALF TIME');
-                    setGeneratedImageUrl(null);
-                  }}
+                  onClick={() => setStatus('HALF TIME')}
                   className={`px-3 py-1 rounded-lg transition ${
                     status === 'HALF TIME'
                       ? 'bg-amber-600 text-white shadow-2xs'
@@ -493,7 +479,6 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     key={team.name}
                     type="button"
                     onClick={() => {
-                      setGeneratedImageUrl(null);
                       if (!homeTeam || homeTeam === 'Aizawl FC') {
                         setHomeTeam(team.name);
                         if (team.logo) setHomeLogo(team.logo);
@@ -527,10 +512,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homeTeam}
-                    onChange={(e) => {
-                      setHomeTeam(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomeTeam(e.target.value)}
                     placeholder="e.g. Aizawl FC"
                     className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-stone-900"
                   />
@@ -542,10 +524,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     <input
                       type="number"
                       value={homeScore}
-                      onChange={(e) => {
-                        setHomeScore(e.target.value);
-                        setGeneratedImageUrl(null);
-                      }}
+                      onChange={(e) => setHomeScore(e.target.value)}
                       className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs font-extrabold text-stone-900"
                     />
                   </div>
@@ -574,10 +553,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homeScorers}
-                    onChange={(e) => {
-                      setHomeScorers(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomeScorers(e.target.value)}
                     placeholder="e.g. Lalthanmawia 23', 67'"
                     className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900"
                   />
@@ -600,10 +576,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={awayTeam}
-                    onChange={(e) => {
-                      setAwayTeam(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayTeam(e.target.value)}
                     placeholder="e.g. Chanmari FC"
                     className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-stone-900"
                   />
@@ -615,10 +588,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     <input
                       type="number"
                       value={awayScore}
-                      onChange={(e) => {
-                        setAwayScore(e.target.value);
-                        setGeneratedImageUrl(null);
-                      }}
+                      onChange={(e) => setAwayScore(e.target.value)}
                       className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs font-extrabold text-stone-900"
                     />
                   </div>
@@ -647,10 +617,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={awayScorers}
-                    onChange={(e) => {
-                      setAwayScorers(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayScorers(e.target.value)}
                     placeholder="e.g. David 89'"
                     className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900"
                   />
@@ -670,10 +637,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                 <input
                   type="checkbox"
                   checked={includeStats}
-                  onChange={(e) => {
-                    setIncludeStats(e.target.checked);
-                    setGeneratedImageUrl(null);
-                  }}
+                  onChange={(e) => setIncludeStats(e.target.checked)}
                   className="rounded text-rose-600 focus:ring-rose-500 w-4 h-4"
                 />
                 <span>Stats Telh</span>
@@ -688,20 +652,14 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homePossession}
-                    onChange={(e) => {
-                      setHomePossession(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomePossession(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                     placeholder="50%"
                   />
                   <input
                     type="text"
                     value={awayPossession}
-                    onChange={(e) => {
-                      setAwayPossession(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayPossession(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                     placeholder="50%"
                   />
@@ -713,19 +671,13 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homeShots}
-                    onChange={(e) => {
-                      setHomeShots(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomeShots(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                   <input
                     type="text"
                     value={awayShots}
-                    onChange={(e) => {
-                      setAwayShots(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayShots(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                 </div>
@@ -736,19 +688,13 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homeShotsOnTarget}
-                    onChange={(e) => {
-                      setHomeShotsOnTarget(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomeShotsOnTarget(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                   <input
                     type="text"
                     value={awayShotsOnTarget}
-                    onChange={(e) => {
-                      setAwayShotsOnTarget(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayShotsOnTarget(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                 </div>
@@ -759,19 +705,13 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homeCorners}
-                    onChange={(e) => {
-                      setHomeCorners(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomeCorners(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                   <input
                     type="text"
                     value={awayCorners}
-                    onChange={(e) => {
-                      setAwayCorners(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayCorners(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                 </div>
@@ -782,19 +722,13 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homeFouls}
-                    onChange={(e) => {
-                      setHomeFouls(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomeFouls(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                   <input
                     type="text"
                     value={awayFouls}
-                    onChange={(e) => {
-                      setAwayFouls(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayFouls(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                 </div>
@@ -805,19 +739,13 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homeYellowCards}
-                    onChange={(e) => {
-                      setHomeYellowCards(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomeYellowCards(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                   <input
                     type="text"
                     value={awayYellowCards}
-                    onChange={(e) => {
-                      setAwayYellowCards(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayYellowCards(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                 </div>
@@ -828,19 +756,13 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                   <input
                     type="text"
                     value={homeRedCards}
-                    onChange={(e) => {
-                      setHomeRedCards(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setHomeRedCards(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                   <input
                     type="text"
                     value={awayRedCards}
-                    onChange={(e) => {
-                      setAwayRedCards(e.target.value);
-                      setGeneratedImageUrl(null);
-                    }}
+                    onChange={(e) => setAwayRedCards(e.target.value)}
                     className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
                   />
                 </div>
@@ -863,10 +785,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
               {bgImage && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setBgImage('');
-                    setGeneratedImageUrl(null);
-                  }}
+                  onClick={() => setBgImage('')}
                   className="text-[11px] text-rose-600 hover:underline font-semibold"
                 >
                   Paih
@@ -891,7 +810,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
           </div>
         </div>
 
-        {/* Right Column: Live Preview & HD Image Generator */}
+        {/* Right Column: Live Preview & Direct 1-Click HD Download */}
         <div className="lg:col-span-5 sticky top-20 space-y-3.5">
           <div className="bg-white border border-stone-200/90 rounded-2xl p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
@@ -904,300 +823,273 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
               </span>
             </div>
 
-            {/* Container for Preview and Snapshot */}
+            {/* Container for Live Preview */}
             <div
               ref={previewContainerRef}
               className="w-full bg-[#090c13] rounded-2xl overflow-hidden border border-stone-300 shadow-md aspect-[819/1024] relative flex items-start justify-start select-none"
             >
-              {/* If generated image is ready and not generating, show generated image directly or show live DOM */}
-              {generatedImageUrl ? (
-                <div className="w-full h-full relative group">
-                  <img
-                    src={generatedImageUrl}
-                    alt="Generated Scorecard"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setGeneratedImageUrl(null)}
-                      className="px-3 py-1.5 bg-white text-stone-900 rounded-xl text-xs font-bold flex items-center gap-1 shadow-md hover:bg-stone-100"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Edit Live</span>
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {/* The Canonical 819x1024 DOM Card element (Snapshot target) */}
+              {/* Scaler Wrapper: applies CSS scale only to the preview display */}
               <div
-                ref={cardRef}
-                className={`w-[819px] h-[1024px] overflow-hidden relative flex flex-col items-center pt-[58px] text-white shrink-0 ${
-                  generatedImageUrl ? 'hidden' : 'block'
-                }`}
                 style={{
+                  width: '819px',
+                  height: '1024px',
                   transform: `scale(${previewScale})`,
                   transformOrigin: 'top left',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                 }}
               >
-                {/* Background Layer */}
+                {/* Canonical Unscaled Card Element (Snapshot Target) */}
                 <div
-                  className="absolute inset-0 z-1"
+                  ref={cardRef}
                   style={{
-                    background: bgImage
-                      ? `linear-gradient(180deg, rgba(8, 12, 18, 0.85) 0%, rgba(4, 6, 10, 0.94) 100%), url('${getSafeImageSrc(
-                          bgImage
-                        )}') center / cover no-repeat`
-                      : 'radial-gradient(circle at 50% 18%, rgba(20, 28, 48, 0.4) 0%, rgba(5, 7, 12, 0.95) 80%), linear-gradient(180deg, #121824 0%, #06080e 100%)',
+                    width: '819px',
+                    height: '1024px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    paddingTop: '58px',
+                    color: '#ffffff',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                   }}
-                />
-
-                {/* Vignette Overlay */}
-                <div
-                  className="absolute inset-0 z-2 pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(circle at 50% 30%, transparent 35%, rgba(0,0,0,0.8) 100%)',
-                  }}
-                />
-
-                {/* Dot Accents */}
-                <div className="absolute top-[75px] right-[30px] z-4">
-                  <DotMatrixSvg />
-                </div>
-                <div className="absolute bottom-[125px] left-[30px] z-4">
-                  <DotMatrixSvg />
-                </div>
-
-                {/* Content Wrap */}
-                <div className="relative z-10 flex flex-col items-center w-full">
-                  {/* League Title */}
+                >
+                  {/* Background Layer */}
                   <div
-                    className="text-[21px] font-extrabold uppercase text-white mb-4"
+                    className="absolute inset-0 z-1"
                     style={{
-                      letterSpacing: '2px',
-                      textShadow: '0 2px 8px rgba(0, 0, 0, 0.9)',
+                      background: bgImage
+                        ? `linear-gradient(180deg, rgba(8, 12, 18, 0.85) 0%, rgba(4, 6, 10, 0.94) 100%), url('${getSafeImageSrc(
+                            bgImage
+                          )}') center / cover no-repeat`
+                        : 'radial-gradient(circle at 50% 18%, rgba(20, 28, 48, 0.4) 0%, rgba(5, 7, 12, 0.95) 80%), linear-gradient(180deg, #121824 0%, #06080e 100%)',
                     }}
-                  >
-                    {league || 'MATCH RESULT'}
+                  />
+
+                  {/* Vignette Overlay */}
+                  <div
+                    className="absolute inset-0 z-2 pointer-events-none"
+                    style={{
+                      background: 'radial-gradient(circle at 50% 30%, transparent 35%, rgba(0,0,0,0.8) 100%)',
+                    }}
+                  />
+
+                  {/* Dot Accents */}
+                  <div className="absolute top-[75px] right-[30px] z-4">
+                    <DotMatrixSvg />
+                  </div>
+                  <div className="absolute bottom-[125px] left-[30px] z-4">
+                    <DotMatrixSvg />
                   </div>
 
-                  {/* Status Badge */}
-                  <div
-                    className="bg-white w-[126px] h-[98px] rounded-t-[4px] flex flex-col items-center justify-center -mb-[1px] z-12"
-                    style={{
-                      boxShadow: '0 -3px 12px rgba(0, 0, 0, 0.4)',
-                    }}
-                  >
+                  {/* Content Wrap */}
+                  <div className="relative z-10 flex flex-col items-center w-full">
+                    {/* League Title */}
                     <div
-                      className="text-[38px] leading-[0.92] font-black text-[#7E0A0A] uppercase"
+                      className="text-[21px] font-extrabold uppercase text-white mb-4"
                       style={{
-                        fontFamily: 'Impact, "Arial Black", -apple-system, sans-serif',
-                        letterSpacing: '0.5px',
+                        letterSpacing: '2px',
+                        textShadow: '0 2px 8px rgba(0, 0, 0, 0.9)',
                       }}
                     >
-                      {statusTop}
+                      {league || 'MATCH RESULT'}
                     </div>
+
+                    {/* Status Badge */}
                     <div
-                      className="text-[38px] leading-[0.92] font-black text-[#7E0A0A] uppercase"
+                      className="bg-white w-[126px] h-[98px] rounded-t-[4px] flex flex-col items-center justify-center -mb-[1px] z-12"
                       style={{
-                        fontFamily: 'Impact, "Arial Black", -apple-system, sans-serif',
-                        letterSpacing: '0.5px',
+                        boxShadow: '0 -3px 12px rgba(0, 0, 0, 0.4)',
                       }}
                     >
-                      {statusBottom}
-                    </div>
-                  </div>
-
-                  {/* Scoreboard Box (655x158) */}
-                  <div
-                    className="w-[655px] h-[158px] flex items-stretch"
-                    style={{
-                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.6)',
-                    }}
-                  >
-                    {/* Home Crest Box */}
-                    <div className="bg-white w-[164px] flex items-center justify-center p-3">
-                      {homeLogo ? (
-                        <img
-                          src={getSafeImageSrc(homeLogo)}
-                          alt={homeTeam}
-                          className="max-w-[100px] max-height-[100px] object-contain"
-                          crossOrigin="anonymous"
-                          style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
-                        />
-                      ) : (
-                        <span className="text-5xl">⚽</span>
-                      )}
-                    </div>
-
-                    {/* Score Center */}
-                    <div className="bg-[#8A0A0A] w-[327px] flex items-center justify-center">
                       <div
-                        className="text-[114px] leading-none font-black text-white"
+                        className="text-[38px] leading-[0.92] font-black text-[#7E0A0A] uppercase"
                         style={{
                           fontFamily: 'Impact, "Arial Black", -apple-system, sans-serif',
-                          letterSpacing: '8px',
-                          textShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
-                          transform: 'translateY(-2px)',
+                          letterSpacing: '0.5px',
                         }}
                       >
-                        {homeScore} : {awayScore}
+                        {statusTop}
+                      </div>
+                      <div
+                        className="text-[38px] leading-[0.92] font-black text-[#7E0A0A] uppercase"
+                        style={{
+                          fontFamily: 'Impact, "Arial Black", -apple-system, sans-serif',
+                          letterSpacing: '0.5px',
+                        }}
+                      >
+                        {statusBottom}
                       </div>
                     </div>
 
-                    {/* Away Crest Box */}
-                    <div className="bg-white w-[164px] flex items-center justify-center p-3">
-                      {awayLogo ? (
-                        <img
-                          src={getSafeImageSrc(awayLogo)}
-                          alt={awayTeam}
-                          className="max-w-[100px] max-height-[100px] object-contain"
-                          crossOrigin="anonymous"
-                          style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
-                        />
-                      ) : (
-                        <span className="text-5xl">⚽</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Scorers Section */}
-                  <div className="w-[655px] flex justify-between items-start mt-3.5 mb-4 min-h-[52px] px-5">
+                    {/* Scoreboard Box (655x158) */}
                     <div
-                      className="text-right text-[15.5px] font-bold text-white leading-[1.38] w-[280px]"
-                      style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                      className="w-[655px] h-[158px] flex items-stretch"
+                      style={{
+                        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.6)',
+                      }}
                     >
-                      {homeScorersList.map((s, idx) => (
-                        <div key={idx}>{s}</div>
-                      ))}
-                    </div>
-                    <div
-                      className="text-left text-[15.5px] font-bold text-white leading-[1.38] w-[280px]"
-                      style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
-                    >
-                      {awayScorersList.map((s, idx) => (
-                        <div key={idx}>{s}</div>
-                      ))}
-                    </div>
-                  </div>
+                      {/* Home Crest Box */}
+                      <div className="bg-white w-[164px] flex items-center justify-center p-3">
+                        {homeLogo ? (
+                          <img
+                            src={getSafeImageSrc(homeLogo)}
+                            alt={homeTeam}
+                            className="max-w-[100px] max-height-[100px] object-contain"
+                            crossOrigin="anonymous"
+                            style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+                          />
+                        ) : (
+                          <span className="text-5xl">⚽</span>
+                        )}
+                      </div>
 
-                  {/* 7 Stats Cards */}
-                  {includeStats && (
-                    <div className="w-[550px] flex flex-col gap-[9px]">
-                      {statsList.map((s, idx) => {
-                        let homePct = 50;
-                        let awayPct = 50;
-                        const hVal = parseFloat(String(s.home).replace('%', '')) || 0;
-                        const aVal = parseFloat(String(s.away).replace('%', '')) || 0;
-                        const total = hVal + aVal;
+                      {/* Score Center */}
+                      <div className="bg-[#8A0A0A] w-[327px] flex items-center justify-center">
+                        <div
+                          className="text-[114px] leading-none font-black text-white"
+                          style={{
+                            fontFamily: 'Impact, "Arial Black", -apple-system, sans-serif',
+                            letterSpacing: '8px',
+                            textShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
+                            transform: 'translateY(-2px)',
+                          }}
+                        >
+                          {homeScore} : {awayScore}
+                        </div>
+                      </div>
 
-                        if (s.isPossession) {
-                          homePct = hVal || 50;
-                          awayPct = 100 - homePct;
-                        } else if (total > 0) {
-                          homePct = Math.round((hVal / total) * 100);
-                          awayPct = 100 - homePct;
-                        }
-
-                        return (
-                          <div
-                            key={idx}
-                            className="bg-white rounded-[15px] h-[48px] px-5 flex items-center justify-between"
-                            style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)' }}
-                          >
-                            <div className="text-[25px] font-black text-[#0B1B3D] w-[60px] text-left">
-                              {s.home}
-                            </div>
-                            <div className="flex flex-col items-center w-[260px]">
-                              <div className="text-[12px] font-black text-[#0B1B3D] uppercase tracking-[0.6px] mb-1">
-                                {s.label}
-                              </div>
-                              <div className="w-[250px] h-[7px] bg-[#D1D5DB] rounded-full relative overflow-hidden flex">
-                                <div
-                                  className="bg-[#B91C1C] h-full rounded-l-full"
-                                  style={{ width: `${homePct}%` }}
-                                />
-                                <div
-                                  className="bg-[#D1D5DB] h-full rounded-r-full"
-                                  style={{ width: `${awayPct}%` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="text-[25px] font-black text-[#0B1B3D] w-[60px] text-right">
-                              {s.away}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {/* Away Crest Box */}
+                      <div className="bg-white w-[164px] flex items-center justify-center p-3">
+                        {awayLogo ? (
+                          <img
+                            src={getSafeImageSrc(awayLogo)}
+                            alt={awayTeam}
+                            className="max-w-[100px] max-height-[100px] object-contain"
+                            crossOrigin="anonymous"
+                            style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+                          />
+                        ) : (
+                          <span className="text-5xl">⚽</span>
+                        )}
+                      </div>
                     </div>
-                  )}
 
-                  {/* Footer Branding */}
-                  <div className="relative z-10 flex flex-col items-center justify-center mt-[18px]">
-                    <div className="flex items-center justify-center scale-90">
-                      <InkhelSvgLogo />
-                    </div>
-                    {brandLogo === 'fb' && (
+                    {/* Scorers Section */}
+                    <div className="w-[655px] flex justify-between items-start mt-3.5 mb-4 min-h-[52px] px-5">
                       <div
-                        className="text-[16px] font-extrabold text-white -mt-1"
-                        style={{
-                          letterSpacing: '0.6px',
-                          textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
-                        }}
+                        className="text-right text-[15.5px] font-bold text-white leading-[1.38] w-[280px]"
+                        style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
                       >
-                        Xtra
+                        {homeScorersList.map((s, idx) => (
+                          <div key={idx}>{s}</div>
+                        ))}
+                      </div>
+                      <div
+                        className="text-left text-[15.5px] font-bold text-white leading-[1.38] w-[280px]"
+                        style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                      >
+                        {awayScorersList.map((s, idx) => (
+                          <div key={idx}>{s}</div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 7 Stats Cards */}
+                    {includeStats && (
+                      <div className="w-[550px] flex flex-col gap-[9px]">
+                        {statsList.map((s, idx) => {
+                          let homePct = 50;
+                          let awayPct = 50;
+                          const hVal = parseFloat(String(s.home).replace('%', '')) || 0;
+                          const aVal = parseFloat(String(s.away).replace('%', '')) || 0;
+                          const total = hVal + aVal;
+
+                          if (s.isPossession) {
+                            homePct = hVal || 50;
+                            awayPct = 100 - homePct;
+                          } else if (total > 0) {
+                            homePct = Math.round((hVal / total) * 100);
+                            awayPct = 100 - homePct;
+                          }
+
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-white rounded-[15px] h-[48px] px-5 flex items-center justify-between"
+                              style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)' }}
+                            >
+                              <div className="text-[25px] font-black text-[#0B1B3D] w-[60px] text-left">
+                                {s.home}
+                              </div>
+                              <div className="flex flex-col items-center w-[260px]">
+                                <div className="text-[12px] font-black text-[#0B1B3D] uppercase tracking-[0.6px] mb-1">
+                                  {s.label}
+                                </div>
+                                <div className="w-[250px] h-[7px] bg-[#D1D5DB] rounded-full relative overflow-hidden flex">
+                                  <div
+                                    className="bg-[#B91C1C] h-full rounded-l-full"
+                                    style={{ width: `${homePct}%` }}
+                                  />
+                                  <div
+                                    className="bg-[#D1D5DB] h-full rounded-r-full"
+                                    style={{ width: `${awayPct}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="text-[25px] font-black text-[#0B1B3D] w-[60px] text-right">
+                                {s.away}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
+
+                    {/* Footer Branding */}
+                    <div className="relative z-10 flex flex-col items-center justify-center mt-[18px]">
+                      <div className="flex items-center justify-center scale-90">
+                        <InkhelSvgLogo />
+                      </div>
+                      {brandLogo === 'fb' && (
+                        <div
+                          className="text-[16px] font-extrabold text-white -mt-1"
+                          style={{
+                            letterSpacing: '0.6px',
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
+                          }}
+                        >
+                          Xtra
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Generator Action Buttons */}
-            <div className="space-y-2.5 pt-2">
-              {/* Generate Button */}
+            {/* Direct 1-Click HD Download Action */}
+            <div className="space-y-2 pt-2">
               <button
                 type="button"
-                disabled={isGenerating}
-                onClick={handleGenerate}
-                className="w-full py-3 px-4 bg-gradient-to-r from-rose-600 via-rose-700 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white rounded-xl text-xs font-black tracking-wide flex items-center justify-center gap-2 shadow-sm transition hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                disabled={isDownloading}
+                onClick={handleDirectDownload}
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-black tracking-wide flex items-center justify-center gap-2 shadow-sm transition hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               >
-                {isGenerating ? (
+                {isDownloading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>HD Graphic Generate mek a ni...</span>
+                    <span>HD Image Download mek a ni (0.2s)...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 text-amber-200" />
-                    <span>Generate Graphic ({brandLogo === 'fb' ? 'Inkhel Xtra' : 'Inkhel'})</span>
+                    <Download className="w-4 h-4 text-emerald-100" />
+                    <span>⬇️ Download HD Scorecard (819x1024 PNG)</span>
                   </>
                 )}
               </button>
-
-              {/* Download Button (Active once generated) */}
-              {generatedImageUrl ? (
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={handleDownloadImage}
-                    className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-sm transition hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>⬇️ Download HD Image (PNG)</span>
-                  </button>
-                  <p className="text-[11px] text-center text-emerald-700 font-bold flex items-center justify-center gap-1">
-                    <Check className="w-3.5 h-3.5" />
-                    <span>HD Image (819x1024) peih a ni ta! Hmet la i khawl-ah a in-download nghal ang.</span>
-                  </p>
-                </div>
-              ) : (
-                <p className="text-[11px] text-center text-stone-500 font-medium">
-                  "Generate Graphic" hmet la, second chanve chhungin HD PNG-in download theih a ni nghal ang.
-                </p>
-              )}
+              <p className="text-[11px] text-center text-stone-500 font-medium">
+                Live Preview-a i hmuh ang chiah chiah hi full HD (819x1024) PNG-in i khawl-ah a in-download nghal ang.
+              </p>
             </div>
           </div>
         </div>
