@@ -28,6 +28,7 @@ interface EspnMatch {
     score: string;
   };
   isTracked?: boolean;
+  trackMode?: 'full' | 'results_only' | null;
 }
 
 export const LiveMatchesPanel: React.FC = () => {
@@ -96,14 +97,17 @@ export const LiveMatchesPanel: React.FC = () => {
     };
   }, [matches]);
 
-  const handleToggleTrack = async (match: EspnMatch) => {
-    const nextState = !match.isTracked;
+  const handleSetTrackMode = async (match: EspnMatch, mode: 'full' | 'results_only' | 'off') => {
+    const isNowTracked = mode !== 'off';
+    const nextMode = isNowTracked ? mode : null;
     setUpdatingId(match.id);
     setStatusMessage(null);
 
     // Optimistic UI update
     setMatches((prev) =>
-      prev.map((m) => (m.id === match.id ? { ...m, isTracked: nextState } : m))
+      prev.map((m) =>
+        m.id === match.id ? { ...m, isTracked: isNowTracked, trackMode: nextMode } : m
+      )
     );
 
     try {
@@ -118,7 +122,8 @@ export const LiveMatchesPanel: React.FC = () => {
           homeLogo: match.homeTeam.logo,
           awayLogo: match.awayTeam.logo,
           matchTime: match.date,
-          isTracked: nextState,
+          isTracked: isNowTracked,
+          trackMode: nextMode || undefined,
         }),
       });
 
@@ -127,15 +132,23 @@ export const LiveMatchesPanel: React.FC = () => {
         throw new Error(data.error || 'Failed to update tracking');
       }
 
-      setStatusMessage(
-        nextState
-          ? `🟢 ${match.shortName || match.name} hi track a ni ta! Goal a luh veleh Inkhel Xtra FB & WhatsApp-ah auto-post zel a ni ang.`
-          : `⚪ ${match.shortName || match.name} tracking titawp a ni e.`
-      );
+      if (mode === 'full') {
+        setStatusMessage(
+          `🔥 ${match.shortName || match.name}: FULL LIVE TRACKING! Goal tin, lineup, HT & FT zawng zawng a auto-post vek ang.`
+        );
+      } else if (mode === 'results_only') {
+        setStatusMessage(
+          `📊 ${match.shortName || match.name}: RESULTS ONLY! Goal tin post lovin, Half Time & Full Time result chauh a auto-post ang.`
+        );
+      } else {
+        setStatusMessage(`⚪ ${match.shortName || match.name} tracking titawp a ni e.`);
+      }
     } catch (err: any) {
       // Revert optimistic update on failure
       setMatches((prev) =>
-        prev.map((m) => (m.id === match.id ? { ...m, isTracked: !nextState } : m))
+        prev.map((m) =>
+          m.id === match.id ? { ...m, isTracked: match.isTracked, trackMode: match.trackMode } : m
+        )
       );
       alert('Tracking thlak laiin buaina a awm: ' + err.message);
     } finally {
@@ -177,7 +190,7 @@ export const LiveMatchesPanel: React.FC = () => {
               </h2>
             </div>
             <p className="text-[11px] text-stone-500 font-medium">
-              Match duh thlang (tick) la, Goal a luh veleh <strong>Inkhel Xtra FB</strong> leh <strong>WhatsApp Channel</strong>-ah auto-post zel a ni ang.
+              Match duh thlang la: <strong className="text-rose-700">🔥 Live</strong> (Goal tin + Lineup + HT/FT) emaw <strong className="text-amber-700">📊 HT/FT</strong> (Half Time & Full Time result chauh).
             </p>
           </div>
         </div>
@@ -340,33 +353,77 @@ export const LiveMatchesPanel: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Track Switch Action */}
-                <div className="shrink-0 flex flex-col items-center gap-1">
+                {/* Track Mode Action Buttons */}
+                <div className="shrink-0 flex items-center gap-1.5 self-center">
+                  {/* Mode 1: Full Live */}
                   <button
                     type="button"
                     disabled={updatingId === match.id}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                      match.isTracked
-                        ? 'bg-rose-600 text-white shadow-xs scale-105'
-                        : 'bg-stone-200/80 hover:bg-stone-300 text-stone-600'
+                    onClick={() =>
+                      handleSetTrackMode(
+                        match,
+                        match.isTracked && match.trackMode === 'full' ? 'off' : 'full'
+                      )
+                    }
+                    className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
+                      match.isTracked && match.trackMode === 'full'
+                        ? 'bg-rose-600 text-white shadow-xs scale-102 ring-2 ring-rose-400'
+                        : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
                     }`}
-                    title={match.isTracked ? 'Click to untrack' : 'Click to track'}
+                    title={
+                      match.isTracked && match.trackMode === 'full'
+                        ? 'Click to turn off'
+                        : '🔥 Full Live: Goal tin, Lineup, VAR, HT & FT auto-posts'
+                    }
                   >
                     {updatingId === match.id ? (
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    ) : match.isTracked ? (
-                      <CheckCircle2 className="w-5 h-5 fill-white stroke-rose-600" />
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Circle className="w-5 h-5" />
+                      <Flame
+                        className={`w-3.5 h-3.5 ${
+                          match.isTracked && match.trackMode === 'full'
+                            ? 'text-amber-200'
+                            : 'text-rose-500'
+                        }`}
+                      />
                     )}
+                    <span>Live</span>
                   </button>
-                  <span
-                    className={`text-[9px] font-extrabold uppercase tracking-tight ${
-                      match.isTracked ? 'text-rose-700' : 'text-stone-400'
+
+                  {/* Mode 2: Results Only (HT & FT) */}
+                  <button
+                    type="button"
+                    disabled={updatingId === match.id}
+                    onClick={() =>
+                      handleSetTrackMode(
+                        match,
+                        match.isTracked && match.trackMode === 'results_only' ? 'off' : 'results_only'
+                      )
+                    }
+                    className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
+                      match.isTracked && match.trackMode === 'results_only'
+                        ? 'bg-amber-600 text-white shadow-xs scale-102 ring-2 ring-amber-400'
+                        : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
                     }`}
+                    title={
+                      match.isTracked && match.trackMode === 'results_only'
+                        ? 'Click to turn off'
+                        : '📊 Results Only: Half Time & Full Time result chauh (Goal tin post lovin)'
+                    }
                   >
-                    {match.isTracked ? 'Tracked' : 'Track'}
-                  </span>
+                    {updatingId === match.id ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Clock
+                        className={`w-3.5 h-3.5 ${
+                          match.isTracked && match.trackMode === 'results_only'
+                            ? 'text-amber-100'
+                            : 'text-amber-600'
+                        }`}
+                      />
+                    )}
+                    <span>HT/FT</span>
+                  </button>
                 </div>
               </div>
             );

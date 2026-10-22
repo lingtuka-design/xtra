@@ -303,8 +303,10 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         continue;
       }
 
+      const isResultsOnly = match.track_mode === 'results_only';
+
       // 1. Check Confirmed Lineups: Auto-Post if announced before kickoff (or at match start)
-      if (summary.lineups && (summary.status.state === 'pre' || match.status !== 'FT')) {
+      if (!isResultsOnly && summary.lineups && (summary.status.state === 'pre' || match.status !== 'FT')) {
         const lineupEventId = `lineup_${match.event_id}`;
         
         if (summary.status.state === 'pre') {
@@ -373,267 +375,269 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         }
       }
 
-      // 2. Check all events in this match (Goals)
-      for (let i = 0; i < summary.events.length; i++) {
-        const ev = summary.events[i];
-        if (ev.type.toLowerCase().includes('goal') || ev.scoringPlay) {
-          // Atomic claim: Try inserting lock into D1 first.
-          let claimed = false;
-          try {
-            const insertLock = await env.DB.prepare(
-              'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-            ).bind(match.event_id, ev.id, 'goal', ev.minute, ev.text).run();
-            claimed = Boolean(insertLock.success);
-          } catch {
-            claimed = false; // Duplicate blocked!
-          }
-
-          if (claimed) {
-            // Calculate accurate running score up to this goal:
-            // ESPN scoreboard header score often lags 30-60s behind live event feed.
-            // We compute score from:
-            // 1) Timeline goal count up to this event
-            const goalsUpToNow = summary.events
-              .slice(0, i + 1)
-              .filter((e) => e.type.toLowerCase().includes('goal') || e.scoringPlay);
-
-            let homeGoalsCount = 0;
-            let awayGoalsCount = 0;
-
-            if (summary.homeTeamId && summary.awayTeamId) {
-              homeGoalsCount = goalsUpToNow.filter((e) => e.teamId === summary.homeTeamId).length;
-              awayGoalsCount = goalsUpToNow.filter((e) => e.teamId === summary.awayTeamId).length;
+      // 2. Check all events in this match (Goals) - Skipped if results_only
+      if (!isResultsOnly) {
+        for (let i = 0; i < summary.events.length; i++) {
+          const ev = summary.events[i];
+          if (ev.type.toLowerCase().includes('goal') || ev.scoringPlay) {
+            // Atomic claim: Try inserting lock into D1 first.
+            let claimed = false;
+            try {
+              const insertLock = await env.DB.prepare(
+                'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+              ).bind(match.event_id, ev.id, 'goal', ev.minute, ev.text).run();
+              claimed = Boolean(insertLock.success);
+            } catch {
+              claimed = false; // Duplicate blocked!
             }
 
-            // 2) Parse score from event text if present (e.g. "Goal! Como 4, Manchester United 0...")
-            let parsedHome: number | null = null;
-            let parsedAway: number | null = null;
-            const textMatch = ev.text.match(/Goal!\s+(.+?)\s+(\d+),\s+(.+?)\s+(\d+)/i);
-            if (textMatch) {
-              const team1 = textMatch[1].trim().toLowerCase();
-              const score1 = parseInt(textMatch[2], 10);
-              const score2 = parseInt(textMatch[4], 10);
-              const homeName = (match.home_team || '').toLowerCase();
-              if (homeName.includes(team1) || team1.includes(homeName)) {
-                parsedHome = score1;
-                parsedAway = score2;
-              } else {
-                parsedHome = score2;
-                parsedAway = score1;
+            if (claimed) {
+              // Calculate accurate running score up to this goal:
+              // ESPN scoreboard header score often lags 30-60s behind live event feed.
+              // We compute score from:
+              // 1) Timeline goal count up to this event
+              const goalsUpToNow = summary.events
+                .slice(0, i + 1)
+                .filter((e) => e.type.toLowerCase().includes('goal') || e.scoringPlay);
+
+              let homeGoalsCount = 0;
+              let awayGoalsCount = 0;
+
+              if (summary.homeTeamId && summary.awayTeamId) {
+                homeGoalsCount = goalsUpToNow.filter((e) => e.teamId === summary.homeTeamId).length;
+                awayGoalsCount = goalsUpToNow.filter((e) => e.teamId === summary.awayTeamId).length;
               }
-            }
 
-            // 3) Resolve the most accurate non-lagging score
-            let finalHomeScore = Math.max(
-              parseInt(summary.score.home || '0', 10),
-              homeGoalsCount,
-              parsedHome !== null ? parsedHome : 0
-            );
-            let finalAwayScore = Math.max(
-              parseInt(summary.score.away || '0', 10),
-              awayGoalsCount,
-              parsedAway !== null ? parsedAway : 0
-            );
+              // 2) Parse score from event text if present (e.g. "Goal! Como 4, Manchester United 0...")
+              let parsedHome: number | null = null;
+              let parsedAway: number | null = null;
+              const textMatch = ev.text.match(/Goal!\s+(.+?)\s+(\d+),\s+(.+?)\s+(\d+)/i);
+              if (textMatch) {
+                const team1 = textMatch[1].trim().toLowerCase();
+                const score1 = parseInt(textMatch[2], 10);
+                const score2 = parseInt(textMatch[4], 10);
+                const homeName = (match.home_team || '').toLowerCase();
+                if (homeName.includes(team1) || team1.includes(homeName)) {
+                  parsedHome = score1;
+                  parsedAway = score2;
+                } else {
+                  parsedHome = score2;
+                  parsedAway = score1;
+                }
+              }
 
-            if (ev.teamId === summary.homeTeamId && finalHomeScore === 0) {
-              finalHomeScore = 1;
-            }
-            if (ev.teamId === summary.awayTeamId && finalAwayScore === 0) {
-              finalAwayScore = 1;
-            }
+              // 3) Resolve the most accurate non-lagging score
+              let finalHomeScore = Math.max(
+                parseInt(summary.score.home || '0', 10),
+                homeGoalsCount,
+                parsedHome !== null ? parsedHome : 0
+              );
+              let finalAwayScore = Math.max(
+                parseInt(summary.score.away || '0', 10),
+                awayGoalsCount,
+                parsedAway !== null ? parsedAway : 0
+              );
 
-            // New Goal! Auto-Post to Inkhel Xtra Facebook + WhatsApp Channel!
-            const fbCaption = formatGoalPost(
-              match.home_team,
-              match.away_team,
-              String(finalHomeScore),
-              String(finalAwayScore),
-              ev.athleteName,
-              ev.minute || 'Goal',
-              leagueName
-            );
+              if (ev.teamId === summary.homeTeamId && finalHomeScore === 0) {
+                finalHomeScore = 1;
+              }
+              if (ev.teamId === summary.awayTeamId && finalAwayScore === 0) {
+                finalAwayScore = 1;
+              }
 
-            const waCaption = formatWhatsAppGoal(
-              match.home_team,
-              match.away_team,
-              String(finalHomeScore),
-              String(finalAwayScore),
-              ev.athleteName,
-              ev.minute || 'Goal',
-              leagueName
-            );
+              // New Goal! Auto-Post to Inkhel Xtra Facebook + WhatsApp Channel!
+              const fbCaption = formatGoalPost(
+                match.home_team,
+                match.away_team,
+                String(finalHomeScore),
+                String(finalAwayScore),
+                ev.athleteName,
+                ev.minute || 'Goal',
+                leagueName
+              );
 
-            // 1. Post to Inkhel Xtra Facebook Page
-            if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+              const waCaption = formatWhatsAppGoal(
+                match.home_team,
+                match.away_team,
+                String(finalHomeScore),
+                String(finalAwayScore),
+                ev.athleteName,
+                ev.minute || 'Goal',
+                leagueName
+              );
+
+              // 1. Post to Inkhel Xtra Facebook Page
+              if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+                try {
+                  await facebookPoster.postNews(
+                    fbCaption,
+                    undefined,
+                    env.FB_PAGE_ID,
+                    env.FB_PAGE_ACCESS_TOKEN
+                  );
+                } catch (fbErr: any) {
+                  console.error('FB Live Goal Post error:', fbErr.message);
+                }
+              }
+
+              // 2. Post to WhatsApp Channel
               try {
-                await facebookPoster.postNews(
-                  fbCaption,
+                await whatsappPoster.postNews(
+                  waCaption,
                   undefined,
-                  env.FB_PAGE_ID,
-                  env.FB_PAGE_ACCESS_TOKEN
+                  env.WHATSAPP_API_TOKEN,
+                  env.WHATSAPP_CHANNEL_ID,
+                  env.WHATSAPP_API_URL
                 );
-              } catch (fbErr: any) {
-                console.error('FB Live Goal Post error:', fbErr.message);
+              } catch (waErr: any) {
+                console.error('WhatsApp Live Goal Post error:', waErr.message);
               }
-            }
 
-            // 2. Post to WhatsApp Channel
-            try {
-              await whatsappPoster.postNews(
-                waCaption,
-                undefined,
-                env.WHATSAPP_API_TOKEN,
-                env.WHATSAPP_CHANNEL_ID,
-                env.WHATSAPP_API_URL
-              );
-            } catch (waErr: any) {
-              console.error('WhatsApp Live Goal Post error:', waErr.message);
+              totalPosted++;
+              logDetails.push(`Goal posted: ${ev.athleteName || 'Goal'} (${ev.minute}) - ${match.home_team} vs ${match.away_team}`);
             }
-
-            totalPosted++;
-            logDetails.push(`Goal posted: ${ev.athleteName || 'Goal'} (${ev.minute}) - ${match.home_team} vs ${match.away_team}`);
           }
         }
-      }
 
-      // 2b. Check VAR Disallowed Goal Events
-      for (const ev of summary.events) {
-        const textLower = (ev.text || '').toLowerCase();
-        const typeLower = (ev.type || '').toLowerCase();
-        const isVarDisallowed =
-          (typeLower.includes('var') && (textLower.includes('no goal') || textLower.includes('disallowed') || textLower.includes('overturned'))) ||
-          textLower.includes('goal disallowed') ||
-          textLower.includes('disallowed goal') ||
-          textLower.includes('var decision: no goal') ||
-          textLower.includes('decision: no goal');
+        // 2b. Check VAR Disallowed Goal Events
+        for (const ev of summary.events) {
+          const textLower = (ev.text || '').toLowerCase();
+          const typeLower = (ev.type || '').toLowerCase();
+          const isVarDisallowed =
+            (typeLower.includes('var') && (textLower.includes('no goal') || textLower.includes('disallowed') || textLower.includes('overturned'))) ||
+            textLower.includes('goal disallowed') ||
+            textLower.includes('disallowed goal') ||
+            textLower.includes('var decision: no goal') ||
+            textLower.includes('decision: no goal');
 
-        if (isVarDisallowed) {
-          const varEventId = `var_${match.event_id}_${ev.id}`;
-          let claimed = false;
-          try {
-            const insertLock = await env.DB.prepare(
-              'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-            ).bind(match.event_id, varEventId, 'var_disallowed', ev.minute, ev.text).run();
-            claimed = Boolean(insertLock.success);
-          } catch {
-            claimed = false; // Duplicate blocked!
-          }
-
-          if (claimed) {
-            let reason = 'Offside/Foul';
-            if (textLower.includes('offside')) reason = 'Offside';
-            else if (textLower.includes('handball')) reason = 'Handball';
-            else if (textLower.includes('foul')) reason = 'Foul';
-
-            const fbVar = formatVarDisallowedPost(
-              match.home_team,
-              match.away_team,
-              summary.score.home,
-              summary.score.away,
-              ev.minute || 'VAR',
-              reason,
-              leagueName
-            );
-
-            const waVar = formatWhatsAppVarDisallowed(
-              match.home_team,
-              match.away_team,
-              summary.score.home,
-              summary.score.away,
-              ev.minute || 'VAR',
-              reason,
-              leagueName
-            );
-
-            if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
-              try {
-                await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
-              } catch (fbErr: any) {
-                console.error('FB VAR Alert error:', fbErr.message);
-              }
-            }
-
+          if (isVarDisallowed) {
+            const varEventId = `var_${match.event_id}_${ev.id}`;
+            let claimed = false;
             try {
-              await whatsappPoster.postNews(
-                waVar,
-                undefined,
-                env.WHATSAPP_API_TOKEN,
-                env.WHATSAPP_CHANNEL_ID,
-                env.WHATSAPP_API_URL
-              );
-            } catch (waErr: any) {
-              console.error('WhatsApp VAR Alert error:', waErr.message);
+              const insertLock = await env.DB.prepare(
+                'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+              ).bind(match.event_id, varEventId, 'var_disallowed', ev.minute, ev.text).run();
+              claimed = Boolean(insertLock.success);
+            } catch {
+              claimed = false; // Duplicate blocked!
             }
 
-            totalPosted++;
-            logDetails.push(`VAR Disallowed Goal posted: ${match.home_team} vs ${match.away_team} (${ev.minute})`);
+            if (claimed) {
+              let reason = 'Offside/Foul';
+              if (textLower.includes('offside')) reason = 'Offside';
+              else if (textLower.includes('handball')) reason = 'Handball';
+              else if (textLower.includes('foul')) reason = 'Foul';
+
+              const fbVar = formatVarDisallowedPost(
+                match.home_team,
+                match.away_team,
+                summary.score.home,
+                summary.score.away,
+                ev.minute || 'VAR',
+                reason,
+                leagueName
+              );
+
+              const waVar = formatWhatsAppVarDisallowed(
+                match.home_team,
+                match.away_team,
+                summary.score.home,
+                summary.score.away,
+                ev.minute || 'VAR',
+                reason,
+                leagueName
+              );
+
+              if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+                try {
+                  await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+                } catch (fbErr: any) {
+                  console.error('FB VAR Alert error:', fbErr.message);
+                }
+              }
+
+              try {
+                await whatsappPoster.postNews(
+                  waVar,
+                  undefined,
+                  env.WHATSAPP_API_TOKEN,
+                  env.WHATSAPP_CHANNEL_ID,
+                  env.WHATSAPP_API_URL
+                );
+              } catch (waErr: any) {
+                console.error('WhatsApp VAR Alert error:', waErr.message);
+              }
+
+              totalPosted++;
+              logDetails.push(`VAR Disallowed Goal posted: ${match.home_team} vs ${match.away_team} (${ev.minute})`);
+            }
           }
         }
-      }
 
-      // 2c. Check Score Decrement (Score dropped after a previously posted goal was overturned)
-      if (match.last_score && match.last_score.includes('-')) {
-        const [prevHStr, prevAStr] = match.last_score.split('-');
-        const prevH = parseInt(prevHStr, 10) || 0;
-        const prevA = parseInt(prevAStr, 10) || 0;
-        const curH = parseInt(summary.score.home, 10) || 0;
-        const curA = parseInt(summary.score.away, 10) || 0;
+        // 2c. Check Score Decrement (Score dropped after a previously posted goal was overturned)
+        if (match.last_score && match.last_score.includes('-')) {
+          const [prevHStr, prevAStr] = match.last_score.split('-');
+          const prevH = parseInt(prevHStr, 10) || 0;
+          const prevA = parseInt(prevAStr, 10) || 0;
+          const curH = parseInt(summary.score.home, 10) || 0;
+          const curA = parseInt(summary.score.away, 10) || 0;
 
-        if ((curH < prevH || curA < prevA) && (prevH > 0 || prevA > 0)) {
-          const varDropEventId = `var_drop_${match.event_id}_${curH}_${curA}`;
-          let claimed = false;
-          try {
-            const insertLock = await env.DB.prepare(
-              'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-            ).bind(match.event_id, varDropEventId, 'var_disallowed', summary.status.clock, `Score drop from ${match.last_score} to ${curH}-${curA}`).run();
-            claimed = Boolean(insertLock.success);
-          } catch {
-            claimed = false;
-          }
-
-          if (claimed) {
-            const fbVar = formatVarDisallowedPost(
-              match.home_team,
-              match.away_team,
-              summary.score.home,
-              summary.score.away,
-              summary.status.clock || 'VAR',
-              'Overturned by VAR',
-              leagueName
-            );
-
-            const waVar = formatWhatsAppVarDisallowed(
-              match.home_team,
-              match.away_team,
-              summary.score.home,
-              summary.score.away,
-              summary.status.clock || 'VAR',
-              'Overturned by VAR',
-              leagueName
-            );
-
-            if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
-              try {
-                await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
-              } catch (fbErr: any) {
-                console.error('FB Score Drop VAR Alert error:', fbErr.message);
-              }
-            }
-
+          if ((curH < prevH || curA < prevA) && (prevH > 0 || prevA > 0)) {
+            const varDropEventId = `var_drop_${match.event_id}_${curH}_${curA}`;
+            let claimed = false;
             try {
-              await whatsappPoster.postNews(
-                waVar,
-                undefined,
-                env.WHATSAPP_API_TOKEN,
-                env.WHATSAPP_CHANNEL_ID,
-                env.WHATSAPP_API_URL
-              );
-            } catch (waErr: any) {
-              console.error('WA Score Drop VAR Alert error:', waErr.message);
+              const insertLock = await env.DB.prepare(
+                'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+              ).bind(match.event_id, varDropEventId, 'var_disallowed', summary.status.clock, `Score drop from ${match.last_score} to ${curH}-${curA}`).run();
+              claimed = Boolean(insertLock.success);
+            } catch {
+              claimed = false;
             }
 
-            totalPosted++;
-            logDetails.push(`VAR Score Decrement posted: ${match.home_team} vs ${match.away_team}`);
+            if (claimed) {
+              const fbVar = formatVarDisallowedPost(
+                match.home_team,
+                match.away_team,
+                summary.score.home,
+                summary.score.away,
+                summary.status.clock || 'VAR',
+                'Overturned by VAR',
+                leagueName
+              );
+
+              const waVar = formatWhatsAppVarDisallowed(
+                match.home_team,
+                match.away_team,
+                summary.score.home,
+                summary.score.away,
+                summary.status.clock || 'VAR',
+                'Overturned by VAR',
+                leagueName
+              );
+
+              if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+                try {
+                  await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+                } catch (fbErr: any) {
+                  console.error('FB Score Drop VAR Alert error:', fbErr.message);
+                }
+              }
+
+              try {
+                await whatsappPoster.postNews(
+                  waVar,
+                  undefined,
+                  env.WHATSAPP_API_TOKEN,
+                  env.WHATSAPP_CHANNEL_ID,
+                  env.WHATSAPP_API_URL
+                );
+              } catch (waErr: any) {
+                console.error('WA Score Drop VAR Alert error:', waErr.message);
+              }
+
+              totalPosted++;
+              logDetails.push(`VAR Score Decrement posted: ${match.home_team} vs ${match.away_team}`);
+            }
           }
         }
       }
