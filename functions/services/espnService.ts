@@ -1,6 +1,6 @@
 export interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL';
+  league: 'PL' | 'UCL' | 'ISL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -38,11 +38,12 @@ export interface MatchEvent {
 }
 
 export const espnService = {
-  // Fetch upcoming & today's Premier League and Champions League matches
+  // Fetch upcoming & today's Premier League, Champions League, and Indian Super League matches
   async getFixtures(): Promise<EspnMatch[]> {
-    const leagues: { key: 'PL' | 'UCL'; slug: string; name: string }[] = [
-      { key: 'PL', slug: 'eng.1', name: 'Premier League' },
-      { key: 'UCL', slug: 'uefa.champions', name: 'UEFA Champions League' },
+    const leagues: { key: 'PL' | 'UCL' | 'ISL'; slug: string; name: string }[] = [
+      { key: 'PL', slug: 'eng.1', name: 'PL' },
+      { key: 'UCL', slug: 'uefa.champions', name: 'UCL' },
+      { key: 'ISL', slug: 'ind.1', name: 'ISL' },
     ];
 
     const allMatches: EspnMatch[] = [];

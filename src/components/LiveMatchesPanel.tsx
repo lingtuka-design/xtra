@@ -3,7 +3,7 @@ import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Spar
 
 interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL';
+  league: 'PL' | 'UCL' | 'ISL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -35,7 +35,7 @@ export const LiveMatchesPanel: React.FC = () => {
   const [matches, setMatches] = useState<EspnMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'UCL'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'UCL' | 'ISL'>('ALL');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -185,12 +185,12 @@ export const LiveMatchesPanel: React.FC = () => {
               <h2 className="text-base sm:text-lg font-black tracking-tight text-stone-900 flex items-center gap-1.5">
                 Live Goal Tracker
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full border border-rose-200">
-                  UCL & PL ONLY
+                  PL • UCL • ISL
                 </span>
               </h2>
             </div>
             <p className="text-[11px] text-stone-500 font-medium">
-              Match duh thlang la: <strong className="text-rose-700">🔥 Live</strong> (Goal tin + Lineup + HT/FT) emaw <strong className="text-amber-700">📊 HT/FT</strong> (Half Time & Full Time result chauh).
+              Match duh thlang la: <strong className="text-rose-700">🔥 Live</strong> (Goal tin + Red Card + Lineup + HT/FT) emaw <strong className="text-amber-700">📊 HT/FT</strong> (Half Time & Full Time result chauh).
             </p>
           </div>
         </div>
@@ -228,6 +228,16 @@ export const LiveMatchesPanel: React.FC = () => {
             >
               UCL
             </button>
+            <button
+              onClick={() => setActiveFilter('ISL')}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                activeFilter === 'ISL'
+                  ? 'bg-white text-stone-950 shadow-2xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              ISL
+            </button>
           </div>
 
           <button
@@ -257,7 +267,7 @@ export const LiveMatchesPanel: React.FC = () => {
       {loading && matches.length === 0 ? (
         <div className="py-8 text-center text-stone-500 text-xs">
           <RefreshCw className="w-5 h-5 mx-auto animate-spin mb-2 text-stone-400" />
-          <span>Premier League leh UCL fixtures kan la khawm mek...</span>
+          <span>PL, UCL leh ISL fixtures kan la khawm mek...</span>
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="py-8 text-center text-stone-500 text-xs space-y-1">
@@ -273,8 +283,7 @@ export const LiveMatchesPanel: React.FC = () => {
             return (
               <div
                 key={match.id}
-                onClick={() => handleToggleTrack(match)}
-                className={`p-3 rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between gap-3 ${
+                className={`p-3 rounded-xl border transition-all select-none flex items-center justify-between gap-3 ${
                   match.isTracked
                     ? 'bg-rose-50/60 border-rose-300 shadow-xs'
                     : 'bg-[#FCFAF6] hover:bg-[#F7F4EE] border-stone-200/90'
@@ -284,13 +293,15 @@ export const LiveMatchesPanel: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase mb-1">
                     <span
-                      className={`px-1.5 py-0.2 rounded ${
+                      className={`px-1.5 py-0.5 rounded font-black text-[10px] tracking-wide ${
                         match.league === 'UCL'
                           ? 'bg-blue-100 text-blue-800'
+                          : match.league === 'ISL'
+                          ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-purple-100 text-purple-800'
                       }`}
                     >
-                      {match.leagueName}
+                      {match.league}
                     </span>
                     {isLive && (
                       <span className="flex items-center gap-1 text-rose-600 bg-rose-100/90 px-1.5 py-0.2 rounded animate-pulse font-extrabold">

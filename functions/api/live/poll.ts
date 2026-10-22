@@ -12,6 +12,9 @@ function getLeagueHashtag(leagueName: string): string {
   if (l.includes('champions') || l.includes('ucl')) {
     return '#ChampionsLeague #UCL';
   }
+  if (l.includes('indian') || l.includes('isl')) {
+    return '#IndianSuperLeague #ISL';
+  }
   return '#Football';
 }
 
@@ -339,8 +342,18 @@ async function handlePoll(context: EventContext<Env, any, any>) {
     const logDetails: string[] = [];
 
     for (const match of activeMatches) {
-      const leagueSlug = match.league === 'UCL' ? 'uefa.champions' : 'eng.1';
-      const leagueName = match.league === 'UCL' ? 'UEFA Champions League' : 'Premier League';
+      const leagueSlug =
+        match.league === 'UCL'
+          ? 'uefa.champions'
+          : match.league === 'ISL'
+          ? 'ind.1'
+          : 'eng.1';
+      const leagueName =
+        match.league === 'UCL'
+          ? 'UEFA Champions League'
+          : match.league === 'ISL'
+          ? 'Indian Super League'
+          : 'Premier League';
 
       let summary;
       try {
