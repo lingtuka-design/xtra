@@ -9,11 +9,55 @@ import {
   Sliders,
   CheckCircle2,
   AlertCircle,
+  Save,
+  FolderOpen,
+  Plus,
+  Trash2,
+  Check,
+  X,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
 interface GraphicMakerPanelProps {
   onPostCreated?: (silent?: boolean) => Promise<void>;
+}
+
+export interface ScorecardProject {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  data: {
+    league: string;
+    status: 'FULL TIME' | 'HALF TIME';
+    homeTeam: string;
+    homeScore: string;
+    homeLogo: string;
+    homeScorers: string;
+    homeRedCardScorers: string;
+    awayTeam: string;
+    awayScore: string;
+    awayLogo: string;
+    awayScorers: string;
+    awayRedCardScorers: string;
+    includeStats: boolean;
+    homePossession: string;
+    awayPossession: string;
+    homeShots: string;
+    awayShots: string;
+    homeShotsOnTarget: string;
+    awayShotsOnTarget: string;
+    homeCorners: string;
+    awayCorners: string;
+    homeFouls: string;
+    awayFouls: string;
+    homeYellowCards: string;
+    awayYellowCards: string;
+    homeRedCards: string;
+    awayRedCards: string;
+    bgImage: string;
+    brandLogo: 'fb' | 'wa';
+  };
 }
 
 const TOURNAMENT_PRESETS = [
@@ -39,6 +83,10 @@ const MPL_TEAMS = [
   {
     name: 'FC Chhinga Veng',
     logo: 'https://upload.wikimedia.org/wikipedia/en/1/17/Chhinga_Veng_FC.svg',
+  },
+  {
+    name: 'Ramthar Veng FC',
+    logo: '',
   },
   {
     name: 'Mizoram Police FC',
@@ -116,6 +164,40 @@ const DotMatrixSvg = () => (
   </svg>
 );
 
+// Soccer Ball Icon for Scorers
+const SoccerBallIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))' }}
+  >
+    <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" strokeWidth="1.2" />
+    <polygon points="12,7.5 15.5,10 14.2,14 9.8,14 8.5,10" fill="#111827" />
+    <line x1="12" y1="7.5" x2="12" y2="2" stroke="#111827" strokeWidth="1.2" />
+    <line x1="15.5" y1="10" x2="20.5" y2="7.5" stroke="#111827" strokeWidth="1.2" />
+    <line x1="14.2" y1="14" x2="18" y2="19.5" stroke="#111827" strokeWidth="1.2" />
+    <line x1="9.8" y1="14" x2="6" y2="19.5" stroke="#111827" strokeWidth="1.2" />
+    <line x1="8.5" y1="10" x2="3.5" y2="7.5" stroke="#111827" strokeWidth="1.2" />
+  </svg>
+);
+
+// Red Card Icon
+const RedCardIcon = () => (
+  <div
+    style={{
+      width: '12px',
+      height: '16px',
+      backgroundColor: '#DC2626',
+      borderRadius: '2px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.2)',
+      transform: 'rotate(8deg)',
+    }}
+  />
+);
+
 // Official Inkhel Vector SVG
 const InkhelSvgLogo = () => (
   <svg
@@ -157,55 +239,21 @@ const InkhelSvgLogo = () => (
   </svg>
 );
 
-// Soccer Ball Icon for Scorers
-const SoccerBallIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))' }}
-  >
-    <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" strokeWidth="1.2" />
-    <polygon points="12,7.5 15.5,10 14.2,14 9.8,14 8.5,10" fill="#111827" />
-    <line x1="12" y1="7.5" x2="12" y2="2" stroke="#111827" strokeWidth="1.2" />
-    <line x1="15.5" y1="10" x2="20.5" y2="7.5" stroke="#111827" strokeWidth="1.2" />
-    <line x1="14.2" y1="14" x2="18" y2="19.5" stroke="#111827" strokeWidth="1.2" />
-    <line x1="9.8" y1="14" x2="6" y2="19.5" stroke="#111827" strokeWidth="1.2" />
-    <line x1="8.5" y1="10" x2="3.5" y2="7.5" stroke="#111827" strokeWidth="1.2" />
-  </svg>
-);
-
-// Red Card Icon
-const RedCardIcon = () => (
-  <div
-    style={{
-      width: '12px',
-      height: '16px',
-      backgroundColor: '#DC2626',
-      borderRadius: '2px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.2)',
-      transform: 'rotate(8deg)',
-    }}
-  />
-);
-
 export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
   const [league, setLeague] = useState('MIZORAM PREMIER LEAGUE');
   const [status, setStatus] = useState<'FULL TIME' | 'HALF TIME'>('FULL TIME');
 
   // Home Team
-  const [homeTeam, setHomeTeam] = useState('Aizawl FC');
+  const [homeTeam, setHomeTeam] = useState('Chanmari FC');
   const [homeScore, setHomeScore] = useState('2');
-  const [homeLogo, setHomeLogo] = useState('https://upload.wikimedia.org/wikipedia/en/4/43/Aizawl_Football_Club.svg');
+  const [homeLogo, setHomeLogo] = useState('https://upload.wikimedia.org/wikipedia/en/5/59/Chanmari_FC.svg');
   const [homeScorers, setHomeScorers] = useState("Lalthanmawia 23', 67'");
   const [homeRedCardScorers, setHomeRedCardScorers] = useState('');
 
   // Away Team
-  const [awayTeam, setAwayTeam] = useState('Chanmari FC');
+  const [awayTeam, setAwayTeam] = useState('Ramthar Veng FC');
   const [awayScore, setAwayScore] = useState('1');
-  const [awayLogo, setAwayLogo] = useState('https://upload.wikimedia.org/wikipedia/en/5/59/Chanmari_FC.svg');
+  const [awayLogo, setAwayLogo] = useState('');
   const [awayScorers, setAwayScorers] = useState("David 89'");
   const [awayRedCardScorers, setAwayRedCardScorers] = useState('');
 
@@ -237,11 +285,210 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(0.44);
 
+  // Saved Projects State
+  const [projects, setProjects] = useState<ScorecardProject[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveNameInput, setSaveNameInput] = useState('');
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
   const cardRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const homeFileInputRef = useRef<HTMLInputElement>(null);
   const awayFileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load projects from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('xtra_scorecard_projects');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setProjects(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading projects:', e);
+    }
+  }, []);
+
+  const showNotice = (msg: string) => {
+    setSuccessNotice(msg);
+    setTimeout(() => {
+      setSuccessNotice((prev) => (prev === msg ? null : prev));
+    }, 3500);
+  };
+
+  const handleOpenSaveModal = () => {
+    const active = projects.find((p) => p.id === activeProjectId);
+    const defaultName = active
+      ? active.name
+      : `${homeTeam.trim() || 'Home Team'} vs ${awayTeam.trim() || 'Away Team'}`;
+    setSaveNameInput(defaultName);
+    setIsSaveModalOpen(true);
+  };
+
+  const handleConfirmSave = () => {
+    const finalName =
+      saveNameInput.trim() || `${homeTeam.trim() || 'Home Team'} vs ${awayTeam.trim() || 'Away Team'}`;
+    const projectData = {
+      league,
+      status,
+      homeTeam,
+      homeScore,
+      homeLogo,
+      homeScorers,
+      homeRedCardScorers,
+      awayTeam,
+      awayScore,
+      awayLogo,
+      awayScorers,
+      awayRedCardScorers,
+      includeStats,
+      homePossession,
+      awayPossession,
+      homeShots,
+      awayShots,
+      homeShotsOnTarget,
+      awayShotsOnTarget,
+      homeCorners,
+      awayCorners,
+      homeFouls,
+      awayFouls,
+      homeYellowCards,
+      awayYellowCards,
+      homeRedCards,
+      awayRedCards,
+      bgImage,
+      brandLogo,
+    };
+
+    let updatedProjects: ScorecardProject[];
+    let targetId = activeProjectId;
+
+    if (activeProjectId && projects.some((p) => p.id === activeProjectId)) {
+      // Update existing project
+      updatedProjects = projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              name: finalName,
+              updatedAt: new Date().toISOString(),
+              data: projectData,
+            }
+          : p
+      );
+    } else {
+      // Create new project
+      targetId = 'proj_' + Date.now();
+      const newProj: ScorecardProject = {
+        id: targetId,
+        name: finalName,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        data: projectData,
+      };
+      updatedProjects = [newProj, ...projects];
+    }
+
+    setProjects(updatedProjects);
+    setActiveProjectId(targetId);
+    try {
+      localStorage.setItem('xtra_scorecard_projects', JSON.stringify(updatedProjects));
+    } catch (e) {
+      console.error('Error saving projects to localStorage:', e);
+    }
+
+    setIsSaveModalOpen(false);
+    showNotice(`Project "${finalName}" save fel a ni ta!`);
+  };
+
+  const handleLoadProject = (proj: ScorecardProject) => {
+    setLeague(proj.data.league);
+    setStatus(proj.data.status);
+    setHomeTeam(proj.data.homeTeam);
+    setHomeScore(proj.data.homeScore);
+    setHomeLogo(proj.data.homeLogo || '');
+    setHomeScorers(proj.data.homeScorers || '');
+    setHomeRedCardScorers(proj.data.homeRedCardScorers || '');
+    setAwayTeam(proj.data.awayTeam);
+    setAwayScore(proj.data.awayScore);
+    setAwayLogo(proj.data.awayLogo || '');
+    setAwayScorers(proj.data.awayScorers || '');
+    setAwayRedCardScorers(proj.data.awayRedCardScorers || '');
+    setIncludeStats(proj.data.includeStats ?? true);
+    setHomePossession(proj.data.homePossession || '50%');
+    setAwayPossession(proj.data.awayPossession || '50%');
+    setHomeShots(proj.data.homeShots || '0');
+    setAwayShots(proj.data.awayShots || '0');
+    setHomeShotsOnTarget(proj.data.homeShotsOnTarget || '0');
+    setAwayShotsOnTarget(proj.data.awayShotsOnTarget || '0');
+    setHomeCorners(proj.data.homeCorners || '0');
+    setAwayCorners(proj.data.awayCorners || '0');
+    setHomeFouls(proj.data.homeFouls || '0');
+    setAwayFouls(proj.data.awayFouls || '0');
+    setHomeYellowCards(proj.data.homeYellowCards || '0');
+    setAwayYellowCards(proj.data.awayYellowCards || '0');
+    setHomeRedCards(proj.data.homeRedCards || '0');
+    setAwayRedCards(proj.data.awayRedCards || '0');
+    setBgImage(proj.data.bgImage || '');
+    setBrandLogo(proj.data.brandLogo || 'fb');
+
+    setActiveProjectId(proj.id);
+    setIsProjectsModalOpen(false);
+    showNotice(`Project "${proj.name}" load a ni ta!`);
+  };
+
+  const handleDeleteProject = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const updated = projects.filter((p) => p.id !== id);
+    setProjects(updated);
+    if (activeProjectId === id) {
+      setActiveProjectId(null);
+    }
+    try {
+      localStorage.setItem('xtra_scorecard_projects', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+    showNotice('Project paih a ni ta.');
+  };
+
+  const handleNewProject = () => {
+    setActiveProjectId(null);
+    setLeague('MIZORAM PREMIER LEAGUE');
+    setStatus('FULL TIME');
+    setHomeTeam('Chanmari FC');
+    setHomeScore('0');
+    setHomeLogo('https://upload.wikimedia.org/wikipedia/en/5/59/Chanmari_FC.svg');
+    setHomeScorers('');
+    setHomeRedCardScorers('');
+    setAwayTeam('Ramthar Veng FC');
+    setAwayScore('0');
+    setAwayLogo('');
+    setAwayScorers('');
+    setAwayRedCardScorers('');
+    setIncludeStats(true);
+    setHomePossession('50%');
+    setAwayPossession('50%');
+    setHomeShots('0');
+    setAwayShots('0');
+    setHomeShotsOnTarget('0');
+    setAwayShotsOnTarget('0');
+    setHomeCorners('0');
+    setAwayCorners('0');
+    setHomeFouls('0');
+    setAwayFouls('0');
+    setHomeYellowCards('0');
+    setAwayYellowCards('0');
+    setHomeRedCards('0');
+    setAwayRedCards('0');
+    setBgImage('');
+    setBrandLogo('fb');
+    showNotice('Project thar siam a ni ta.');
+  };
 
   // Resize observer to keep preview scaled nicely to right column width
   useEffect(() => {
@@ -285,7 +532,6 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
       for (const seg of segments) {
         const hasLetters = /[a-zA-Z]{2,}/.test(seg);
         if (!hasLetters && currentPlayer) {
-          // It's another minute for the same player (e.g. "67'", "45+2'")
           currentPlayer += `, ${seg}`;
         } else {
           if (currentPlayer) results.push(currentPlayer);
@@ -475,6 +721,250 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
         </div>
       </div>
 
+      {/* Success Notification */}
+      {successNotice && (
+        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successNotice}</span>
+          </div>
+          <button
+            onClick={() => setSuccessNotice(null)}
+            className="text-emerald-700 hover:text-emerald-950 font-bold ml-2 text-xs"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
+      {/* Projects Management Bar */}
+      <div className="bg-white border border-stone-200/90 rounded-2xl p-3 sm:px-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Save Button */}
+          <button
+            type="button"
+            onClick={handleOpenSaveModal}
+            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition active:scale-95 cursor-pointer"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Save Project</span>
+          </button>
+
+          {/* Saved Projects Button */}
+          <button
+            type="button"
+            onClick={() => setIsProjectsModalOpen(true)}
+            className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-stone-200 transition cursor-pointer"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-stone-600" />
+            <span>Saved Projects</span>
+            {projects.length > 0 && (
+              <span className="px-1.5 py-0.2 bg-stone-900 text-white text-[10px] rounded-full font-extrabold">
+                {projects.length}
+              </span>
+            )}
+          </button>
+
+          {/* New / Reset Button */}
+          <button
+            type="button"
+            onClick={handleNewProject}
+            className="px-2.5 py-1.5 bg-stone-50 hover:bg-stone-100 text-stone-600 hover:text-stone-900 rounded-xl text-xs font-semibold flex items-center gap-1 border border-stone-200 transition cursor-pointer"
+            title="Siam thar / Reset"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New</span>
+          </button>
+
+          {activeProjectId && (
+            <span className="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-xl">
+              Active: {projects.find((p) => p.id === activeProjectId)?.name || 'Custom'}
+            </span>
+          )}
+        </div>
+
+        {/* Quick project chips */}
+        {projects.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-0.5 no-scrollbar">
+            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider shrink-0 mr-1">
+              Quick Load:
+            </span>
+            {projects.slice(0, 4).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handleLoadProject(p)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 whitespace-nowrap shrink-0 border cursor-pointer ${
+                  activeProjectId === p.id
+                    ? 'bg-rose-50 text-rose-800 border-rose-300 shadow-2xs font-extrabold'
+                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200 border-stone-200'
+                }`}
+              >
+                <span>{p.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Save Project Modal */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-stone-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-extrabold text-stone-900 flex items-center gap-2">
+                <Save className="w-4 h-4 text-rose-600" />
+                <span>Project Save Rawh</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(false)}
+                className="text-stone-400 hover:text-stone-700 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-stone-700">Project Hming</label>
+              <input
+                type="text"
+                value={saveNameInput}
+                onChange={(e) => setSaveNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmSave();
+                }}
+                placeholder="e.g. Chanmari FC vs Ramthar Veng FC"
+                className="w-full bg-[#FAF8F5] border border-stone-300 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-900 focus:outline-none focus:border-rose-600"
+                autoFocus
+              />
+              <p className="text-[11px] text-stone-500">
+                Match score, scorers, red card leh stats zawng zawng a in-save ang a, engtik lai pawhin i load leh thei ang.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(false)}
+                className="px-3.5 py-1.5 rounded-xl border border-stone-200 text-xs font-bold text-stone-600 hover:bg-stone-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSave}
+                className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Save</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Projects Modal */}
+      {isProjectsModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-stone-200 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+              <h3 className="text-sm font-extrabold text-stone-900 flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-amber-600" />
+                <span>Saved Scorecard Projects ({projects.length})</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsProjectsModalOpen(false)}
+                className="text-stone-400 hover:text-stone-700 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-2 pr-1 flex-1">
+              {projects.length === 0 ? (
+                <div className="py-8 text-center text-stone-400 text-xs font-medium space-y-1">
+                  <p>Project save a la awm rih lo.</p>
+                  <p className="text-[11px] text-stone-400">Match score i siam zawhah "Save Project" hmetin save rawh.</p>
+                </div>
+              ) : (
+                projects.map((proj) => (
+                  <div
+                    key={proj.id}
+                    onClick={() => handleLoadProject(proj)}
+                    className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 cursor-pointer ${
+                      activeProjectId === proj.id
+                        ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-300'
+                        : 'bg-stone-50/80 hover:bg-stone-100/90 border-stone-200'
+                    }`}
+                  >
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-xs text-stone-900 truncate">
+                          {proj.name}
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-stone-200 text-stone-700 rounded-md uppercase shrink-0">
+                          {proj.data.status === 'FULL TIME' ? 'FT' : 'HT'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-stone-500 font-medium flex items-center gap-2">
+                        <span>
+                          {proj.data.homeTeam || 'Home'} ({proj.data.homeScore}) : ({proj.data.awayScore}) {proj.data.awayTeam || 'Away'}
+                        </span>
+                        <span>•</span>
+                        <span className="text-stone-400 text-[10px]">
+                          {new Date(proj.updatedAt || proj.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLoadProject(proj);
+                        }}
+                        className="px-2.5 py-1 bg-stone-900 text-white rounded-lg text-[11px] font-bold hover:bg-stone-800 transition"
+                      >
+                        Load
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteProject(e, proj.id)}
+                        className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        title="Paih"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-stone-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleNewProject}
+                className="text-xs font-bold text-rose-600 hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Project Thar Siam</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsProjectsModalOpen(false)}
+                className="px-3.5 py-1.5 rounded-xl border border-stone-200 text-xs font-bold text-stone-600 hover:bg-stone-100"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {errorMsg && (
         <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -577,7 +1067,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     key={team.name}
                     type="button"
                     onClick={() => {
-                      if (!homeTeam || homeTeam === 'Aizawl FC') {
+                      if (!homeTeam || homeTeam === 'Chanmari FC') {
                         setHomeTeam(team.name);
                         if (team.logo) setHomeLogo(team.logo);
                       } else {
@@ -611,7 +1101,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     type="text"
                     value={homeTeam}
                     onChange={(e) => setHomeTeam(e.target.value)}
-                    placeholder="e.g. Aizawl FC"
+                    placeholder="e.g. Chanmari FC"
                     className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-stone-900"
                   />
                 </div>
@@ -700,7 +1190,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     type="text"
                     value={awayTeam}
                     onChange={(e) => setAwayTeam(e.target.value)}
-                    placeholder="e.g. Chanmari FC"
+                    placeholder="e.g. Ramthar Veng FC"
                     className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-stone-900"
                   />
                 </div>
