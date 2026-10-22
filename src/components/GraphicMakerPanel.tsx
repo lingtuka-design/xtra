@@ -234,6 +234,70 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
     reader.readAsDataURL(file);
   };
 
+  // Parse scorers helper: keep multiple goals/minutes by one player on a single line, and separate players on new lines
+  const parseScorers = (raw: string): string[] => {
+    if (!raw || !raw.trim()) return [];
+    const lines = raw.includes('\n') ? raw.split('\n') : raw.includes(';') ? raw.split(';') : [raw];
+    const results: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const segments = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+      let currentPlayer = '';
+
+      for (const seg of segments) {
+        const hasLetters = /[a-zA-Z]{2,}/.test(seg);
+        if (!hasLetters && currentPlayer) {
+          // It's another minute for the same player (e.g. "67'", "45+2'")
+          currentPlayer += `, ${seg}`;
+        } else {
+          if (currentPlayer) results.push(currentPlayer);
+          currentPlayer = seg;
+        }
+      }
+      if (currentPlayer) results.push(currentPlayer);
+    }
+    return results;
+  };
+
+  // Auto-sync possession percentage so both always total 100%
+  const handleHomePossessionChange = (val: string) => {
+    setHomePossession(val);
+    const clean = val.replace(/[^0-9]/g, '');
+    if (clean !== '') {
+      const num = Math.min(100, Math.max(0, parseInt(clean, 10)));
+      setAwayPossession(`${100 - num}%`);
+    }
+  };
+
+  const handleAwayPossessionChange = (val: string) => {
+    setAwayPossession(val);
+    const clean = val.replace(/[^0-9]/g, '');
+    if (clean !== '') {
+      const num = Math.min(100, Math.max(0, parseInt(clean, 10)));
+      setHomePossession(`${100 - num}%`);
+    }
+  };
+
+  const handleHomePossessionBlur = () => {
+    const clean = homePossession.replace(/[^0-9]/g, '');
+    if (clean !== '') {
+      const num = Math.min(100, Math.max(0, parseInt(clean, 10)));
+      setHomePossession(`${num}%`);
+      setAwayPossession(`${100 - num}%`);
+    }
+  };
+
+  const handleAwayPossessionBlur = () => {
+    const clean = awayPossession.replace(/[^0-9]/g, '');
+    if (clean !== '') {
+      const num = Math.min(100, Math.max(0, parseInt(clean, 10)));
+      setAwayPossession(`${num}%`);
+      setHomePossession(`${100 - num}%`);
+    }
+  };
+
   // Convert external image URLs to use safe proxy if necessary
   const getSafeImageSrc = (url: string) => {
     if (!url) return '';
@@ -312,12 +376,8 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
     { label: 'RED CARDS', home: homeRedCards, away: awayRedCards },
   ];
 
-  const homeScorersList = homeScorers
-    ? homeScorers.split(',').map((s) => s.trim()).filter(Boolean)
-    : [];
-  const awayScorersList = awayScorers
-    ? awayScorers.split(',').map((s) => s.trim()).filter(Boolean)
-    : [];
+  const homeScorersList = parseScorers(homeScorers);
+  const awayScorersList = parseScorers(awayScorers);
 
   const statusTop = status.includes('FULL') ? 'FULL' : 'HALF';
   const statusBottom = 'TIME';
@@ -549,13 +609,16 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-stone-500 block mb-0.5">Goal Scorers (Minute nen)</label>
-                  <input
-                    type="text"
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="text-[10px] font-bold text-stone-500">Goal Scorers (Minute nen)</label>
+                    <span className="text-[9px] text-stone-400">Scorer dang chu hnuai lamah</span>
+                  </div>
+                  <textarea
+                    rows={2}
                     value={homeScorers}
                     onChange={(e) => setHomeScorers(e.target.value)}
-                    placeholder="e.g. Lalthanmawia 23', 67'"
-                    className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900"
+                    placeholder={"e.g. Lalthanmawia 23', 67'\nDavid 89'"}
+                    className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900 resize-none font-medium leading-relaxed"
                   />
                 </div>
               </div>
@@ -613,13 +676,16 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-stone-500 block mb-0.5">Goal Scorers (Minute nen)</label>
-                  <input
-                    type="text"
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="text-[10px] font-bold text-stone-500">Goal Scorers (Minute nen)</label>
+                    <span className="text-[9px] text-stone-400">Scorer dang chu hnuai lamah</span>
+                  </div>
+                  <textarea
+                    rows={2}
                     value={awayScorers}
                     onChange={(e) => setAwayScorers(e.target.value)}
-                    placeholder="e.g. David 89'"
-                    className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900"
+                    placeholder={"e.g. David 89'\nLalhmunmawia 90+3'"}
+                    className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900 resize-none font-medium leading-relaxed"
                   />
                 </div>
               </div>
@@ -648,19 +714,24 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
               <div className="space-y-2 pt-1 text-xs">
                 {/* 1. Possession */}
                 <div className="grid grid-cols-12 gap-2 items-center bg-[#FAF8F5] p-2 rounded-xl border border-stone-200">
-                  <span className="col-span-4 font-bold text-stone-800 text-[11px]">POSSESSION</span>
+                  <div className="col-span-4 flex flex-col">
+                    <span className="font-bold text-stone-800 text-[11px]">POSSESSION</span>
+                    <span className="text-[9px] text-stone-400 font-normal">Auto 100% sync</span>
+                  </div>
                   <input
                     type="text"
                     value={homePossession}
-                    onChange={(e) => setHomePossession(e.target.value)}
-                    className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
+                    onChange={(e) => handleHomePossessionChange(e.target.value)}
+                    onBlur={handleHomePossessionBlur}
+                    className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs focus:outline-none focus:border-rose-600"
                     placeholder="50%"
                   />
                   <input
                     type="text"
                     value={awayPossession}
-                    onChange={(e) => setAwayPossession(e.target.value)}
-                    className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs"
+                    onChange={(e) => handleAwayPossessionChange(e.target.value)}
+                    onBlur={handleAwayPossessionBlur}
+                    className="col-span-4 bg-white border border-stone-300 rounded-lg px-2 py-1 text-center font-bold text-stone-900 text-xs focus:outline-none focus:border-rose-600"
                     placeholder="50%"
                   />
                 </div>

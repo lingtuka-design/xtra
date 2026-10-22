@@ -41,9 +41,34 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const statusTop = isFT ? 'FULL' : 'HALF';
   const statusBottom = 'TIME';
 
-  // Parse scorers
-  const homeScorersList = homeScorersRaw ? homeScorersRaw.split(',').map((s) => s.trim()).filter(Boolean) : [];
-  const awayScorersList = awayScorersRaw ? awayScorersRaw.split(',').map((s) => s.trim()).filter(Boolean) : [];
+  // Helper to parse scorers: keep multiple goals by one player on one line, and different players on separate lines
+  const parseScorers = (raw: string): string[] => {
+    if (!raw || !raw.trim()) return [];
+    const lines = raw.includes('\n') ? raw.split('\n') : raw.includes(';') ? raw.split(';') : [raw];
+    const results: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const segments = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+      let currentPlayer = '';
+
+      for (const seg of segments) {
+        const hasLetters = /[a-zA-Z]{2,}/.test(seg);
+        if (!hasLetters && currentPlayer) {
+          currentPlayer += `, ${seg}`;
+        } else {
+          if (currentPlayer) results.push(currentPlayer);
+          currentPlayer = seg;
+        }
+      }
+      if (currentPlayer) results.push(currentPlayer);
+    }
+    return results;
+  };
+
+  const homeScorersList = parseScorers(homeScorersRaw);
+  const awayScorersList = parseScorers(awayScorersRaw);
 
   const statsList = [
     { label: 'POSSESSION', home: homePossession, away: awayPossession, isPossession: true },
