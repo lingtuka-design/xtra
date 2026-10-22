@@ -157,6 +157,40 @@ const InkhelSvgLogo = () => (
   </svg>
 );
 
+// Soccer Ball Icon for Scorers
+const SoccerBallIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))' }}
+  >
+    <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" strokeWidth="1.2" />
+    <polygon points="12,7.5 15.5,10 14.2,14 9.8,14 8.5,10" fill="#111827" />
+    <line x1="12" y1="7.5" x2="12" y2="2" stroke="#111827" strokeWidth="1.2" />
+    <line x1="15.5" y1="10" x2="20.5" y2="7.5" stroke="#111827" strokeWidth="1.2" />
+    <line x1="14.2" y1="14" x2="18" y2="19.5" stroke="#111827" strokeWidth="1.2" />
+    <line x1="9.8" y1="14" x2="6" y2="19.5" stroke="#111827" strokeWidth="1.2" />
+    <line x1="8.5" y1="10" x2="3.5" y2="7.5" stroke="#111827" strokeWidth="1.2" />
+  </svg>
+);
+
+// Red Card Icon
+const RedCardIcon = () => (
+  <div
+    style={{
+      width: '12px',
+      height: '16px',
+      backgroundColor: '#DC2626',
+      borderRadius: '2px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.2)',
+      transform: 'rotate(8deg)',
+    }}
+  />
+);
+
 export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
   const [league, setLeague] = useState('MIZORAM PREMIER LEAGUE');
   const [status, setStatus] = useState<'FULL TIME' | 'HALF TIME'>('FULL TIME');
@@ -166,12 +200,14 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
   const [homeScore, setHomeScore] = useState('2');
   const [homeLogo, setHomeLogo] = useState('https://upload.wikimedia.org/wikipedia/en/4/43/Aizawl_Football_Club.svg');
   const [homeScorers, setHomeScorers] = useState("Lalthanmawia 23', 67'");
+  const [homeRedCardScorers, setHomeRedCardScorers] = useState('');
 
   // Away Team
   const [awayTeam, setAwayTeam] = useState('Chanmari FC');
   const [awayScore, setAwayScore] = useState('1');
   const [awayLogo, setAwayLogo] = useState('https://upload.wikimedia.org/wikipedia/en/5/59/Chanmari_FC.svg');
   const [awayScorers, setAwayScorers] = useState("David 89'");
+  const [awayRedCardScorers, setAwayRedCardScorers] = useState('');
 
   // Stats
   const [includeStats, setIncludeStats] = useState(true);
@@ -378,6 +414,8 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
 
   const homeScorersList = parseScorers(homeScorers);
   const awayScorersList = parseScorers(awayScorers);
+  const homeRedCardList = parseScorers(homeRedCardScorers);
+  const awayRedCardList = parseScorers(awayRedCardScorers);
 
   const statusTop = status.includes('FULL') ? 'FULL' : 'HALF';
   const statusBottom = 'TIME';
@@ -621,6 +659,28 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900 resize-none font-medium leading-relaxed"
                   />
                 </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="text-[10px] font-bold text-stone-500 flex items-center gap-1">
+                      <span className="w-2 h-2.5 bg-rose-600 rounded-[1px] inline-block" />
+                      <span>Red Card (Optional)</span>
+                    </label>
+                    <span className="text-[9px] text-stone-400">Player & minute</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={homeRedCardScorers}
+                    onChange={(e) => {
+                      setHomeRedCardScorers(e.target.value);
+                      if (e.target.value.trim() && homeRedCards === '0') {
+                        setHomeRedCards('1');
+                      }
+                    }}
+                    placeholder="e.g. Lalbiakzuala 75'"
+                    className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:border-rose-600"
+                  />
+                </div>
               </div>
 
               {/* Away Team */}
@@ -686,6 +746,28 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     onChange={(e) => setAwayScorers(e.target.value)}
                     placeholder={"e.g. David 89'\nLalhmunmawia 90+3'"}
                     className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900 resize-none font-medium leading-relaxed"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="text-[10px] font-bold text-stone-500 flex items-center gap-1">
+                      <span className="w-2 h-2.5 bg-rose-600 rounded-[1px] inline-block" />
+                      <span>Red Card (Optional)</span>
+                    </label>
+                    <span className="text-[9px] text-stone-400">Player & minute</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={awayRedCardScorers}
+                    onChange={(e) => {
+                      setAwayRedCardScorers(e.target.value);
+                      if (e.target.value.trim() && awayRedCards === '0') {
+                        setAwayRedCards('1');
+                      }
+                    }}
+                    placeholder="e.g. Rohmingthanga 82'"
+                    className="w-full bg-white border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:border-rose-600"
                   />
                 </div>
               </div>
@@ -1045,24 +1127,67 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                       </div>
                     </div>
 
-                    {/* Scorers Section */}
-                    <div className="w-[655px] flex justify-between items-start mt-3.5 mb-4 min-h-[52px] px-5">
-                      <div
-                        className="text-right text-[15.5px] font-bold text-white leading-[1.38] w-[280px]"
-                        style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
-                      >
-                        {homeScorersList.map((s, idx) => (
-                          <div key={idx}>{s}</div>
-                        ))}
-                      </div>
-                      <div
-                        className="text-left text-[15.5px] font-bold text-white leading-[1.38] w-[280px]"
-                        style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
-                      >
-                        {awayScorersList.map((s, idx) => (
-                          <div key={idx}>{s}</div>
-                        ))}
-                      </div>
+                    {/* Events Section (Scorers & Red Cards) */}
+                    <div className="w-[655px] flex flex-col items-center mt-3.5 mb-4 px-5 min-h-[52px]">
+                      {/* Goal Scorers Row */}
+                      {(homeScorersList.length > 0 || awayScorersList.length > 0) && (
+                        <div className="w-full flex items-start justify-between">
+                          {/* Home Scorers */}
+                          <div
+                            className="text-right text-[15.5px] font-bold text-white leading-[1.38] flex-1 pr-3"
+                            style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                          >
+                            {homeScorersList.map((s, idx) => (
+                              <div key={idx}>{s}</div>
+                            ))}
+                          </div>
+
+                          {/* Center Ball Icon */}
+                          <div className="w-[36px] flex justify-center items-center pt-0.5 shrink-0">
+                            <SoccerBallIcon />
+                          </div>
+
+                          {/* Away Scorers */}
+                          <div
+                            className="text-left text-[15.5px] font-bold text-white leading-[1.38] flex-1 pl-3"
+                            style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                          >
+                            {awayScorersList.map((s, idx) => (
+                              <div key={idx}>{s}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Red Cards Row (Only shown if at least one red card is entered) */}
+                      {(homeRedCardList.length > 0 || awayRedCardList.length > 0) && (
+                        <div className={`w-full flex items-start justify-between ${homeScorersList.length > 0 || awayScorersList.length > 0 ? 'mt-2' : ''}`}>
+                          {/* Home Red Cards */}
+                          <div
+                            className="text-right text-[14px] font-bold text-rose-300 leading-[1.35] flex-1 pr-3"
+                            style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                          >
+                            {homeRedCardList.map((s, idx) => (
+                              <div key={idx}>{s}</div>
+                            ))}
+                          </div>
+
+                          {/* Center Red Card Icon */}
+                          <div className="w-[36px] flex justify-center items-center pt-0.5 shrink-0">
+                            <RedCardIcon />
+                          </div>
+
+                          {/* Away Red Cards */}
+                          <div
+                            className="text-left text-[14px] font-bold text-rose-300 leading-[1.35] flex-1 pl-3"
+                            style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                          >
+                            {awayRedCardList.map((s, idx) => (
+                              <div key={idx}>{s}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* 7 Stats Cards */}

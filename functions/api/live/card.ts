@@ -12,6 +12,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const league = url.searchParams.get('league') || 'UEFA Champions League';
   const homeScorersRaw = url.searchParams.get('homeScorers') || url.searchParams.get('scorers') || '';
   const awayScorersRaw = url.searchParams.get('awayScorers') || '';
+  const homeRedCardScorersRaw = url.searchParams.get('homeRedCardScorers') || url.searchParams.get('homeRedCardsList') || '';
+  const awayRedCardScorersRaw = url.searchParams.get('awayRedCardScorers') || url.searchParams.get('awayRedCardsList') || '';
   const channel = (url.searchParams.get('channel') || 'fb').toLowerCase();
   const bgImage = url.searchParams.get('bgImage') || '';
 
@@ -69,6 +71,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const homeScorersList = parseScorers(homeScorersRaw);
   const awayScorersList = parseScorers(awayScorersRaw);
+  const homeRedCardList = parseScorers(homeRedCardScorersRaw);
+  const awayRedCardList = parseScorers(awayRedCardScorersRaw);
 
   const statsList = [
     { label: 'POSSESSION', home: homePossession, away: awayPossession, isPossession: true },
@@ -251,8 +255,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .scorers-wrap {
       width: 655px;
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      flex-direction: column;
+      align-items: center;
       margin-top: 14px;
       margin-bottom: 16px;
       min-height: 52px;
@@ -265,7 +269,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       color: #ffffff;
       line-height: 1.38;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
-      width: 280px;
+      flex: 1;
+      padding-right: 12px;
     }
     .away-scorers {
       text-align: left;
@@ -274,7 +279,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       color: #ffffff;
       line-height: 1.38;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
-      width: 280px;
+      flex: 1;
+      padding-left: 12px;
     }
     .stats-table {
       width: 550px;
@@ -390,12 +396,41 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     </div>
 
     <div class="scorers-wrap">
-      <div class="home-scorers">
-        ${homeScorersList.map((s) => `<div>${s}</div>`).join('')}
-      </div>
-      <div class="away-scorers">
-        ${awayScorersList.map((s) => `<div>${s}</div>`).join('')}
-      </div>
+      ${(homeScorersList.length > 0 || awayScorersList.length > 0) ? `
+        <div style="width: 100%; display: flex; align-items: flex-start; justify-content: space-between;">
+          <div class="home-scorers">
+            ${homeScorersList.map((s) => `<div>${s}</div>`).join('')}
+          </div>
+          <div style="width: 36px; display: flex; justify-content: center; align-items: center; padding-top: 2px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
+              <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+              <polygon points="12,7.5 15.5,10 14.2,14 9.8,14 8.5,10" fill="#111827"/>
+              <line x1="12" y1="7.5" x2="12" y2="2" stroke="#111827" stroke-width="1.2"/>
+              <line x1="15.5" y1="10" x2="20.5" y2="7.5" stroke="#111827" stroke-width="1.2"/>
+              <line x1="14.2" y1="14" x2="18" y2="19.5" stroke="#111827" stroke-width="1.2"/>
+              <line x1="9.8" y1="14" x2="6" y2="19.5" stroke="#111827" stroke-width="1.2"/>
+              <line x1="8.5" y1="10" x2="3.5" y2="7.5" stroke="#111827" stroke-width="1.2"/>
+            </svg>
+          </div>
+          <div class="away-scorers">
+            ${awayScorersList.map((s) => `<div>${s}</div>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      ${(homeRedCardList.length > 0 || awayRedCardList.length > 0) ? `
+        <div style="width: 100%; display: flex; align-items: flex-start; justify-content: space-between; margin-top: 8px;">
+          <div class="home-scorers" style="color: #fca5a5; font-size: 14px;">
+            ${homeRedCardList.map((s) => `<div>${s}</div>`).join('')}
+          </div>
+          <div style="width: 36px; display: flex; justify-content: center; align-items: center; padding-top: 2px;">
+            <div style="width: 12px; height: 16px; background-color: #DC2626; border-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.8); transform: rotate(8deg);"></div>
+          </div>
+          <div class="away-scorers" style="color: #fca5a5; font-size: 14px;">
+            ${awayRedCardList.map((s) => `<div>${s}</div>`).join('')}
+          </div>
+        </div>
+      ` : ''}
     </div>
 
     <div class="stats-table">
