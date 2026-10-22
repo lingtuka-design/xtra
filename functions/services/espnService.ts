@@ -193,8 +193,8 @@ export const espnService = {
 
     // Extract match statistics (Possession, Shots, Shots on target, Corners, Fouls)
     let stats: {
-      home: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
-      away: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
+      home: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string; yellowCards?: string; redCards?: string };
+      away: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string; yellowCards?: string; redCards?: string };
     } | undefined = undefined;
 
     const boxTeams = data.boxscore?.teams;

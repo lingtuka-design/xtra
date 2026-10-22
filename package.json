@@ -14,6 +14,7 @@
     "d1:migrate:prod": "wrangler d1 execute xtra-db --remote --file=./schema.sql"
   },
   "dependencies": {
+    "html-to-image": "^1.11.13",
     "lucide-react": "^1.57.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
