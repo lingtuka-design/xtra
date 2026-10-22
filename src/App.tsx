@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { PostCard } from './components/PostCard';
-import { Sidebar } from './components/Sidebar';
 import { ImageModal } from './components/ImageModal';
 import { SyncModal } from './components/SyncModal';
 import { CreatePostCard } from './components/CreatePostCard';
 import { LiveMatchesPanel } from './components/LiveMatchesPanel';
+import { GraphicMakerPanel } from './components/GraphicMakerPanel';
 import { LoginModal } from './components/LoginModal';
 import { Post } from './types';
-import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, PenSquare, Radio } from 'lucide-react';
+import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, PenSquare, Radio, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
@@ -30,7 +30,7 @@ export default function App() {
   const [syncModalOpen, setSyncModalOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'all' | 'live' | 'queue' | 'create' | 'published'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'live' | 'graphic' | 'create' | 'queue' | 'published'>('all');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
@@ -370,9 +370,9 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      <div className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-4 sm:py-6 flex gap-6">
-        {/* Main Feed Column */}
-        <main className="flex-1 min-w-0 max-w-2xl mx-auto w-full">
+      <div className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        {/* Main Column */}
+        <main className={`flex-1 min-w-0 w-full mx-auto ${activeTab === 'graphic' ? 'max-w-5xl' : 'max-w-2xl'}`}>
           {/* Top Primary Tabs: FEED vs LIVE vs CREATE vs SCHEDULED vs PUBLISHED */}
           <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-bold uppercase tracking-wide overflow-x-auto no-scrollbar">
             <button
@@ -396,6 +396,18 @@ export default function App() {
             >
               <Radio className={`w-3.5 h-3.5 ${activeTab === 'live' ? 'animate-pulse' : 'text-rose-600'}`} />
               <span>LIVE</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('graphic')}
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
+                activeTab === 'graphic'
+                  ? 'bg-gradient-to-r from-rose-600 to-amber-600 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>GRAPHIC</span>
             </button>
 
             <button
@@ -444,9 +456,11 @@ export default function App() {
             </button>
           </div>
 
-          {/* Conditional: Create Post Screen vs Live Matches vs Feed Views */}
+          {/* Conditional: Graphic Panel vs Create Post vs Live Matches vs Feed Views */}
           {activeTab === 'live' ? (
             <LiveMatchesPanel />
+          ) : activeTab === 'graphic' ? (
+            <GraphicMakerPanel onPostCreated={fetchPosts} />
           ) : activeTab === 'create' ? (
             <CreatePostCard
               onPostCreated={handlePostCreated}
@@ -592,9 +606,6 @@ export default function App() {
             </>
           )}
         </main>
-
-        {/* Sidebar for Desktop */}
-        <Sidebar />
       </div>
 
       {/* Floating Scroll to Top Button */}
