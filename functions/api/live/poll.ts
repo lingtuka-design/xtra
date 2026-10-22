@@ -316,6 +316,57 @@ ${playerLine}🏆 *${leagueName}*
 👉 _Inkhel WhatsApp Channel_`;
 }
 
+// Helper to generate 4:5 Match Scorecard Graphic using user's custom design
+function buildCardImageUrl(options: {
+  home: string;
+  away: string;
+  homeScore: string;
+  awayScore: string;
+  homeLogo?: string;
+  awayLogo?: string;
+  status: 'HT' | 'FT';
+  leagueName: string;
+  homeScorers: string;
+  awayScorers: string;
+  stats?: any;
+  channel: 'fb' | 'wa';
+  bgImage?: string;
+}): string {
+  const q = new URLSearchParams();
+  q.set('home', options.home);
+  q.set('away', options.away);
+  q.set('homeScore', options.homeScore);
+  q.set('awayScore', options.awayScore);
+  if (options.homeLogo) q.set('homeLogo', options.homeLogo);
+  if (options.awayLogo) q.set('awayLogo', options.awayLogo);
+  q.set('status', options.status);
+  q.set('league', options.leagueName);
+  if (options.homeScorers) q.set('homeScorers', options.homeScorers);
+  if (options.awayScorers) q.set('awayScorers', options.awayScorers);
+  q.set('channel', options.channel);
+  if (options.bgImage) q.set('bgImage', options.bgImage);
+
+  if (options.stats) {
+    q.set('homePossession', options.stats.home.possession || '50%');
+    q.set('awayPossession', options.stats.away.possession || '50%');
+    q.set('homeShots', options.stats.home.shots || '0');
+    q.set('awayShots', options.stats.away.shots || '0');
+    q.set('homeShotsOnTarget', options.stats.home.shotsOnTarget || '0');
+    q.set('awayShotsOnTarget', options.stats.away.shotsOnTarget || '0');
+    q.set('homeCorners', options.stats.home.corners || '0');
+    q.set('awayCorners', options.stats.away.corners || '0');
+    q.set('homeFouls', options.stats.home.fouls || '0');
+    q.set('awayFouls', options.stats.away.fouls || '0');
+    if (options.stats.home.yellowCards) q.set('homeYellowCards', options.stats.home.yellowCards);
+    if (options.stats.away.yellowCards) q.set('awayYellowCards', options.stats.away.yellowCards);
+    if (options.stats.home.redCards) q.set('homeRedCards', options.stats.home.redCards);
+    if (options.stats.away.redCards) q.set('awayRedCards', options.stats.away.redCards);
+  }
+
+  const cardEndpoint = `https://xtra-byd.pages.dev/api/live/card?${q.toString()}`;
+  return `https://api.microlink.io/?url=${encodeURIComponent(cardEndpoint)}&screenshot=true&embed=screenshot.url&viewport.width=820&viewport.height=1024`;
+}
+
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   return handlePoll(context);
@@ -840,32 +891,40 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           // Facebook Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const fbImage =
             htPhotoToUse ||
-            `https://api.microlink.io/?url=${encodeURIComponent(
-              `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
-                match.away_team
-              )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=HT&league=${encodeURIComponent(
-                leagueName
-              )}&homeScorers=${encodeURIComponent(homeScorers)}&awayScorers=${encodeURIComponent(
-                awayScorers
-              )}&homeLogo=${encodeURIComponent(match.home_logo || '')}&awayLogo=${encodeURIComponent(
-                match.away_logo || ''
-              )}&stats=${encodeURIComponent(statsSummary)}&channel=fb`
-            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
+            buildCardImageUrl({
+              home: match.home_team,
+              away: match.away_team,
+              homeScore: summary.score.home,
+              awayScore: summary.score.away,
+              homeLogo: match.home_logo,
+              awayLogo: match.away_logo,
+              status: 'HT',
+              leagueName,
+              homeScorers,
+              awayScorers,
+              stats: summary.stats,
+              channel: 'fb',
+              bgImage: htPhotoToUse,
+            });
 
           // WhatsApp Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const waImage =
             htPhotoToUse ||
-            `https://api.microlink.io/?url=${encodeURIComponent(
-              `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
-                match.away_team
-              )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=HT&league=${encodeURIComponent(
-                leagueName
-              )}&homeScorers=${encodeURIComponent(homeScorers)}&awayScorers=${encodeURIComponent(
-                awayScorers
-              )}&homeLogo=${encodeURIComponent(match.home_logo || '')}&awayLogo=${encodeURIComponent(
-                match.away_logo || ''
-              )}&stats=${encodeURIComponent(statsSummary)}&channel=wa`
-            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
+            buildCardImageUrl({
+              home: match.home_team,
+              away: match.away_team,
+              homeScore: summary.score.home,
+              awayScore: summary.score.away,
+              homeLogo: match.home_logo,
+              awayLogo: match.away_logo,
+              status: 'HT',
+              leagueName,
+              homeScorers,
+              awayScorers,
+              stats: summary.stats,
+              channel: 'wa',
+              bgImage: htPhotoToUse,
+            });
 
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {
@@ -964,32 +1023,40 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           // Facebook Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const fbImage =
             chosenPhoto ||
-            `https://api.microlink.io/?url=${encodeURIComponent(
-              `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
-                match.away_team
-              )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=FT&league=${encodeURIComponent(
-                leagueName
-              )}&homeScorers=${encodeURIComponent(homeScorers)}&awayScorers=${encodeURIComponent(
-                awayScorers
-              )}&homeLogo=${encodeURIComponent(match.home_logo || '')}&awayLogo=${encodeURIComponent(
-                match.away_logo || ''
-              )}&stats=${encodeURIComponent(statsSummary)}&channel=fb`
-            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
+            buildCardImageUrl({
+              home: match.home_team,
+              away: match.away_team,
+              homeScore: summary.score.home,
+              awayScore: summary.score.away,
+              homeLogo: match.home_logo,
+              awayLogo: match.away_logo,
+              status: 'FT',
+              leagueName,
+              homeScorers,
+              awayScorers,
+              stats: summary.stats,
+              channel: 'fb',
+              bgImage: chosenPhoto,
+            });
 
           // WhatsApp Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const waImage =
             chosenPhoto ||
-            `https://api.microlink.io/?url=${encodeURIComponent(
-              `https://xtra-byd.pages.dev/api/live/card?home=${encodeURIComponent(match.home_team)}&away=${encodeURIComponent(
-                match.away_team
-              )}&homeScore=${summary.score.home}&awayScore=${summary.score.away}&status=FT&league=${encodeURIComponent(
-                leagueName
-              )}&homeScorers=${encodeURIComponent(homeScorers)}&awayScorers=${encodeURIComponent(
-                awayScorers
-              )}&homeLogo=${encodeURIComponent(match.home_logo || '')}&awayLogo=${encodeURIComponent(
-                match.away_logo || ''
-              )}&stats=${encodeURIComponent(statsSummary)}&channel=wa`
-            )}&screenshot=true&embed=screenshot.url&viewport.width=1200&viewport.height=900`;
+            buildCardImageUrl({
+              home: match.home_team,
+              away: match.away_team,
+              homeScore: summary.score.home,
+              awayScore: summary.score.away,
+              homeLogo: match.home_logo,
+              awayLogo: match.away_logo,
+              status: 'FT',
+              leagueName,
+              homeScorers,
+              awayScorers,
+              stats: summary.stats,
+              channel: 'wa',
+              bgImage: chosenPhoto,
+            });
 
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {

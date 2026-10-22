@@ -121,8 +121,8 @@ export const espnService = {
       away: { team: string; formation?: string; starters: string[] };
     };
     stats?: {
-      home: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
-      away: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string };
+      home: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string; yellowCards?: string; redCards?: string };
+      away: { possession: string; shots: string; shotsOnTarget: string; corners: string; fouls: string; yellowCards?: string; redCards?: string };
     };
     matchImage?: string;
     matchImages?: string[];
@@ -216,6 +216,8 @@ export const espnService = {
           shotsOnTarget: getStat(homeBox, 'shotsOnTarget'),
           corners: getStat(homeBox, 'wonCorners'),
           fouls: getStat(homeBox, 'foulsCommitted'),
+          yellowCards: getStat(homeBox, 'yellowCards'),
+          redCards: getStat(homeBox, 'redCards'),
         },
         away: {
           possession: awayPoss.includes('%') ? awayPoss : `${Math.round(parseFloat(awayPoss) || 50)}%`,
@@ -223,6 +225,8 @@ export const espnService = {
           shotsOnTarget: getStat(awayBox, 'shotsOnTarget'),
           corners: getStat(awayBox, 'wonCorners'),
           fouls: getStat(awayBox, 'foulsCommitted'),
+          yellowCards: getStat(awayBox, 'yellowCards'),
+          redCards: getStat(awayBox, 'redCards'),
         },
       };
     }
