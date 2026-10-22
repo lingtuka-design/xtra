@@ -266,6 +266,53 @@ VAR-in endik a nih hnuah goal hi pawm a ni ta lo${reasonText}. Score a ngai: *${
 👉 _Inkhel WhatsApp Channel_`;
 }
 
+// Helper to format Red Card Alert for Facebook
+function formatRedCardPost(
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: string,
+  awayScore: string,
+  player: string | undefined,
+  teamName: string | undefined,
+  minute: string,
+  leagueName: string
+): string {
+  const playerLine = player
+    ? `🟥 Red Card: ${player}${teamName ? ` (${teamName})` : ''} - ${minute}\n`
+    : `🟥 Red Card (${minute})\n`;
+
+  return `🚨 RED CARD!! 🟥 (${minute})
+
+${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+
+${playerLine}🏆 ${leagueName}
+
+#InkhelxtraLive #RedCard ${getLeagueHashtag(leagueName)} #FootballUpdate`;
+}
+
+// Helper to format WhatsApp Red Card Alert
+function formatWhatsAppRedCard(
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: string,
+  awayScore: string,
+  player: string | undefined,
+  teamName: string | undefined,
+  minute: string,
+  leagueName: string
+): string {
+  const playerLine = player
+    ? `*Red Card:* ${player}${teamName ? ` (${teamName})` : ''} - ${minute}\n`
+    : `*Red Card:* ${minute}\n`;
+
+  return `🟥 *RED CARD!!* (${minute})
+${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
+
+${playerLine}🏆 *${leagueName}*
+
+👉 _Inkhel WhatsApp Channel_`;
+}
+
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   return handlePoll(context);
@@ -637,6 +684,84 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
               totalPosted++;
               logDetails.push(`VAR Score Decrement posted: ${match.home_team} vs ${match.away_team}`);
+            }
+          }
+        }
+
+        // 2d. Check Red Card Events (Skipped if results_only)
+        for (const ev of summary.events) {
+          const textLower = (ev.text || '').toLowerCase();
+          const typeLower = (ev.type || '').toLowerCase();
+          const isRedCard =
+            (typeLower.includes('red') && typeLower.includes('card')) ||
+            textLower.includes('red card') ||
+            textLower.includes('shown the red card') ||
+            typeLower.includes('second-yellow');
+
+          if (isRedCard) {
+            const redCardEventId = `red_${match.event_id}_${ev.id}`;
+            let claimed = false;
+            try {
+              const insertLock = await env.DB.prepare(
+                'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+              ).bind(match.event_id, redCardEventId, 'red_card', ev.minute, ev.text).run();
+              claimed = Boolean(insertLock.success);
+            } catch {
+              claimed = false; // Duplicate blocked!
+            }
+
+            if (claimed) {
+              const teamName =
+                ev.teamId === summary.homeTeamId
+                  ? match.home_team
+                  : ev.teamId === summary.awayTeamId
+                  ? match.away_team
+                  : undefined;
+
+              const fbRed = formatRedCardPost(
+                match.home_team,
+                match.away_team,
+                summary.score.home,
+                summary.score.away,
+                ev.athleteName,
+                teamName,
+                ev.minute || 'Card',
+                leagueName
+              );
+
+              const waRed = formatWhatsAppRedCard(
+                match.home_team,
+                match.away_team,
+                summary.score.home,
+                summary.score.away,
+                ev.athleteName,
+                teamName,
+                ev.minute || 'Card',
+                leagueName
+              );
+
+              if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+                try {
+                  await facebookPoster.postNews(fbRed, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+                } catch (fbErr: any) {
+                  console.error('FB Red Card Alert error:', fbErr.message);
+                }
+              }
+
+              try {
+                await whatsappPoster.postNews(
+                  waRed,
+                  undefined,
+                  env.WHATSAPP_API_TOKEN,
+                  env.WHATSAPP_CHANNEL_ID,
+                  env.WHATSAPP_API_URL
+                );
+              } catch (waErr: any) {
+                console.error('WhatsApp Red Card Alert error:', waErr.message);
+              }
+
+              totalPosted++;
+              logDetails.push(`Red Card posted: ${ev.athleteName || 'Player'} (${ev.minute}) - ${match.home_team} vs ${match.away_team}`);
             }
           }
         }
