@@ -57,11 +57,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // Dot matrix SVG generator
   const dotMatrix = `
-    <svg width="64" height="96" viewBox="0 0 64 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="60" height="90" viewBox="0 0 60 90" fill="none" xmlns="http://www.w3.org/2000/svg">
       ${Array.from({ length: 6 })
         .map((_, r) =>
           Array.from({ length: 4 })
-            .map((_, c) => `<circle cx="${c * 17 + 5}" cy="${r * 16 + 6}" r="2.8" fill="white" fill-opacity="0.6"/>`)
+            .map((_, c) => `<circle cx="${c * 17 + 5}" cy="${r * 16 + 5}" r="2.8" fill="white" fill-opacity="0.65"/>`)
             .join('')
         )
         .join('')}
@@ -70,7 +70,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // Official Inkhel Vector SVG
   const inkhelSvg = `
-    <svg width="150" height="42" viewBox="0 0 6683 1858" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <svg width="170" height="46" viewBox="0 0 6683 1858" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
       <g transform="matrix(1,0,0,1,-8972.54,-259.853)">
         <g transform="matrix(1,0,0,1,8414.76,104.994)">
           <g transform="matrix(4.16667,0,0,4.16667,3652.43,948.396)">
@@ -94,7 +94,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   `;
 
   const bgStyle = bgImage
-    ? `background-image: linear-gradient(180deg, rgba(7, 10, 16, 0.84) 0%, rgba(4, 6, 10, 0.94) 100%), url('${bgImage}'); background-size: cover; background-position: center;`
+    ? `background-image: linear-gradient(180deg, rgba(8, 12, 18, 0.85) 0%, rgba(4, 6, 10, 0.94) 100%), url('${bgImage}'); background-size: cover; background-position: center;`
     : `background: radial-gradient(circle at 50% 18%, rgba(20, 28, 48, 0.4) 0%, rgba(5, 7, 12, 0.95) 80%), linear-gradient(180deg, #121824 0%, #06080e 100%);`;
 
   const html = `<!DOCTYPE html>
@@ -110,17 +110,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     body {
-      width: 820px;
+      width: 819px;
       height: 1024px;
       overflow: hidden;
-      background: #06080d;
+      background: #090c13;
       position: relative;
       color: #ffffff;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      padding: 34px 30px 22px;
+      padding-top: 58px;
     }
     .bg-layer {
       position: absolute;
@@ -131,149 +130,148 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .vignette-overlay {
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at 50% 30%, transparent 40%, rgba(0,0,0,0.75) 100%);
+      background: radial-gradient(circle at 50% 30%, transparent 35%, rgba(0,0,0,0.8) 100%);
       z-index: 2;
     }
     .dot-accent-tr {
       position: absolute;
-      top: 36px;
-      right: 36px;
+      top: 75px;
+      right: 30px;
       z-index: 4;
     }
     .dot-accent-bl {
       position: absolute;
-      bottom: 100px;
-      left: 36px;
+      bottom: 125px;
+      left: 30px;
       z-index: 4;
     }
-    .main-wrap {
+    .content-wrap {
       position: relative;
       z-index: 10;
-      width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
+      width: 100%;
     }
     .league-title {
-      font-size: 20px;
+      font-size: 21px;
       font-weight: 800;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: #ffffff;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-      margin-bottom: 18px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+      margin-bottom: 16px;
     }
     .status-badge {
       background: #ffffff;
       width: 126px;
-      height: 70px;
-      border-radius: 6px 6px 0 0;
+      height: 98px;
+      border-radius: 4px 4px 0 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       margin-bottom: -1px;
       z-index: 12;
-      box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.4);
     }
     .status-text {
       font-family: Impact, "Arial Black", -apple-system, sans-serif;
-      font-size: 30px;
-      line-height: 0.94;
+      font-size: 38px;
+      line-height: 0.92;
       font-weight: 900;
       color: #7E0A0A;
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
     .score-card {
-      width: 670px;
-      height: 135px;
+      width: 655px;
+      height: 158px;
       display: flex;
       align-items: stretch;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-      margin-bottom: 12px;
+      border-radius: 0;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
     }
     .crest-box {
       background: #ffffff;
-      width: 175px;
+      width: 164px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 14px;
+      padding: 12px;
     }
     .team-logo {
-      max-width: 96px;
-      max-height: 96px;
+      max-width: 100px;
+      max-height: 100px;
       object-fit: contain;
-      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
     }
     .score-center {
-      background: #7E0A0A;
-      flex: 1;
+      background: #8A0A0A;
+      width: 327px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .score-digits {
       font-family: Impact, "Arial Black", -apple-system, sans-serif;
-      font-size: 96px;
+      font-size: 114px;
       line-height: 1;
       font-weight: 900;
       color: #ffffff;
       letter-spacing: 8px;
-      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
       transform: translateY(-2px);
     }
     .scorers-wrap {
-      width: 670px;
+      width: 655px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 20px;
-      min-height: 48px;
-      padding: 0 6px;
+      margin-top: 14px;
+      margin-bottom: 16px;
+      min-height: 52px;
+      padding: 0 20px;
     }
     .home-scorers {
-      text-align: left;
-      font-size: 14.5px;
-      font-weight: 600;
+      text-align: right;
+      font-size: 15.5px;
+      font-weight: 700;
       color: #ffffff;
-      line-height: 1.35;
-      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
-      max-width: 320px;
+      line-height: 1.38;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+      width: 280px;
     }
     .away-scorers {
-      text-align: right;
-      font-size: 14.5px;
-      font-weight: 600;
+      text-align: left;
+      font-size: 15.5px;
+      font-weight: 700;
       color: #ffffff;
-      line-height: 1.35;
-      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
-      max-width: 320px;
+      line-height: 1.38;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+      width: 280px;
     }
     .stats-table {
-      width: 670px;
+      width: 550px;
       display: flex;
       flex-direction: column;
       gap: 9px;
     }
     .stat-pill {
       background: #ffffff;
-      border-radius: 13px;
-      height: 47px;
-      padding: 0 26px;
+      border-radius: 15px;
+      height: 48px;
+      padding: 0 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
     }
     .stat-num {
-      font-size: 24px;
+      font-size: 25px;
       font-weight: 900;
       color: #0B1B3D;
-      width: 65px;
+      width: 60px;
     }
     .stat-num.left {
       text-align: left;
@@ -285,19 +283,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 250px;
+      width: 260px;
     }
     .stat-label {
-      font-size: 12.5px;
-      font-weight: 800;
+      font-size: 12px;
+      font-weight: 900;
       color: #0B1B3D;
       letter-spacing: 0.6px;
       text-transform: uppercase;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
     }
     .stat-bar-track {
-      width: 230px;
-      height: 5.5px;
+      width: 250px;
+      height: 7px;
       background: #D1D5DB;
       border-radius: 999px;
       position: relative;
@@ -321,21 +319,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      margin-top: 10px;
+      margin-top: 18px;
     }
     .brand-svg-box {
       display: flex;
       align-items: center;
       justify-content: center;
-      transform: scale(0.95);
+      transform: scale(0.92);
     }
     .brand-xtra-text {
       font-size: 16px;
       font-weight: 800;
       color: #ffffff;
       letter-spacing: 0.6px;
-      margin-top: -3px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+      margin-top: -4px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
     }
   </style>
 </head>
@@ -346,7 +344,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   <div class="dot-accent-tr">${dotMatrix}</div>
   <div class="dot-accent-bl">${dotMatrix}</div>
 
-  <div class="main-wrap">
+  <div class="content-wrap">
     <div class="league-title">${league}</div>
 
     <div class="status-badge">
@@ -408,13 +406,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         })
         .join('')}
     </div>
-  </div>
 
-  <div class="footer-brand">
-    <div class="brand-svg-box">
-      ${inkhelSvg}
+    <div class="footer-brand">
+      <div class="brand-svg-box">
+        ${inkhelSvg}
+      </div>
+      ${channel === 'fb' ? '<div class="brand-xtra-text">Xtra</div>' : ''}
     </div>
-    ${channel === 'fb' ? '<div class="brand-xtra-text">Xtra</div>' : ''}
   </div>
 </body>
 </html>`;
