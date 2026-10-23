@@ -40,7 +40,7 @@ export default function App() {
   const fetchPosts = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await fetch('/api/posts?limit=50');
+      const res = await fetch('/api/posts?limit=15');
       if (res.ok) {
         const data = (await res.json()) as any;
         if (data.success && Array.isArray(data.data)) {
