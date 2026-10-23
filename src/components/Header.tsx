@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Zap, RefreshCw, Radio, Download, LogOut, User } from 'lucide-react';
 
 interface HeaderProps {
-  onOpenSync: () => void;
-  isSyncing: boolean;
+  onRefresh: () => void;
+  isRefreshing: boolean;
   totalPosts: number;
   currentUser?: { username: string } | null;
   onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  onOpenSync,
-  isSyncing,
+  onRefresh,
+  isRefreshing,
   totalPosts,
   currentUser,
   onLogout,
@@ -41,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
       setDeferredPrompt(null);
     }
   };
+
   return (
     <header className="sticky top-0 z-30 bg-[#FBF9F5]/90 backdrop-blur-md border-b border-stone-200/90 shadow-xs">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -53,20 +54,20 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-xl tracking-tight text-stone-900">Xtra</span>
               <span className="text-[10px] font-bold uppercase tracking-wider bg-stone-200/80 text-stone-700 px-1.5 py-0.5 rounded border border-stone-300">
-                Tier-1 Mizo
+                FB & WA Studio
               </span>
             </div>
             <p className="text-[11px] text-stone-500 font-medium hidden sm:block">
-              Premier League Breaking News & Transfers in authentic Mizo
+              Football Graphics & Social Publisher for Facebook & WhatsApp
             </p>
           </div>
         </div>
 
-        {/* Status & Sync Button */}
+        {/* Status & Refresh Button */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden md:flex items-center gap-2 text-xs text-stone-600 bg-white border border-stone-200 px-3 py-1.5 rounded-full shadow-xs">
             <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            <span>Cloudflare Cron Active</span>
+            <span>Auto Drip Active</span>
             <span className="text-stone-300">•</span>
             <span className="text-stone-900 font-bold">{totalPosts} Posts</span>
           </div>
@@ -83,13 +84,13 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           <button
-            onClick={onOpenSync}
-            disabled={isSyncing}
+            onClick={onRefresh}
+            disabled={isRefreshing}
             className="flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-stone-50 font-semibold text-xs sm:text-sm px-3.5 py-1.5 rounded-full shadow-xs hover:shadow transition-all disabled:opacity-50"
-            title="Trigger manual scraper sync"
+            title="Refresh posts status"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
           </button>
 
           {currentUser && onLogout && (

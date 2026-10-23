@@ -2,13 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { PostCard } from './components/PostCard';
 import { ImageModal } from './components/ImageModal';
-import { SyncModal } from './components/SyncModal';
 import { CreatePostCard } from './components/CreatePostCard';
 import { LiveMatchesPanel } from './components/LiveMatchesPanel';
 import { GraphicMakerPanel } from './components/GraphicMakerPanel';
 import { LoginModal } from './components/LoginModal';
 import { Post } from './types';
-import { Search, AlertCircle, ArrowUp, Send, CheckCircle2, Clock, PenSquare, Radio, Sparkles } from 'lucide-react';
+import { Search, AlertCircle, ArrowUp, Clock, PenSquare, Radio, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
@@ -27,11 +26,8 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [syncModalOpen, setSyncModalOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'all' | 'live' | 'graphic' | 'create' | 'queue' | 'published'>('all');
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'graphic' | 'create' | 'live' | 'queue' | 'published'>('graphic');
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
   const handleLogout = () => {
@@ -40,24 +36,11 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  const [sources, setSources] = useState<{ id: string; name: string }[]>([
-    { id: 'FabrizioRomano', name: 'Fabrizio Romano' },
-    { id: 'DeadlineDayLive', name: 'Deadline Day Live' },
-    { id: 'TheAthleticFC', name: 'The Athletic FC' },
-    { id: 'centregoals', name: 'CentreGoals' },
-    { id: 'onefootball', name: 'OneFootball' },
-    { id: 'brfootball', name: 'B/R Football' },
-    { id: 'Squawka', name: 'Squawka' },
-    { id: 'UtdDistrict', name: 'United District' },
-    { id: 'BBCSport', name: 'BBC Sport' },
-    { id: 'David_Ornstein', name: 'David Ornstein' },
-  ]);
-
-  // Fetch real posts from Cloudflare D1 via Pages Functions
+  // Fetch only active / queued / published posts from Cloudflare D1
   const fetchPosts = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await fetch('/api/posts?limit=30');
+      const res = await fetch('/api/posts?limit=50');
       if (res.ok) {
         const data = (await res.json()) as any;
         if (data.success && Array.isArray(data.data)) {
@@ -71,26 +54,13 @@ export default function App() {
     }
   };
 
-  const fetchSources = async () => {
-    try {
-      const res = await fetch('/api/sources');
-      if (res.ok) {
-        const data = (await res.json()) as any;
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          setSources(data.data);
-        }
-      }
-    } catch {}
-  };
-
   useEffect(() => {
     fetchPosts(false);
-    fetchSources();
 
-    // Live sync polling: auto-refresh every 20s so published posts vanish from queue automatically
+    // Auto-refresh queue and published posts every 25 seconds
     const interval = setInterval(() => {
       fetchPosts(true);
-    }, 20000);
+    }, 25000);
 
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
@@ -119,153 +89,56 @@ export default function App() {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  // Real-time ticker (updates countdowns every 30s)
-  const [nowTick, setNowTick] = useState<number>(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNowTick(Date.now()), 30000);
-    return () => clearInterval(t);
-  }, []);
+  // Count scheduled/queued posts
+  const queueCount = useMemo(() => {
+    return posts.filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'failed').length;
+  }, [posts]);
 
-  // Counts
-  const queueCount = useMemo(
-    () => posts.filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'failed').length,
-    [posts]
-  );
+  // Count published posts
+  const publishedCount = useMemo(() => {
+    return posts.filter((p) => p.facebook_status === 'published').length;
+  }, [posts]);
 
-  const DRIP_INTERVAL_MS = 45 * 60 * 1000;
-  const INITIAL_QUEUE_DELAY_MS = 5 * 60 * 1000;
-
-  const parseSqliteDate = (dateStr?: string | null): number => {
-    if (!dateStr) return 0;
-    if (dateStr.includes('+0000')) return new Date(dateStr).getTime();
-    const iso = dateStr.includes('T')
-      ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z')
-      : dateStr.replace(' ', 'T') + 'Z';
-    const t = new Date(iso).getTime();
-    return isNaN(t) ? new Date(dateStr).getTime() : t;
-  };
-
-  // Active queued posts sorted by FIFO order (updated_at ASC, id ASC)
+  // FIFO sorted queued posts for drip scheduling
   const queuedSortedList = useMemo(() => {
     return posts
       .filter((p) => p.facebook_status === 'queued')
       .sort((a, b) => {
-        const timeA = parseSqliteDate(a.updated_at || a.created_at);
-        const timeB = parseSqliteDate(b.updated_at || b.created_at);
-        if (timeA !== timeB) return timeA - timeB;
-        return a.id - b.id;
+        const timeA = new Date(a.updated_at || a.created_at).getTime();
+        const timeB = new Date(b.updated_at || b.created_at).getTime();
+        return timeA - timeB;
       });
   }, [posts]);
 
-  // Calculate live position and estimated minutes left for each queued post (respecting 11:00 PM - 7:00 AM IST night sleep pause)
+  // Map queue position & estimate
   const queueInfoMap = useMemo(() => {
-    const map = new Map<number, { position: number; estimatedMinutes: number; isNightPaused?: boolean }>();
-    if (queuedSortedList.length === 0) return map;
-
-    const istOffsetMs = 5.5 * 60 * 60 * 1000;
-
-    // Helper to get next active dispatch timestamp, shifting past 11:00 PM into next morning 7:00 AM IST
-    const shiftIfNightPause = (timestampMs: number): number => {
-      const istDate = new Date(timestampMs + istOffsetMs);
-      const istHours = istDate.getUTCHours();
-      const istMinutes = istDate.getUTCMinutes();
-      const istTotal = istHours * 60 + istMinutes;
-
-      if (istTotal < 7 * 60 || istTotal >= 23 * 60) {
-        const next7Am = new Date(istDate);
-        if (istTotal >= 23 * 60) {
-          next7Am.setUTCDate(next7Am.getUTCDate() + 1);
-        }
-        next7Am.setUTCHours(7, 0, 0, 0);
-        return next7Am.getTime() - istOffsetMs;
-      }
-      return timestampMs;
-    };
-
-    // Find the last published post from scheduled queue (ignore direct publishes so queue timer isn't reset)
-    const lastPublishedPost = posts
-      .filter((p) => p.facebook_status === 'published' && p.publish_source !== 'direct' && p.updated_at)
-      .sort((a, b) => parseSqliteDate(b.updated_at) - parseSqliteDate(a.updated_at))[0];
-
-    const lastPubTime = lastPublishedPost ? parseSqliteDate(lastPublishedPost.updated_at) : 0;
-    const timeSinceLastPub = lastPubTime ? nowTick - lastPubTime : DRIP_INTERVAL_MS;
-
-    // Gap required from last published post
-    const pubWaitMins = (lastPubTime && timeSinceLastPub < DRIP_INTERVAL_MS)
-      ? Math.max(1, Math.ceil((DRIP_INTERVAL_MS - timeSinceLastPub) / 60000))
-      : 1;
-
-    // First post delay: 5-minute initial buffer from queue time
-    const firstPost = queuedSortedList[0];
-    const firstQueuedTime = parseSqliteDate(firstPost.updated_at || firstPost.created_at);
-    const timeSinceFirstQueued = nowTick - firstQueuedTime;
-    const queueBufferMins = timeSinceFirstQueued < INITIAL_QUEUE_DELAY_MS
-      ? Math.max(1, Math.ceil((INITIAL_QUEUE_DELAY_MS - timeSinceFirstQueued) / 60000))
-      : 1;
-
-    const baseDelayMins = Math.max(pubWaitMins, queueBufferMins);
-
-    // Initial dispatch time for post #1
-    let currentDispatchTime = shiftIfNightPause(nowTick + baseDelayMins * 60000);
-
+    const map = new Map<number, { position: number; estimatedMinutes: number }>();
     queuedSortedList.forEach((post, index) => {
-      if (index > 0) {
-        currentDispatchTime = shiftIfNightPause(currentDispatchTime + DRIP_INTERVAL_MS);
-      }
-
-      const diffMs = currentDispatchTime - nowTick;
-      const estimatedMinutes = Math.max(1, Math.ceil(diffMs / 60000));
-      const isNightPaused = diffMs > 60 * 60000 && estimatedMinutes > 120;
-
       map.set(post.id, {
         position: index + 1,
-        estimatedMinutes,
-        isNightPaused,
+        estimatedMinutes: index * 45,
       });
     });
-
     return map;
-  }, [posts, queuedSortedList, nowTick]);
+  }, [queuedSortedList]);
 
-  // Filter posts
+  // Filter posts based on activeTab (Queue or Published)
   const filteredPosts = useMemo(() => {
     let list = posts.filter((post) => {
-      // 1. Tab filter
-      // In FEED view ('all'):
-      if (activeTab === 'all') {
-        // Never show posts created from the Create tab (manual posts)
-        const isManual = post.tweet_id?.startsWith('manual_') || post.author_handle === 'inkhel_xtra';
-        if (isManual) return false;
-
-        // Never show scheduled/queued posts or already published posts in feed
-        if (post.facebook_status === 'queued' || post.facebook_status === 'published') return false;
-      }
-
-      // In QUEUE view ('queue'): only show queued and failed posts
       if (activeTab === 'queue' && post.facebook_status !== 'queued' && post.facebook_status !== 'failed') return false;
-
-      // In PUBLISHED view ('published'): only show published posts
       if (activeTab === 'published' && post.facebook_status !== 'published') return false;
 
-      // 2. Source filter
-      const matchesSource =
-        selectedSource === 'all' ||
-        post.author_handle.toLowerCase() === selectedSource.toLowerCase();
-
-      // 3. Search query
       const query = searchQuery.toLowerCase().trim();
-      if (!query) return matchesSource;
+      if (!query) return true;
 
-      const matchesText =
-        post.mizo_translation.toLowerCase().includes(query) ||
-        post.original_text.toLowerCase().includes(query) ||
-        post.author_name.toLowerCase().includes(query);
-
-      return matchesSource && matchesText;
+      return (
+        post.mizo_translation?.toLowerCase().includes(query) ||
+        post.original_text?.toLowerCase().includes(query) ||
+        post.author_name?.toLowerCase().includes(query)
+      );
     });
 
     if (activeTab === 'queue') {
-      // Order queued posts ascending (FIFO) so #1 (next out) is at the top
       list = [...list].sort((a, b) => {
         const posA = queueInfoMap.get(a.id)?.position ?? 9999;
         const posB = queueInfoMap.get(b.id)?.position ?? 9999;
@@ -274,79 +147,41 @@ export default function App() {
     }
 
     return list;
-  }, [posts, activeTab, selectedSource, searchQuery, queueInfoMap]);
+  }, [posts, activeTab, searchQuery, queueInfoMap]);
 
-  // Handle reordering of queued posts (Move Up / Move Down)
+  // Handle reordering of queued posts
   const handleReorderQueue = async (id: number, direction: 'up' | 'down') => {
     const currentIndex = queuedSortedList.findIndex((p) => p.id === id);
     if (currentIndex === -1) return;
+
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= queuedSortedList.length) return;
 
     const currentPost = queuedSortedList[currentIndex];
     const targetPost = queuedSortedList[targetIndex];
 
-    const formatSqlite = (ms: number): string => {
-      return new Date(ms).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
-    };
+    const currentPostTime = currentPost.updated_at || currentPost.created_at;
+    const targetPostTime = targetPost.updated_at || targetPost.created_at;
 
-    const tCurrent = parseSqliteDate(currentPost.updated_at || currentPost.created_at);
-    const tTarget = parseSqliteDate(targetPost.updated_at || targetPost.created_at);
-
-    let newCurrentTime: string;
-    let newTargetTime: string;
-
-    if (direction === 'up') {
-      if (tCurrent > tTarget) {
-        newCurrentTime = targetPost.updated_at || formatSqlite(tTarget);
-        newTargetTime = currentPost.updated_at || formatSqlite(tCurrent);
-      } else {
-        newCurrentTime = formatSqlite(tTarget - 1000);
-        newTargetTime = targetPost.updated_at || formatSqlite(tTarget);
-      }
-    } else {
-      if (tTarget > tCurrent) {
-        newCurrentTime = targetPost.updated_at || formatSqlite(tTarget);
-        newTargetTime = currentPost.updated_at || formatSqlite(tCurrent);
-      } else {
-        newTargetTime = formatSqlite(tCurrent - 1000);
-        newCurrentTime = currentPost.updated_at || formatSqlite(tCurrent);
-      }
-    }
-
-    // Immediate optimistic update so UI reorders with 0 lag
     setPosts((prev) =>
       prev.map((p) => {
-        if (p.id === currentPost.id) return { ...p, updated_at: newCurrentTime };
-        if (p.id === targetPost.id) return { ...p, updated_at: newTargetTime };
+        if (p.id === currentPost.id) return { ...p, updated_at: targetPostTime };
+        if (p.id === targetPost.id) return { ...p, updated_at: currentPostTime };
         return p;
       })
     );
 
     try {
-      const res = await fetch('/api/posts', {
-        method: 'PATCH',
+      await fetch('/api/publish', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'reorder_queue',
-          id,
-          direction,
+          action: 'swap_queue_order',
+          postAId: currentPost.id,
+          postBId: targetPost.id,
         }),
       });
-
-      if (res.ok) {
-        const json = (await res.json()) as any;
-        if (json.success && Array.isArray(json.updatedPosts) && json.updatedPosts.length > 0) {
-          setPosts((prev) =>
-            prev.map((p) => {
-              const matched = json.updatedPosts.find((up: Post) => up.id === p.id);
-              return matched ? { ...p, ...matched } : p;
-            })
-          );
-        }
-      } else {
-        fetchPosts(true);
-      }
+      fetchPosts(true);
     } catch {
       fetchPosts(true);
     }
@@ -363,8 +198,8 @@ export default function App() {
       )}
 
       <Header
-        onOpenSync={() => setSyncModalOpen(true)}
-        isSyncing={isSyncing}
+        onRefresh={() => fetchPosts(false)}
+        isRefreshing={loading}
         totalPosts={posts.length}
         currentUser={currentUser}
         onLogout={handleLogout}
@@ -373,40 +208,17 @@ export default function App() {
       <div className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-4 sm:py-6">
         {/* Main Column */}
         <main className={`flex-1 min-w-0 w-full mx-auto ${activeTab === 'graphic' ? 'max-w-5xl' : 'max-w-2xl'}`}>
-          {/* Top Primary Tabs: FEED vs LIVE vs CREATE vs SCHEDULED vs PUBLISHED */}
+          {/* Top Primary Tabs */}
           <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-bold uppercase tracking-wide overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center font-bold uppercase tracking-wide whitespace-nowrap ${
-                activeTab === 'all'
-                  ? 'bg-white text-stone-900 shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              FEED
-            </button>
-
-            <button
-              onClick={() => setActiveTab('live')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
-                activeTab === 'live'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              <Radio className={`w-3.5 h-3.5 ${activeTab === 'live' ? 'animate-pulse' : 'text-rose-600'}`} />
-              <span>LIVE</span>
-            </button>
-
             <button
               onClick={() => setActiveTab('graphic')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
                 activeTab === 'graphic'
-                  ? 'bg-gradient-to-r from-rose-600 to-amber-600 text-white shadow-xs'
+                  ? 'bg-stone-900 text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span>GRAPHIC</span>
             </button>
 
@@ -419,7 +231,19 @@ export default function App() {
               }`}
             >
               <PenSquare className="w-3.5 h-3.5" />
-              <span>CREATE</span>
+              <span>CREATE POST</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('live')}
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
+                activeTab === 'live'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <Radio className={`w-3.5 h-3.5 ${activeTab === 'live' ? 'animate-pulse' : 'text-rose-600'}`} />
+              <span>LIVE MATCHES</span>
             </button>
 
             <button
@@ -453,10 +277,21 @@ export default function App() {
               }`}
             >
               <span>PUBLISHED</span>
+              {publishedCount > 0 && (
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'published'
+                      ? 'bg-white text-emerald-800'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}
+                >
+                  {publishedCount}
+                </span>
+              )}
             </button>
           </div>
 
-          {/* Conditional: Graphic Panel vs Create Post vs Live Matches vs Feed Views */}
+          {/* Conditional: Graphic Panel vs Create Post vs Live Matches vs Queue/Published Views */}
           {activeTab === 'live' ? (
             <LiveMatchesPanel />
           ) : activeTab === 'graphic' ? (
@@ -474,7 +309,7 @@ export default function App() {
                   <div className="flex items-center gap-2 font-medium min-w-0">
                     <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <span className="truncate sm:whitespace-normal">
-                      <strong>Schedule Post:</strong> Minute 45 dan zelin a in-post ang (Active hours: 7:00 AM – 11:00 PM IST)
+                      <strong>Scheduled Queue:</strong> Minute 45 dan zelin Facebook & WhatsApp-ah a in-post ang (Active hours: 7:00 AM – 11:00 PM IST)
                     </span>
                   </div>
                   <span className="font-semibold text-blue-700 bg-white border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] whitespace-nowrap flex-shrink-0 shadow-2xs">
@@ -483,126 +318,69 @@ export default function App() {
                 </div>
               )}
 
-          {/* Search & Filter Bar */}
-          <div className="mb-4 space-y-2.5">
-            <div className="relative">
-              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search transfer news, player, or club..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-stone-300 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 transition-colors shadow-xs"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-500 hover:text-stone-700 bg-stone-100 px-2 py-0.5 rounded border border-stone-200"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-
-            {/* Source selector tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
-              <button
-                onClick={() => setSelectedSource('all')}
-                className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
-                  selectedSource === 'all'
-                    ? 'bg-stone-900 text-white shadow-xs'
-                    : 'bg-white text-stone-600 hover:text-stone-900 border border-stone-200 shadow-xs'
-                }`}
-              >
-                All Sources
-              </button>
-              {sources.map((s) => {
-                const count = posts.filter((p) => {
-                  const matchSource = p.author_handle.toLowerCase() === s.id.toLowerCase();
-                  if (!matchSource) return false;
-                  if (activeTab === 'all') {
-                    const isManual = p.tweet_id?.startsWith('manual_') || p.author_handle === 'inkhel_xtra';
-                    if (isManual) return false;
-                    return p.facebook_status !== 'queued' && p.facebook_status !== 'published';
-                  }
-                  if (activeTab === 'queue') return p.facebook_status === 'queued' || p.facebook_status === 'failed';
-                  if (activeTab === 'published') return p.facebook_status === 'published';
-                  return true;
-                }).length;
-                const isSelected = selectedSource.toLowerCase() === s.id.toLowerCase();
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedSource(s.id)}
-                    className={`px-3.5 py-1.5 rounded-full font-semibold transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-amber-400 text-stone-950 font-bold shadow-xs'
-                        : 'bg-white text-stone-600 hover:text-stone-900 border border-stone-200 shadow-xs'
-                    }`}
-                  >
-                    <span>@{s.id}</span>
-                    {count > 0 && (
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                        isSelected ? 'bg-black/15 text-stone-950 font-bold' : 'bg-stone-100 text-stone-600 border border-stone-200'
-                      }`}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Feed Container */}
-          <div className="border border-stone-200/90 rounded-2xl overflow-hidden bg-white divide-y divide-stone-200/80 shadow-xs">
-            {loading && posts.length === 0 ? (
-              <div className="p-12 text-center text-stone-500 space-y-3">
-                <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-stone-200 border-t-amber-500" />
-                <p className="text-sm font-medium text-stone-500">Chanchin thar lakkhawm mek a ni...</p>
-              </div>
-            ) : filteredPosts.length > 0 ? (
-              filteredPosts.map((post) => {
-                const qPos = queueInfoMap.get(post.id)?.position;
-                const isQ = post.facebook_status === 'queued';
-                const canMoveUp = isQ && typeof qPos === 'number' && qPos > 1;
-                const canMoveDown = isQ && typeof qPos === 'number' && qPos < queuedSortedList.length;
-
-                return (
-                  <PostCard
-                    key={post.id || post.tweet_id}
-                    post={post}
-                    onImageClick={(url) => setSelectedImage(url)}
-                    onPostUpdated={handlePostUpdated}
-                    onPostDeleted={handlePostDeleted}
-                    queuePosition={qPos}
-                    queueEstimatedMinutes={queueInfoMap.get(post.id)?.estimatedMinutes}
-                    onMoveUp={() => handleReorderQueue(post.id, 'up')}
-                    onMoveDown={() => handleReorderQueue(post.id, 'down')}
-                    canMoveUp={canMoveUp}
-                    canMoveDown={canMoveDown}
+              {/* Search Bar for Queue / Published */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search posts..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-stone-300 rounded-2xl pl-10 pr-4 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 transition-colors shadow-xs"
                   />
-                );
-              })
-            ) : (
-              <div className="p-12 text-center text-stone-500 space-y-3">
-                <AlertCircle className="w-8 h-8 mx-auto text-stone-400" />
-                <p className="text-sm font-medium">
-                  {activeTab === 'queue'
-                    ? 'Awm lo rih! Feed atangin "+ Add to FB Queue" hmet la, heta a lo lang ang.'
-                    : 'No breaking news matching your search.'}
-                </p>
-                {activeTab !== 'all' && (
-                  <button
-                    onClick={() => setActiveTab('all')}
-                    className="text-xs text-amber-600 hover:underline font-semibold"
-                  >
-                    View all feed &rarr;
-                  </button>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-500 hover:text-stone-700 bg-stone-100 px-2 py-0.5 rounded border border-stone-200"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* List Container */}
+              <div className="border border-stone-200/90 rounded-2xl overflow-hidden bg-white divide-y divide-stone-200/80 shadow-xs">
+                {loading && posts.length === 0 ? (
+                  <div className="p-12 text-center text-stone-500 space-y-3">
+                    <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-stone-200 border-t-amber-500" />
+                    <p className="text-sm font-medium text-stone-500">Post lakkhawm mek a ni...</p>
+                  </div>
+                ) : filteredPosts.length > 0 ? (
+                  filteredPosts.map((post) => {
+                    const qPos = queueInfoMap.get(post.id)?.position;
+                    const isQ = post.facebook_status === 'queued';
+                    const canMoveUp = isQ && typeof qPos === 'number' && qPos > 1;
+                    const canMoveDown = isQ && typeof qPos === 'number' && qPos < queuedSortedList.length;
+
+                    return (
+                      <PostCard
+                        key={post.id || post.tweet_id}
+                        post={post}
+                        onImageClick={(url) => setSelectedImage(url)}
+                        onPostUpdated={handlePostUpdated}
+                        onPostDeleted={handlePostDeleted}
+                        queuePosition={qPos}
+                        queueEstimatedMinutes={queueInfoMap.get(post.id)?.estimatedMinutes}
+                        onMoveUp={() => handleReorderQueue(post.id, 'up')}
+                        onMoveDown={() => handleReorderQueue(post.id, 'down')}
+                        canMoveUp={canMoveUp}
+                        canMoveDown={canMoveDown}
+                      />
+                    );
+                  })
+                ) : (
+                  <div className="p-12 text-center text-stone-500 space-y-3">
+                    <AlertCircle className="w-8 h-8 mx-auto text-stone-400" />
+                    <p className="text-sm font-medium">
+                      {activeTab === 'queue'
+                        ? 'Scheduled queue-ah post a awm rih lo! Create Post emaw Graphic aṭangin "+ Add to Queue" i ti thei e.'
+                        : 'Post zawn hmuh a awm lo.'}
+                    </p>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
             </>
           )}
         </main>
@@ -623,15 +401,6 @@ export default function App() {
       <ImageModal
         imageUrl={selectedImage}
         onClose={() => setSelectedImage(null)}
-      />
-
-      {/* Scraper Sync Modal */}
-      <SyncModal
-        isOpen={syncModalOpen}
-        onClose={() => setSyncModalOpen(false)}
-        onSyncSuccess={() => {
-          fetchPosts();
-        }}
       />
     </div>
   );

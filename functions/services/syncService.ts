@@ -1,227 +1,16 @@
 import { Env, SyncResult } from '../types';
-import { twitterScraper } from './twitterScraper';
-import { telegramScraper } from './telegramScraper';
-import { geminiTranslator } from './geminiTranslator';
 import { facebookPoster } from './facebookPoster';
 import { whatsappPoster } from './whatsappPoster';
 
 export class SyncService {
   /**
-   * Run sync job across configured sources
+   * News scraping is permanently disabled.
+   * runSync only processes the scheduled Facebook & WhatsApp Queue Drip.
    */
-  public async runSync(env: Env, targetSource?: string): Promise<SyncResult[]> {
+  public async runSync(env: Env, _targetSource?: string): Promise<SyncResult[]> {
     const results: SyncResult[] = [];
 
-    // 1. Determine sources to scrape
-    let sources: string[] = [];
-
-    if (targetSource) {
-      sources = [targetSource];
-    } else {
-      // Query active sources from D1
-      try {
-        const { results: dbSources } = await env.DB.prepare(
-          'SELECT id FROM sources WHERE enabled = 1'
-        ).all<{ id: string }>();
-
-        if (dbSources && dbSources.length > 0) {
-          sources = dbSources.map((s) => s.id);
-        }
-      } catch (err: any) {
-        console.warn('Could not read sources from D1, falling back to default:', err.message);
-      }
-
-      if (sources.length === 0) {
-        // Fallback to DEFAULT_SOURCES or hardcoded Tier-1 sources
-        const envSources = env.DEFAULT_SOURCES?.split(',').map((s) => s.trim()) || [];
-        sources = envSources.length > 0 ? envSources : ['David_Ornstein'];
-      }
-    }
-
-    console.log(`Starting sync for sources: ${sources.join(', ')}`);
-
-    for (const sourceHandle of sources) {
-      const syncResult: SyncResult = {
-        source: sourceHandle,
-        status: 'success',
-        tweetsFound: 0,
-        tweetsNew: 0,
-        message: '',
-        processedIds: [],
-      };
-
-      try {
-        // 1. Scrape latest posts (Support both Twitter and Telegram channels)
-        const isTelegram =
-          sourceHandle.startsWith('tg:') ||
-          sourceHandle.startsWith('t.me/') ||
-          sourceHandle.toLowerCase().includes('telegram');
-        const cleanHandle = sourceHandle
-          .replace(/^tg:/i, '')
-          .replace(/^t\.me\//i, '')
-          .replace(/^https?:\/\/t\.me\/(s\/)?/i, '')
-          .trim();
-
-        const tweets = isTelegram
-          ? await telegramScraper.getRecentPosts(cleanHandle, 25)
-          : await twitterScraper.getRecentTweets(sourceHandle, 25);
-
-        syncResult.tweetsFound = tweets.length;
-
-        if (tweets.length === 0) {
-          syncResult.message = 'No tweets found or profile has no recent public tweets';
-          results.push(syncResult);
-          continue;
-        }
-
-        // 2. Filter strictly for FRESH tweets only (past 7 days) and EXCLUDE any tweets with website URLs/links
-        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-        const seenIds = new Set<string>();
-        const freshTweets = tweets
-          .filter((t) => {
-            if (seenIds.has(t.id)) return false;
-            seenIds.add(t.id);
-            const time = new Date(t.createdAt).getTime();
-            if (isNaN(time) || time < sevenDaysAgo) return false;
-
-            // Sanitize text by removing URLs so translation contains no links
-            const cleanText = t.text
-              .replace(/https?:\/\/t\.co\/[a-zA-Z0-9]+/gi, '')
-              .replace(/https?:\/\/\S+/gi, '')
-              .replace(/\s+/g, ' ')
-              .trim();
-            if (cleanText.length < 10) return false;
-            t.text = cleanText;
-
-            return true;
-          })
-          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-          .slice(-15); // process up to 15 freshest tweets
-
-        if (freshTweets.length === 0) {
-          syncResult.message = 'No new tweets from the past 7 days';
-          results.push(syncResult);
-          continue;
-        }
-
-        // Deduplicate against D1 first to conserve API calls
-        const newTweetsToProcess: typeof freshTweets = [];
-        for (const tweet of freshTweets) {
-          const existing = await env.DB.prepare(
-            'SELECT id FROM posts WHERE tweet_id = ?'
-          )
-            .bind(tweet.id)
-            .first();
-
-          if (!existing) {
-            newTweetsToProcess.push(tweet);
-          }
-        }
-
-        if (newTweetsToProcess.length === 0) {
-          syncResult.message = 'All recent tweets are already translated and saved';
-          results.push(syncResult);
-          continue;
-        }
-
-        console.log(`Found ${newTweetsToProcess.length} new tweet(s) to translate for @${sourceHandle}`);
-
-        // Process up to 3 fresh short news tweets per 15m run to optimize free tier tokens
-        const batchToTranslate = newTweetsToProcess.slice(0, 3);
-
-        // Batch translate in a single Gemini request
-        const fallbackKey = env.GEMINI_API_KEY_2 || env.GEMINI_API_KEY_FALLBACK;
-        let translationsMap = new Map<string, { id: string; mizo_title?: string; mizo_content: string }>();
-        try {
-          translationsMap = await geminiTranslator.batchTranslate(
-            batchToTranslate.map((t) => ({
-              id: t.id,
-              text: t.text,
-              authorName: t.authorName,
-            })),
-            env.GEMINI_API_KEY,
-            fallbackKey
-          );
-        } catch (transErr: any) {
-          console.error(`Gemini batch translation error for @${sourceHandle}:`, transErr.message);
-        }
-
-        for (const tweet of batchToTranslate) {
-          const transResult = translationsMap.get(tweet.id);
-          let mizoText = transResult?.mizo_content || '';
-          if (
-            transResult?.mizo_title &&
-            transResult.mizo_title.trim() &&
-            !mizoText.includes(transResult.mizo_title.trim())
-          ) {
-            mizoText = `${transResult.mizo_title.trim()}\n\n${mizoText.trim()}`;
-          }
-
-          // Do NOT save as raw English if model translation failed!
-          // Skipping allows it to retry on the next sync when quota or fallback recovers
-          if (!mizoText.trim()) {
-            console.warn(
-              `Translation failed for tweet ${tweet.id}. Skipping to retry on next sync.`
-            );
-            continue;
-          }
-
-          // Save to Cloudflare D1 with facebook_status = 'none' (awaiting editorial curation)
-          await env.DB.prepare(
-            `INSERT OR IGNORE INTO posts (
-              tweet_id, author_handle, author_name, author_avatar,
-              original_text, mizo_translation, primary_image_url,
-              media_urls, tweet_url, tweet_created_at, facebook_post_id,
-              facebook_status, error_message, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'none', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-          )
-            .bind(
-              tweet.id,
-              tweet.authorHandle,
-              tweet.authorName,
-              tweet.authorAvatar,
-              tweet.text,
-              mizoText,
-              tweet.primaryImageUrl || null,
-              JSON.stringify(tweet.photos),
-              tweet.tweetUrl,
-              tweet.createdAt
-            )
-            .run();
-
-          syncResult.tweetsNew++;
-          syncResult.processedIds.push(tweet.id);
-        }
-
-        syncResult.message = `Sync completed: ${syncResult.tweetsNew} new tweet(s) recorded out of ${tweets.length} examined`;
-      } catch (err: any) {
-        console.error(`Sync error for @${sourceHandle}:`, err.message);
-        syncResult.status = 'error';
-        syncResult.message = err.message;
-      }
-
-      // Record to sync_logs table in D1
-      try {
-        await env.DB.prepare(
-          `INSERT INTO sync_logs (source_handle, status, message, tweets_found, tweets_new)
-           VALUES (?, ?, ?, ?, ?)`
-        )
-          .bind(
-            sourceHandle,
-            syncResult.status,
-            syncResult.message,
-            syncResult.tweetsFound,
-            syncResult.tweetsNew
-          )
-          .run();
-      } catch (logErr: any) {
-        console.warn('Could not insert into sync_logs:', logErr.message);
-      }
-
-      results.push(syncResult);
-    }
-
-    // 4. Process the next queued item for Facebook & WhatsApp
+    // Process the next queued item for Facebook & WhatsApp
     try {
       if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
         const MIN_POST_INTERVAL_MS = 45 * 60 * 1000; // Strictly 45 minutes gap between published posts
@@ -266,8 +55,7 @@ export class SyncService {
           return results;
         }
 
-        // Condition 1: Check when the last post was published via the queue (must have 30 mins gap)
-        // Direct publishes do not delay or reset the scheduled drip queue!
+        // Condition 1: Check when the last post was published via the queue (must have 45 mins gap)
         const lastPublished = await env.DB.prepare(
           "SELECT updated_at FROM posts WHERE facebook_status = 'published' AND (publish_source IS NULL OR publish_source != 'direct') ORDER BY updated_at DESC LIMIT 1"
         ).first<{ updated_at: string }>();

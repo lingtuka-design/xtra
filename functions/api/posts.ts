@@ -13,7 +13,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const fbStatus = url.searchParams.get('fb_status');
 
   try {
-    let query = 'SELECT * FROM posts WHERE 1=1';
+    let query = "SELECT * FROM posts WHERE (facebook_status != 'none' OR tweet_id LIKE 'manual_%')";
     const params: any[] = [];
 
     if (source && source !== 'all') {
