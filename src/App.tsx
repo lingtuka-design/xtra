@@ -111,17 +111,103 @@ export default function App() {
       });
   }, [posts]);
 
-  // Map queue position & estimate
+  // Last published post to compute remaining drip interval
+  const lastPublished = useMemo(() => {
+    return posts
+      .filter((p) => p.facebook_status === 'published' && (p.publish_source === 'queue' || !p.publish_source))
+      .sort((a, b) => {
+        const timeA = new Date(a.updated_at || a.created_at).getTime();
+        const timeB = new Date(b.updated_at || b.created_at).getTime();
+        return timeB - timeA;
+      })[0];
+  }, [posts]);
+
+  // Map queue position & estimate with night pause awareness (11 PM - 7 AM IST)
   const queueInfoMap = useMemo(() => {
-    const map = new Map<number, { position: number; estimatedMinutes: number }>();
+    const map = new Map<
+      number,
+      {
+        position: number;
+        estimatedMinutes: number;
+        scheduledTimeStr: string;
+        isNightPaused: boolean;
+      }
+    >();
+
+    const now = Date.now();
+    const DRIP_INTERVAL_MS = 45 * 60 * 1000;
+    const INITIAL_DELAY_MS = 5 * 60 * 1000;
+
+    let baseCursor = now;
+    if (lastPublished?.updated_at) {
+      const lastPubMs = new Date(lastPublished.updated_at).getTime();
+      if (!isNaN(lastPubMs) && now - lastPubMs < DRIP_INTERVAL_MS) {
+        baseCursor = Math.max(baseCursor, lastPubMs + DRIP_INTERVAL_MS);
+      }
+    }
+
+    if (queuedSortedList.length > 0) {
+      const firstQueuedMs = new Date(
+        queuedSortedList[0].updated_at || queuedSortedList[0].created_at
+      ).getTime();
+      if (!isNaN(firstQueuedMs) && now - firstQueuedMs < INITIAL_DELAY_MS) {
+        baseCursor = Math.max(baseCursor, firstQueuedMs + INITIAL_DELAY_MS);
+      }
+    }
+
+    const pushPastNightPause = (timeMs: number): { scheduledMs: number; isNightPaused: boolean } => {
+      const istOffsetMs = 5.5 * 60 * 60 * 1000;
+      const istDate = new Date(timeMs + istOffsetMs);
+      const istHours = istDate.getUTCHours();
+      const istMinutes = istDate.getUTCMinutes();
+      const istTotalMinutes = istHours * 60 + istMinutes;
+
+      const ACTIVE_START_MINS = 7 * 60; // 7:00 AM IST
+      const ACTIVE_END_MINS = 23 * 60;  // 11:00 PM IST
+
+      if (istTotalMinutes >= ACTIVE_END_MINS) {
+        const minsToMidnight = 1440 - istTotalMinutes;
+        const minsTo7Am = minsToMidnight + ACTIVE_START_MINS;
+        return {
+          scheduledMs: timeMs + minsTo7Am * 60 * 1000 - istDate.getUTCSeconds() * 1000 - istDate.getUTCMilliseconds(),
+          isNightPaused: true,
+        };
+      } else if (istTotalMinutes < ACTIVE_START_MINS) {
+        const minsTo7Am = ACTIVE_START_MINS - istTotalMinutes;
+        return {
+          scheduledMs: timeMs + minsTo7Am * 60 * 1000 - istDate.getUTCSeconds() * 1000 - istDate.getUTCMilliseconds(),
+          isNightPaused: true,
+        };
+      }
+      return { scheduledMs: timeMs, isNightPaused: false };
+    };
+
+    let cursor = baseCursor;
     queuedSortedList.forEach((post, index) => {
+      const { scheduledMs, isNightPaused } = pushPastNightPause(cursor);
+      const diffMs = Math.max(0, scheduledMs - now);
+      const estimatedMinutes = Math.max(1, Math.round(diffMs / 60000));
+
+      const istDate = new Date(scheduledMs + 5.5 * 3600 * 1000);
+      const istH = istDate.getUTCHours();
+      const istM = istDate.getUTCMinutes();
+      const ampm = istH >= 12 ? 'PM' : 'AM';
+      const displayH = istH % 12 === 0 ? 12 : istH % 12;
+      const displayM = istM.toString().padStart(2, '0');
+      const scheduledTimeStr = `${displayH}:${displayM} ${ampm}`;
+
       map.set(post.id, {
         position: index + 1,
-        estimatedMinutes: index * 45,
+        estimatedMinutes,
+        scheduledTimeStr,
+        isNightPaused,
       });
+
+      cursor = scheduledMs + DRIP_INTERVAL_MS;
     });
+
     return map;
-  }, [queuedSortedList]);
+  }, [queuedSortedList, lastPublished]);
 
   // Filter posts based on activeTab (Queue or Published)
   const filteredPosts = useMemo(() => {
@@ -388,6 +474,8 @@ export default function App() {
                         onPostDeleted={handlePostDeleted}
                         queuePosition={qPos}
                         queueEstimatedMinutes={queueInfoMap.get(post.id)?.estimatedMinutes}
+                        queueScheduledTime={queueInfoMap.get(post.id)?.scheduledTimeStr}
+                        isNightPaused={queueInfoMap.get(post.id)?.isNightPaused}
                         onMoveUp={() => handleReorderQueue(post.id, 'up')}
                         onMoveDown={() => handleReorderQueue(post.id, 'down')}
                         canMoveUp={canMoveUp}

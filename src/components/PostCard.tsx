@@ -41,6 +41,8 @@ interface PostCardProps {
   onPostDeleted?: (id: number) => void;
   queuePosition?: number;
   queueEstimatedMinutes?: number;
+  queueScheduledTime?: string;
+  isNightPaused?: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   canMoveUp?: boolean;
@@ -54,6 +56,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   onPostDeleted,
   queuePosition,
   queueEstimatedMinutes,
+  queueScheduledTime,
+  isNightPaused,
   onMoveUp,
   onMoveDown,
   canMoveUp = false,
@@ -102,17 +106,24 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  const formatQueueTime = (mins?: number) => {
-    if (mins === undefined || mins === null) return 'Drip 30m';
-    if (mins <= 1) return '~1 min left';
-    if (mins < 60) return `~${mins} mins left`;
+  const formatQueueTime = (
+    mins?: number,
+    scheduledTime?: string,
+    isNight?: boolean
+  ) => {
+    if (mins === undefined || mins === null) return 'Drip 45m';
+
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    if (h >= 3) {
-      return `~${h}h left (Resumes 7 AM)`;
+    const timeRemaining = h > 0 ? (m === 0 ? `${h}h` : `${h}h ${m}m`) : `${m}m`;
+
+    if (isNight) {
+      return `Zing ${scheduledTime || '7:00 AM'} • ~${timeRemaining}`;
     }
-    if (m === 0) return h === 1 ? '~1 hr left' : `~${h} hrs left`;
-    return `~${h}h ${m}m left`;
+
+    if (mins <= 1) return '~1 min left';
+    if (mins < 60) return `~${mins} mins left`;
+    return `~${timeRemaining} left (${scheduledTime || ''})`;
   };
 
   const handleCopy = () => {
@@ -313,7 +324,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     <span>
                       {queuePosition === 1 ? 'Next in queue' : `Queue #${queuePosition}`}{' '}
                       <span className="font-bold text-amber-900">
-                        ({formatQueueTime(queueEstimatedMinutes)})
+                        ({formatQueueTime(queueEstimatedMinutes, queueScheduledTime, isNightPaused)})
                       </span>
                     </span>
                   ) : (
