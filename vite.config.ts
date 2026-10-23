@@ -11,5 +11,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'https://xtra-byd.pages.dev',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });
