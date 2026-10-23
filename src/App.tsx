@@ -94,9 +94,10 @@ export default function App() {
     return posts.filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'failed').length;
   }, [posts]);
 
-  // Count published posts
+  // Count published posts (latest 5)
   const publishedCount = useMemo(() => {
-    return posts.filter((p) => p.facebook_status === 'published').length;
+    const total = posts.filter((p) => p.facebook_status === 'published').length;
+    return Math.min(total, 5);
   }, [posts]);
 
   // FIFO sorted queued posts for drip scheduling
@@ -144,6 +145,16 @@ export default function App() {
         const posB = queueInfoMap.get(b.id)?.position ?? 9999;
         return posA - posB;
       });
+    }
+
+    if (activeTab === 'published') {
+      list = [...list]
+        .sort((a, b) => {
+          const timeA = new Date(a.updated_at || a.created_at).getTime();
+          const timeB = new Date(b.updated_at || b.created_at).getTime();
+          return timeB - timeA;
+        })
+        .slice(0, 5);
     }
 
     return list;
@@ -314,6 +325,20 @@ export default function App() {
                   </div>
                   <span className="font-semibold text-blue-700 bg-white border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] whitespace-nowrap flex-shrink-0 shadow-2xs">
                     {queueCount} queued
+                  </span>
+                </div>
+              )}
+
+              {/* Published Banner (Latest 5) */}
+              {activeTab === 'published' && (
+                <div className="p-3 mb-4 rounded-xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-3 text-xs text-emerald-900 shadow-xs">
+                  <div className="flex items-center gap-2 font-medium min-w-0">
+                    <span className="truncate sm:whitespace-normal">
+                      <strong>Published Posts:</strong> Post chhuak hnuhnung ber 5 chauh tarlan a ni.
+                    </span>
+                  </div>
+                  <span className="font-semibold text-emerald-700 bg-white border border-emerald-200 px-2.5 py-0.5 rounded-full text-[11px] whitespace-nowrap flex-shrink-0 shadow-2xs">
+                    Latest 5
                   </span>
                 </div>
               )}
