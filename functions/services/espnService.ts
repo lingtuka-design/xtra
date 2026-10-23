@@ -37,8 +37,15 @@ export interface MatchEvent {
   scoringPlay: boolean;
 }
 
+function formatEspnDate(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
+}
+
 export const espnService = {
-  // Fetch upcoming & today's Premier League, Champions League, and Indian Super League matches
+  // Fetch upcoming 24h schedule & active live matches for PL, UCL, and ISL (excluding finished FT matches)
   async getFixtures(): Promise<EspnMatch[]> {
     const leagues: { key: 'PL' | 'UCL' | 'ISL'; slug: string; name: string }[] = [
       { key: 'PL', slug: 'eng.1', name: 'PL' },
@@ -46,61 +53,84 @@ export const espnService = {
       { key: 'ISL', slug: 'ind.1', name: 'ISL' },
     ];
 
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const dTomorrow = formatEspnDate(tomorrow);
+
     const allMatches: EspnMatch[] = [];
+    const seenIds = new Set<string>();
 
     for (const l of leagues) {
-      try {
-        const res = await fetch(
-          `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard`,
-          { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }
-        );
-        if (!res.ok) continue;
+      const endpoints = [
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard`,
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${dTomorrow}`,
+      ];
 
-        const data = (await res.json()) as any;
-        const events = data.events || [];
-
-        for (const ev of events) {
-          const comp = ev.competitions?.[0];
-          if (!comp) continue;
-
-          const home = comp.competitors?.find((c: any) => c.homeAway === 'home');
-          const away = comp.competitors?.find((c: any) => c.homeAway === 'away');
-          if (!home || !away) continue;
-
-          allMatches.push({
-            id: ev.id,
-            league: l.key,
-            leagueName: l.name,
-            name: ev.name,
-            shortName: ev.shortName,
-            date: ev.date,
-            statusState: comp.status?.type?.state || 'pre',
-            statusDetail: comp.status?.type?.shortDetail || comp.status?.type?.description || 'Scheduled',
-            displayClock: comp.status?.displayClock || "0'",
-            homeTeam: {
-              id: home.team?.id || '',
-              name: home.team?.displayName || 'Home Team',
-              shortName: home.team?.shortDisplayName || home.team?.name || 'Home',
-              abbreviation: home.team?.abbreviation || 'HOM',
-              logo: home.team?.logo || '',
-              score: home.score || '0',
-            },
-            awayTeam: {
-              id: away.team?.id || '',
-              name: away.team?.displayName || 'Away Team',
-              shortName: away.team?.shortDisplayName || away.team?.name || 'Away',
-              abbreviation: away.team?.abbreviation || 'AWY',
-              logo: away.team?.logo || '',
-              score: away.score || '0',
-            },
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
           });
+          if (!res.ok) continue;
+
+          const data = (await res.json()) as any;
+          const events = data.events || [];
+
+          for (const ev of events) {
+            if (seenIds.has(ev.id)) continue;
+
+            const comp = ev.competitions?.[0];
+            if (!comp) continue;
+
+            const state = comp.status?.type?.state || 'pre';
+            // Automatically hide/exclude full time matches as requested
+            if (state === 'post') continue;
+
+            const home = comp.competitors?.find((c: any) => c.homeAway === 'home');
+            const away = comp.competitors?.find((c: any) => c.homeAway === 'away');
+            if (!home || !away) continue;
+
+            seenIds.add(ev.id);
+            allMatches.push({
+              id: ev.id,
+              league: l.key,
+              leagueName: l.name,
+              name: ev.name,
+              shortName: ev.shortName,
+              date: ev.date,
+              statusState: state,
+              statusDetail: comp.status?.type?.shortDetail || comp.status?.type?.description || 'Scheduled',
+              displayClock: comp.status?.displayClock || "0'",
+              homeTeam: {
+                id: home.team?.id || '',
+                name: home.team?.displayName || 'Home Team',
+                shortName: home.team?.shortDisplayName || home.team?.name || 'Home',
+                abbreviation: home.team?.abbreviation || 'HOM',
+                logo: home.team?.logo || '',
+                score: home.score || '0',
+              },
+              awayTeam: {
+                id: away.team?.id || '',
+                name: away.team?.displayName || 'Away Team',
+                shortName: away.team?.shortDisplayName || away.team?.name || 'Away',
+                abbreviation: away.team?.abbreviation || 'AWY',
+                logo: away.team?.logo || '',
+                score: away.score || '0',
+              },
+            });
+          }
+        } catch (err) {
+          console.warn(`ESPN fetch error for ${l.key} (${endpoint}):`, err);
         }
-      } catch (err) {
-        console.warn(`ESPN fetch error for ${l.key}:`, err);
       }
     }
 
-    return allMatches;
+    // Sort: Live matches first, then chronological by kickoff time
+    return allMatches.sort((a, b) => {
+      if (a.statusState === 'in' && b.statusState !== 'in') return -1;
+      if (b.statusState === 'in' && a.statusState !== 'in') return 1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
   },
 
   // Fetch live match events (goals, cards, period changes), confirmed lineups and stats for a specific match

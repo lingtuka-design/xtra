@@ -156,17 +156,40 @@ export const LiveMatchesPanel: React.FC = () => {
     }
   };
 
-  const filteredMatches = matches.filter((m) => {
-    if (activeFilter === 'ALL') return true;
-    return m.league === activeFilter;
-  });
+  const filteredMatches = matches
+    .filter((m) => {
+      // Hide Full Time / Completed matches as requested
+      if (
+        m.statusState === 'post' ||
+        m.statusDetail?.toUpperCase().includes('FT') ||
+        m.statusDetail?.toUpperCase().includes('FINAL')
+      ) {
+        return false;
+      }
+
+      if (activeFilter === 'ALL') return true;
+      return m.league === activeFilter;
+    })
+    .sort((a, b) => {
+      if (a.statusState === 'in' && b.statusState !== 'in') return -1;
+      if (b.statusState === 'in' && a.statusState !== 'in') return 1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
 
   const trackedCount = matches.filter((m) => m.isTracked).length;
 
   const formatMatchTime = (isoString: string) => {
     try {
       const d = new Date(isoString);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const isTomorrow = tomorrow.toDateString() === d.toDateString();
+      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      if (isToday) return `Vawiin ${timeStr}`;
+      if (isTomorrow) return `Naktuk ${timeStr}`;
+      return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${timeStr}`;
     } catch {
       return '';
     }
@@ -190,7 +213,7 @@ export const LiveMatchesPanel: React.FC = () => {
               </h2>
             </div>
             <p className="text-[11px] text-stone-500 font-medium">
-              Match duh thlang la: <strong className="text-rose-700">🔥 Live</strong> (Goal tin + Red Card + Lineup + HT/FT) emaw <strong className="text-amber-700">📊 HT/FT</strong> (Half Time & Full Time result chauh).
+              Darkar 24 chhunga match khelh tur leh active mekte chauh a lang a, match zawh (FT) tawh chu mahniin an bo zel ang.
             </p>
           </div>
         </div>
@@ -206,7 +229,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              All ({matches.length})
+              All ({filteredMatches.length})
             </button>
             <button
               onClick={() => setActiveFilter('PL')}
