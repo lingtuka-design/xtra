@@ -116,6 +116,44 @@ ${awayStarters.join(', ')}
 }
 
 // Helper to format Half Time post for Facebook
+// Helper to format grouped match scorers: e.g. "(Nicolas Jackson 6', 60')  (Erling Haaland 52')"
+function formatMatchScorersDisplay(goalEvents: any[], homeTeamId?: string, awayTeamId?: string): string {
+  if (!goalEvents || goalEvents.length === 0) return '';
+
+  const formatTeam = (teamId?: string) => {
+    const teamGoals = goalEvents.filter((ev: any) => (teamId && ev.teamId ? ev.teamId === teamId : true));
+    if (teamGoals.length === 0) return '';
+    const playerMap = new Map<string, string[]>();
+    for (const ev of teamGoals) {
+      const name = ev.athleteName || 'Goal';
+      const m = ev.minute ? `${ev.minute.replace(/'/g, '')}'` : '';
+      if (!playerMap.has(name)) playerMap.set(name, []);
+      if (m) playerMap.get(name)!.push(m);
+    }
+    const parts: string[] = [];
+    for (const [name, mins] of playerMap.entries()) {
+      if (mins.length > 0) {
+        parts.push(`${name} ${mins.join(', ')}`);
+      } else {
+        parts.push(name);
+      }
+    }
+    return parts.length > 0 ? `(${parts.join(', ')})` : '';
+  };
+
+  const homeGrouped = homeTeamId ? formatTeam(homeTeamId) : '';
+  const awayGrouped = awayTeamId ? formatTeam(awayTeamId) : '';
+
+  if (homeGrouped && awayGrouped) {
+    return `${homeGrouped}  ${awayGrouped}`;
+  } else if (homeGrouped) {
+    return homeGrouped;
+  } else if (awayGrouped) {
+    return awayGrouped;
+  }
+  return '';
+}
+
 function formatHalfTimePost(
   homeTeam: string,
   awayTeam: string,
@@ -125,7 +163,7 @@ function formatHalfTimePost(
   stats: any,
   leagueName: string
 ): string {
-  const scorersSection = scorersText ? `⚽ Scorers: ${scorersText}\n\n` : '';
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '';
   const statsSection = stats
     ? `📊 Match Stats (HT):
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -180,7 +218,7 @@ function formatFullTimePost(
   stats: any,
   leagueName: string
 ): string {
-  const scorersSection = scorersText ? `⚽ Scorers: ${scorersText}\n\n` : '';
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '';
   const statsSection = stats
     ? `📊 Final Match Stats:
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -852,7 +890,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
         if (claimed) {
           const goalEvents = summary.events.filter((ev: any) => ev.type.toLowerCase().includes('goal') || ev.scoringPlay);
-          const scorersText = goalEvents.map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`).join(', ');
+          const scorersText = formatMatchScorersDisplay(goalEvents, summary.homeTeamId, summary.awayTeamId);
 
           const homeScorers = goalEvents
             .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : true))
@@ -966,7 +1004,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
         if (claimed) {
           const goalEvents = summary.events.filter((ev: any) => ev.type.toLowerCase().includes('goal') || ev.scoringPlay);
-          const scorersText = goalEvents.map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`).join(', ');
+          const scorersText = formatMatchScorersDisplay(goalEvents, summary.homeTeamId, summary.awayTeamId);
 
           const homeScorers = goalEvents
             .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : true))
