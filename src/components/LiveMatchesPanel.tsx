@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles } from 'lucide-react';
+import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star } from 'lucide-react';
 
 interface EspnMatch {
   id: string;
@@ -29,6 +29,7 @@ interface EspnMatch {
   };
   isTracked?: boolean;
   trackMode?: 'full' | 'results_only' | null;
+  trackRatings?: boolean;
 }
 
 export const LiveMatchesPanel: React.FC = () => {
@@ -124,6 +125,7 @@ export const LiveMatchesPanel: React.FC = () => {
           matchTime: match.date,
           isTracked: isNowTracked,
           trackMode: nextMode || undefined,
+          trackRatings: match.trackRatings,
         }),
       });
 
@@ -151,6 +153,63 @@ export const LiveMatchesPanel: React.FC = () => {
         )
       );
       alert('Tracking thlak laiin buaina a awm: ' + err.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleToggleRatings = async (match: EspnMatch) => {
+    const nextRatings = !match.trackRatings;
+    setUpdatingId(match.id);
+    setStatusMessage(null);
+
+    // If enabling ratings and match was not tracked, default to full tracking
+    const isNowTracked = nextRatings ? true : match.isTracked;
+    const nextMode = match.trackMode || 'full';
+
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.id === match.id
+          ? { ...m, trackRatings: nextRatings, isTracked: isNowTracked, trackMode: nextMode }
+          : m
+      )
+    );
+
+    try {
+      const res = await fetch('/api/live/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: match.id,
+          league: match.league,
+          homeTeam: match.homeTeam.name,
+          awayTeam: match.awayTeam.name,
+          homeLogo: match.homeTeam.logo,
+          awayLogo: match.awayTeam.logo,
+          matchTime: match.date,
+          isTracked: isNowTracked,
+          trackMode: nextMode,
+          trackRatings: nextRatings,
+        }),
+      });
+
+      const data = (await res.json()) as any;
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update ratings');
+      }
+
+      if (nextRatings) {
+        setStatusMessage(
+          `⭐ ${match.shortName || match.name}: PLAYER RATINGS ON! Match zawhah Full Time post hnu minute 1-ah Player ratings a auto-post ang.`
+        );
+      } else {
+        setStatusMessage(`⚪ ${match.shortName || match.name}: Player Ratings disabled.`);
+      }
+    } catch (err: any) {
+      setMatches((prev) =>
+        prev.map((m) => (m.id === match.id ? { ...m, trackRatings: match.trackRatings } : m))
+      );
+      alert('Ratings thlak laiin buaina a awm: ' + err.message);
     } finally {
       setUpdatingId(null);
     }
@@ -388,75 +447,102 @@ export const LiveMatchesPanel: React.FC = () => {
                 </div>
 
                 {/* Track Mode Action Buttons */}
-                <div className="shrink-0 flex items-center gap-1.5 self-center">
-                  {/* Mode 1: Full Live */}
-                  <button
-                    type="button"
-                    disabled={updatingId === match.id}
-                    onClick={() =>
-                      handleSetTrackMode(
-                        match,
-                        match.isTracked && match.trackMode === 'full' ? 'off' : 'full'
-                      )
-                    }
-                    className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
-                      match.isTracked && match.trackMode === 'full'
-                        ? 'bg-rose-600 text-white shadow-xs scale-102 ring-2 ring-rose-400'
-                        : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
-                    }`}
-                    title={
-                      match.isTracked && match.trackMode === 'full'
-                        ? 'Click to turn off'
-                        : '🔥 Full Live: Goal tin, Lineup, VAR, HT & FT auto-posts'
-                    }
-                  >
-                    {updatingId === match.id ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Flame
-                        className={`w-3.5 h-3.5 ${
-                          match.isTracked && match.trackMode === 'full'
-                            ? 'text-amber-200'
-                            : 'text-rose-500'
-                        }`}
-                      />
-                    )}
-                    <span>Live</span>
-                  </button>
+                <div className="shrink-0 flex flex-col items-end gap-1.5 self-center">
+                  <div className="flex items-center gap-1.5">
+                    {/* Mode 1: Full Live */}
+                    <button
+                      type="button"
+                      disabled={updatingId === match.id}
+                      onClick={() =>
+                        handleSetTrackMode(
+                          match,
+                          match.isTracked && match.trackMode === 'full' ? 'off' : 'full'
+                        )
+                      }
+                      className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
+                        match.isTracked && match.trackMode === 'full'
+                          ? 'bg-rose-600 text-white shadow-xs scale-102 ring-2 ring-rose-400'
+                          : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
+                      }`}
+                      title={
+                        match.isTracked && match.trackMode === 'full'
+                          ? 'Click to turn off'
+                          : '🔥 Full Live: Goal tin, Lineup, VAR, HT & FT auto-posts'
+                      }
+                    >
+                      {updatingId === match.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Flame
+                          className={`w-3.5 h-3.5 ${
+                            match.isTracked && match.trackMode === 'full'
+                              ? 'text-amber-200'
+                              : 'text-rose-500'
+                          }`}
+                        />
+                      )}
+                      <span>Live</span>
+                    </button>
 
-                  {/* Mode 2: Results Only (HT & FT) */}
+                    {/* Mode 2: Results Only (HT & FT) */}
+                    <button
+                      type="button"
+                      disabled={updatingId === match.id}
+                      onClick={() =>
+                        handleSetTrackMode(
+                          match,
+                          match.isTracked && match.trackMode === 'results_only' ? 'off' : 'results_only'
+                        )
+                      }
+                      className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
+                        match.isTracked && match.trackMode === 'results_only'
+                          ? 'bg-amber-600 text-white shadow-xs scale-102 ring-2 ring-amber-400'
+                          : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
+                      }`}
+                      title={
+                        match.isTracked && match.trackMode === 'results_only'
+                          ? 'Click to turn off'
+                          : '📊 Results Only: Half Time & Full Time result chauh (Goal tin post lovin)'
+                      }
+                    >
+                      {updatingId === match.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Clock
+                          className={`w-3.5 h-3.5 ${
+                            match.isTracked && match.trackMode === 'results_only'
+                              ? 'text-amber-100'
+                              : 'text-amber-600'
+                          }`}
+                        />
+                      )}
+                      <span>HT/FT</span>
+                    </button>
+                  </div>
+
+                  {/* Mode 3 / Addon: Player Ratings Checkbox */}
                   <button
                     type="button"
                     disabled={updatingId === match.id}
-                    onClick={() =>
-                      handleSetTrackMode(
-                        match,
-                        match.isTracked && match.trackMode === 'results_only' ? 'off' : 'results_only'
-                      )
-                    }
-                    className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
-                      match.isTracked && match.trackMode === 'results_only'
-                        ? 'bg-amber-600 text-white shadow-xs scale-102 ring-2 ring-amber-400'
-                        : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
+                    onClick={() => handleToggleRatings(match)}
+                    className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
+                      match.trackRatings
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-2xs font-extrabold ring-1 ring-amber-400'
+                        : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
                     }`}
                     title={
-                      match.isTracked && match.trackMode === 'results_only'
-                        ? 'Click to turn off'
-                        : '📊 Results Only: Half Time & Full Time result chauh (Goal tin post lovin)'
+                      match.trackRatings
+                        ? '⭐ Player Ratings enabled (Click to turn off)'
+                        : '⭐ Click to enable Player Ratings (Posts 1m after Full Time with fresh photo)'
                     }
                   >
-                    {updatingId === match.id ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Clock
-                        className={`w-3.5 h-3.5 ${
-                          match.isTracked && match.trackMode === 'results_only'
-                            ? 'text-amber-100'
-                            : 'text-amber-600'
-                        }`}
-                      />
-                    )}
-                    <span>HT/FT</span>
+                    <Star
+                      className={`w-2.5 h-2.5 ${
+                        match.trackRatings ? 'text-amber-100 fill-amber-100' : 'text-amber-500'
+                      }`}
+                    />
+                    <span>Ratings</span>
+                    {match.trackRatings && <CheckCircle2 className="w-2.5 h-2.5 text-white ml-0.5" />}
                   </button>
                 </div>
               </div>

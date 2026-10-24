@@ -8,6 +8,28 @@ export interface FotmobMatchResult {
   };
 }
 
+export interface PlayerRatingItem {
+  name: string;
+  rating?: string;
+}
+
+export interface MatchRatingsResult {
+  matchFound: boolean;
+  homeTeam: string;
+  awayTeam: string;
+  homeStarters: PlayerRatingItem[];
+  homeSubs: PlayerRatingItem[];
+  awayStarters: PlayerRatingItem[];
+  awaySubs: PlayerRatingItem[];
+  potm?: {
+    name: string;
+    rating: string;
+    team: string;
+  };
+  bestPhoto?: string;
+  allPhotos: string[];
+}
+
 interface PhotoCandidate {
   url: string;
   title: string;
@@ -252,6 +274,226 @@ export const fotmobService = {
     } catch (err: any) {
       console.error('FotMob service error:', err.message);
       return { allPhotos: [] };
+    }
+  },
+
+  /**
+   * Fetch complete player ratings and an alternative fresh photo for Player Ratings Post
+   */
+  async getMatchRatings(options: {
+    homeTeam: string;
+    awayTeam: string;
+    dateStr?: string;
+    excludePhoto?: string;
+  }): Promise<MatchRatingsResult> {
+    try {
+      let date = options.dateStr;
+      if (!date) {
+        const now = new Date();
+        const y = now.getUTCFullYear();
+        const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(now.getUTCDate()).padStart(2, '0');
+        date = `${y}${m}${d}`;
+      }
+
+      const res = await fetch(`https://www.fotmob.com/api/data/matches?date=${date}`, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'application/json, text/plain, */*',
+        },
+      });
+
+      if (!res.ok) {
+        return {
+          matchFound: false,
+          homeTeam: options.homeTeam,
+          awayTeam: options.awayTeam,
+          homeStarters: [],
+          homeSubs: [],
+          awayStarters: [],
+          awaySubs: [],
+          allPhotos: [],
+        };
+      }
+
+      const data = (await res.json()) as any;
+      const allMatches: any[] = [];
+      if (Array.isArray(data.leagues)) {
+        for (const league of data.leagues) {
+          if (Array.isArray(league.matches)) {
+            allMatches.push(...league.matches);
+          }
+        }
+      }
+
+      const norm = (s: string) =>
+        (s || '')
+          .toLowerCase()
+          .replace(/fc|afc|cf|sc|club/g, '')
+          .replace(/[^a-z0-9]/g, '')
+          .trim();
+
+      const hNorm = norm(options.homeTeam);
+      const aNorm = norm(options.awayTeam);
+
+      const matched = allMatches.find((m) => {
+        const mh = norm(m.home?.name || '');
+        const ma = norm(m.away?.name || '');
+        const direct = (mh.includes(hNorm) || hNorm.includes(mh)) && (ma.includes(aNorm) || aNorm.includes(ma));
+        const reverse = (mh.includes(aNorm) || aNorm.includes(mh)) && (ma.includes(hNorm) || hNorm.includes(ma));
+        return direct || reverse;
+      });
+
+      if (!matched?.id) {
+        return {
+          matchFound: false,
+          homeTeam: options.homeTeam,
+          awayTeam: options.awayTeam,
+          homeStarters: [],
+          homeSubs: [],
+          awayStarters: [],
+          awaySubs: [],
+          allPhotos: [],
+        };
+      }
+
+      const [detailsRes, ltcRes] = await Promise.all([
+        fetch(`https://www.fotmob.com/api/data/matchDetails?matchId=${matched.id}`, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'application/json, text/plain, */*',
+          },
+        }).catch(() => null),
+        fetch(`https://data.fotmob.com/webcl/ltc/gsm/${matched.id}_en.json.gz`, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        }).catch(() => null),
+      ]);
+
+      const photoList: string[] = [];
+
+      // Extract commentary photos
+      if (ltcRes && ltcRes.ok) {
+        try {
+          const ltcData = (await ltcRes.json()) as any;
+          const pulseItems = ltcData.PulseInfo?.Items || [];
+          for (const item of pulseItems) {
+            const imgContent = item.Content?.find((c: any) => c.Type === 'image' && c.Media?.[0]?.Url);
+            if (imgContent?.Media?.[0]?.Url) {
+              photoList.push(imgContent.Media[0].Url);
+            }
+          }
+        } catch {}
+      }
+
+      let homeStarters: PlayerRatingItem[] = [];
+      let homeSubs: PlayerRatingItem[] = [];
+      let awayStarters: PlayerRatingItem[] = [];
+      let awaySubs: PlayerRatingItem[] = [];
+      let potm: { name: string; rating: string; team: string } | undefined = undefined;
+
+      if (detailsRes && detailsRes.ok) {
+        try {
+          const detailsData = (await detailsRes.json()) as any;
+          const content = detailsData.content || {};
+
+          // Extract POTM
+          const potmRaw = content.matchFacts?.playerOfTheMatch;
+          if (potmRaw?.name) {
+            potm = {
+              name: potmRaw.name.fullName || `${potmRaw.name.firstName || ''} ${potmRaw.name.lastName || ''}`.trim(),
+              rating: String(potmRaw.rating?.num || ''),
+              team: potmRaw.teamName || '',
+            };
+          }
+
+          // Lineup parse
+          const lineup = content.lineup || {};
+          const parseTeam = (t: any) => {
+            const starters: PlayerRatingItem[] = (t?.starters || []).map((p: any) => ({
+              name: p.name || p.fullName || 'Player',
+              rating: p.performance?.rating ? Number(p.performance.rating).toFixed(1) : undefined,
+            }));
+            // Only subs who played (have a rating)
+            const subs: PlayerRatingItem[] = (t?.subs || [])
+              .filter((p: any) => p.performance?.rating)
+              .map((p: any) => ({
+                name: p.name || p.fullName || 'Sub',
+                rating: Number(p.performance.rating).toFixed(1),
+              }));
+            return { starters, subs };
+          };
+
+          const homeParsed = parseTeam(lineup.homeTeam);
+          const awayParsed = parseTeam(lineup.awayTeam);
+
+          homeStarters = homeParsed.starters;
+          homeSubs = homeParsed.subs;
+          awayStarters = awayParsed.starters;
+          awaySubs = awayParsed.subs;
+
+          // Content photos
+          const contentStr = JSON.stringify(content);
+          const regex = /https?:\/\/[^"\s']+\.(?:jpg|jpeg|png|webp)/gi;
+          const matches = contentStr.match(regex) || [];
+          for (const u of matches) {
+            const ul = u.toLowerCase();
+            const isAction =
+              ul.includes('performgroup.com') ||
+              ul.includes('stories.dazn.com') ||
+              ul.includes('images.fotmob.com/images/pulse') ||
+              ul.includes('images.fotmob.com/image_resources/playerimages');
+            const isUi =
+              ul.includes('logo') ||
+              ul.includes('teamlogo') ||
+              ul.includes('heatmap') ||
+              ul.includes('fallback') ||
+              ul.includes('weather');
+            if (isAction && !isUi && !photoList.includes(u)) {
+              photoList.push(u);
+            }
+          }
+        } catch (e: any) {
+          console.warn('[FotMob Ratings] Parse error:', e.message);
+        }
+      }
+
+      const allPhotos = [...new Set(photoList)];
+      // Pick a fresh photo that is NOT the FT photo
+      let bestPhoto: string | undefined = undefined;
+      const exclude = options.excludePhoto || '';
+
+      const diffPhoto = allPhotos.find((p) => p !== exclude);
+      bestPhoto = diffPhoto || allPhotos[0];
+
+      return {
+        matchFound: true,
+        homeTeam: options.homeTeam,
+        awayTeam: options.awayTeam,
+        homeStarters,
+        homeSubs,
+        awayStarters,
+        awaySubs,
+        potm,
+        bestPhoto,
+        allPhotos,
+      };
+    } catch (err: any) {
+      console.error('FotMob getMatchRatings error:', err.message);
+      return {
+        matchFound: false,
+        homeTeam: options.homeTeam,
+        awayTeam: options.awayTeam,
+        homeStarters: [],
+        homeSubs: [],
+        awayStarters: [],
+        awaySubs: [],
+        allPhotos: [],
+      };
     }
   },
 };

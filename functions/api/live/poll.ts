@@ -308,6 +308,66 @@ VAR-in endik a nih hnuah goal hi pawm a ni ta lo${reasonText}. Score a ngai: *${
 👉 _Inkhel WhatsApp Channel_`;
 }
 
+// Helper to format Mizo Player Ratings Post for Facebook
+function formatPlayerRatingsPost(
+  homeTeam: string,
+  awayTeam: string,
+  homeStarters: { name: string; rating?: string }[],
+  homeSubs: { name: string; rating?: string }[],
+  awayStarters: { name: string; rating?: string }[],
+  awaySubs: { name: string; rating?: string }[],
+  leagueName: string
+): string {
+  const fmtList = (list: { name: string; rating?: string }[]) =>
+    list.map((p) => (p.rating ? `${p.name} (${p.rating})` : p.name)).join(', ');
+
+  const homeStartersText = fmtList(homeStarters);
+  const homeSubsText = homeSubs.length > 0 ? `\n\nSubs : ${fmtList(homeSubs)}` : '';
+
+  const awayStartersText = fmtList(awayStarters);
+  const awaySubsText = awaySubs.length > 0 ? `\n\nSubs : ${fmtList(awaySubs)}` : '';
+
+  return `${homeTeam} vs ${awayTeam} inkhel Player ratings :
+
+${homeTeam} : ${homeStartersText}${homeSubsText}
+
+${awayTeam} : ${awayStartersText}${awaySubsText}
+
+🏆 ${leagueName}
+
+#InkhelxtraLive #PlayerRatings ${getLeagueHashtag(leagueName)}`;
+}
+
+// Helper to format WhatsApp Player Ratings Post
+function formatWhatsAppRatings(
+  homeTeam: string,
+  awayTeam: string,
+  homeStarters: { name: string; rating?: string }[],
+  homeSubs: { name: string; rating?: string }[],
+  awayStarters: { name: string; rating?: string }[],
+  awaySubs: { name: string; rating?: string }[],
+  leagueName: string
+): string {
+  const fmtList = (list: { name: string; rating?: string }[]) =>
+    list.map((p) => (p.rating ? `${p.name} (${p.rating})` : p.name)).join(', ');
+
+  const homeStartersText = fmtList(homeStarters);
+  const homeSubsText = homeSubs.length > 0 ? `\n\n*Subs :* ${fmtList(homeSubs)}` : '';
+
+  const awayStartersText = fmtList(awayStarters);
+  const awaySubsText = awaySubs.length > 0 ? `\n\n*Subs :* ${fmtList(awaySubs)}` : '';
+
+  return `⭐ *${homeTeam} vs ${awayTeam} inkhel Player ratings :*
+
+*${homeTeam} :* ${homeStartersText}${homeSubsText}
+
+*${awayTeam} :* ${awayStartersText}${awaySubsText}
+
+🏆 *${leagueName}*
+
+👉 _Inkhel WhatsApp Channel_`;
+}
+
 // Helper to format Red Card Alert for Facebook
 function formatRedCardPost(
   homeTeam: string,
@@ -1227,12 +1287,142 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           totalPosted++;
           logDetails.push(`Full Time stats posted: ${match.home_team} vs ${match.away_team}`);
+
+          // Save chosenPhoto to D1 so Ratings post knows which photo to avoid duplicating
+          if (chosenPhoto) {
+            try {
+              await env.DB.prepare(
+                'UPDATE posted_match_events SET text = ? WHERE match_event_id = ?'
+              ).bind(chosenPhoto, ftEventId).run();
+            } catch {}
+          }
         }
 
-        // Auto untrack completed match
-        await env.DB.prepare(
-          'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
-        ).bind(match.event_id).run();
+        // Auto untrack completed match (or wait for Ratings if track_ratings is enabled)
+        if (Number(match.track_ratings) === 1) {
+          await env.DB.prepare(
+            'UPDATE live_tracked_matches SET status = "FT_WAIT_RATINGS", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+          ).bind(match.event_id).run();
+        } else {
+          await env.DB.prepare(
+            'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+          ).bind(match.event_id).run();
+        }
+      }
+
+      // 5. Check Player Ratings (if match.track_ratings === 1 and at least 1 minute has passed since Full Time)
+      if (Number(match.track_ratings) === 1) {
+        try {
+          const ftRecord = await env.DB.prepare(
+            'SELECT created_at, text FROM posted_match_events WHERE event_id = ? AND match_event_id = ?'
+          ).bind(match.event_id, `ft_${match.event_id}`).first<{ created_at: string; text?: string }>();
+
+          if (ftRecord?.created_at) {
+            const ftTime = new Date(ftRecord.created_at).getTime();
+            const elapsedSec = (Date.now() - ftTime) / 1000;
+
+            // At least 60 seconds (1 minute) delay after FT
+            if (elapsedSec >= 60) {
+              const ratingsEventId = `ratings_${match.event_id}`;
+              let ratingsClaimed = false;
+              try {
+                const insertLock = await env.DB.prepare(
+                  'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+                ).bind(match.event_id, ratingsEventId, 'ratings', 'FT+1m', 'Player Ratings').run();
+                ratingsClaimed = Boolean(insertLock.success);
+              } catch {
+                ratingsClaimed = false;
+              }
+
+              if (ratingsClaimed) {
+                const ftPhoto = ftRecord.text || '';
+                const ratingsRes = await fotmobService.getMatchRatings({
+                  homeTeam: match.home_team,
+                  awayTeam: match.away_team,
+                  excludePhoto: ftPhoto,
+                });
+
+                if (ratingsRes.matchFound && ratingsRes.homeStarters.length > 0) {
+                  const fbRatings = formatPlayerRatingsPost(
+                    match.home_team,
+                    match.away_team,
+                    ratingsRes.homeStarters,
+                    ratingsRes.homeSubs,
+                    ratingsRes.awayStarters,
+                    ratingsRes.awaySubs,
+                    leagueName
+                  );
+
+                  const waRatings = formatWhatsAppRatings(
+                    match.home_team,
+                    match.away_team,
+                    ratingsRes.homeStarters,
+                    ratingsRes.homeSubs,
+                    ratingsRes.awayStarters,
+                    ratingsRes.awaySubs,
+                    leagueName
+                  );
+
+                  // Pick a fresh photo strictly different from the Full Time photo
+                  let ratingsPhoto = ratingsRes.bestPhoto || '';
+                  if (!ratingsPhoto || ratingsPhoto === ftPhoto) {
+                    const diffEspn = (summary.matchImages || []).find((u: string) => u !== ftPhoto);
+                    if (diffEspn) ratingsPhoto = diffEspn;
+                  }
+
+                  const ratingsCardImage =
+                    ratingsPhoto ||
+                    buildCardImageUrl({
+                      home: match.home_team,
+                      away: match.away_team,
+                      homeScore: summary.score?.home || '0',
+                      awayScore: summary.score?.away || '0',
+                      homeLogo: match.home_logo,
+                      awayLogo: match.away_logo,
+                      status: 'FT',
+                      leagueName,
+                      channel: 'fb',
+                    });
+
+                  if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+                    try {
+                      await facebookPoster.postNews(
+                        fbRatings,
+                        ratingsPhoto || ratingsCardImage,
+                        env.FB_PAGE_ID,
+                        env.FB_PAGE_ACCESS_TOKEN
+                      );
+                    } catch (e: any) {
+                      console.error('FB Ratings post error:', e.message);
+                    }
+                  }
+
+                  try {
+                    await whatsappPoster.postNews(
+                      waRatings,
+                      ratingsPhoto || ratingsCardImage,
+                      env.WHATSAPP_API_TOKEN,
+                      env.WHATSAPP_CHANNEL_ID,
+                      env.WHATSAPP_API_URL
+                    );
+                  } catch (e: any) {
+                    console.error('WA Ratings post error:', e.message);
+                  }
+
+                  totalPosted++;
+                  logDetails.push(`Player Ratings posted: ${match.home_team} vs ${match.away_team}`);
+                }
+
+                // Deactivate tracked match once ratings are posted
+                await env.DB.prepare(
+                  'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+                ).bind(match.event_id).run();
+              }
+            }
+          }
+        } catch (ratingsErr: any) {
+          console.error('[Ratings Post Error]:', ratingsErr.message);
+        }
       }
     }
 
