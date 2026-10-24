@@ -65,7 +65,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
 
   const [isTranslating, setIsTranslating] = useState(false);
   const [isQueueing, setIsQueueing] = useState(false);
-  const [publishingTarget, setPublishingTarget] = useState<'both' | 'fb_only' | 'trio' | null>(null);
+  const [publishingTarget, setPublishingTarget] = useState<'both' | 'fb_only' | 'quad' | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -247,8 +247,8 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
     }
   };
 
-  // Publish Immediately (either to FB Only, Both FB & WhatsApp, or TRIO)
-  const handlePublishNow = async (target: 'both' | 'fb_only' | 'trio') => {
+  // Publish Immediately (either to FB Only, Both FB & WhatsApp & Telegram (X/W/T), or QUAD)
+  const handlePublishNow = async (target: 'both' | 'fb_only' | 'quad') => {
     if (!mizoCaption.trim()) {
       setErrorMessage('Facebook Caption (Mizo) hi chhut luh ngei ngei tur a ni.');
       return;
@@ -258,7 +258,8 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
     setErrorMessage(null);
 
     const skipWhatsApp = target === 'fb_only';
-    const publishMainFb = target === 'trio';
+    const skipTelegram = target === 'fb_only';
+    const publishMainFb = target === 'quad';
 
     try {
       const res = await fetch('/api/posts', {
@@ -271,6 +272,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
           author_name: authorName.trim() || 'Xtra Editorial',
           publish_now: true,
           skip_whatsapp: skipWhatsApp,
+          skip_telegram: skipTelegram,
           publish_main_fb: publishMainFb,
         }),
       });
@@ -281,11 +283,11 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
       }
 
       onPostCreated(data.post);
-      let successMsg = '🎉 Facebook Page leh WhatsApp Channel-ah hlawhtling takin a in-post fel e!';
+      let successMsg = '🎉 X/W/T: Facebook Page, WhatsApp Channel, leh Telegram Channel-ah hlawhtling takin a in-post fel e!';
       if (target === 'fb_only') {
         successMsg = '🎉 Xtra Facebook Page-ah chiah hlawhtling takin a in-post fel e!';
-      } else if (target === 'trio') {
-        successMsg = '🔥 TRIO: Xtra FB, Inkhel.com FB, leh WhatsApp Channel-ah a rualin a in-post fel thlap e!';
+      } else if (target === 'quad') {
+        successMsg = '🔥 QUAD: Xtra FB, Inkhel.com FB, WhatsApp Channel, leh Telegram Channel-ah a rualin a in-post fel thlap e!';
       }
       setStatusMessage(successMsg);
       // Reset form
@@ -484,21 +486,21 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
 
         {/* Action Buttons: 1 Single Line on Mobile */}
         <div className="grid grid-cols-4 gap-1.5 pt-2 sm:flex sm:items-center sm:justify-end sm:gap-2">
-          {/* TRIO: Red button for Xtra FB + Main FB + WhatsApp */}
+          {/* QUAD: Red button for Xtra FB + Main FB + WhatsApp + Telegram */}
           <button
             type="button"
-            onClick={() => handlePublishNow('trio')}
+            onClick={() => handlePublishNow('quad')}
             disabled={publishingTarget !== null || isQueueing || !mizoCaption.trim()}
             className="inline-flex items-center justify-center gap-1 px-2 sm:px-3.5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-bold transition-all disabled:opacity-40 shadow-xs whitespace-nowrap min-w-0"
-            title="Xtra FB + Inkhel.com FB + WhatsApp Channel-a post rualna"
+            title="Xtra FB + Inkhel.com FB + WhatsApp Channel + Telegram Channel-a post rualna"
           >
-            {publishingTarget === 'trio' ? (
+            {publishingTarget === 'quad' ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin flex-shrink-0" />
-                <span className="truncate text-[11px] sm:text-sm">TRIO...</span>
+                <span className="truncate text-[11px] sm:text-sm">QUAD...</span>
               </>
             ) : (
-              <span className="truncate">TRIO</span>
+              <span className="truncate">QUAD</span>
             )}
           </button>
 
@@ -508,7 +510,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             onClick={handleAddToQueue}
             disabled={isQueueing || publishingTarget !== null || !mizoCaption.trim()}
             className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs whitespace-nowrap min-w-0"
-            title="Add to Facebook scheduled queue"
+            title="Add to Facebook scheduled queue (posts to Xtra FB, WhatsApp & Telegram)"
           >
             {isQueueing ? (
               <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin flex-shrink-0" />
@@ -524,7 +526,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             onClick={() => handlePublishNow('fb_only')}
             disabled={publishingTarget !== null || isQueueing || !mizoCaption.trim()}
             className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs whitespace-nowrap min-w-0"
-            title="Facebook chiaha post na (No WhatsApp)"
+            title="Facebook chiaha post na (No WhatsApp/Telegram)"
           >
             {publishingTarget === 'fb_only' ? (
               <>
@@ -539,13 +541,13 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
             )}
           </button>
 
-          {/* Post to FB & WhatsApp */}
+          {/* Post to Xtra FB, WhatsApp & Telegram (X/W/T) */}
           <button
             type="button"
             onClick={() => handlePublishNow('both')}
             disabled={publishingTarget !== null || isQueueing || !mizoCaption.trim()}
             className="inline-flex items-center justify-center gap-1.5 px-2 sm:px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 shadow-xs whitespace-nowrap min-w-0"
-            title="Facebook Page leh WhatsApp Channel-a post rualna"
+            title="Facebook Page, WhatsApp Channel, leh Telegram Channel-a post rualna"
           >
             {publishingTarget === 'both' ? (
               <>
@@ -553,7 +555,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({
                 <span className="truncate text-[11px] sm:text-sm">Posting...</span>
               </>
             ) : (
-              <span className="truncate">Xtra/Whatsapp</span>
+              <span className="truncate">X/W/T</span>
             )}
           </button>
         </div>

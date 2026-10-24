@@ -34,6 +34,12 @@ const WhatsAppIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
   </svg>
 );
 
+const TelegramIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .42z"/>
+  </svg>
+);
+
 interface PostCardProps {
   post: Post;
   onImageClick: (url: string) => void;
@@ -73,7 +79,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   // Queue and publishing states
   const [isQueueing, setIsQueueing] = useState(false);
-  const [publishingTarget, setPublishingTarget] = useState<'both' | 'fb_only' | 'trio' | null>(null);
+  const [publishingTarget, setPublishingTarget] = useState<'both' | 'fb_only' | 'quad' | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -202,13 +208,14 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  // 1-Click Instant Post (either to FB Only, Both FB & WhatsApp, or TRIO)
-  const handlePublishNow = async (target: 'both' | 'fb_only' | 'trio' = 'both') => {
+  // 1-Click Instant Post (either to FB Only, Both FB & WhatsApp & Telegram (X/W/T), or QUAD)
+  const handlePublishNow = async (target: 'both' | 'fb_only' | 'quad' = 'both') => {
     setPublishingTarget(target);
     setActionError(null);
 
     const skipWhatsApp = target === 'fb_only';
-    const publishMainFb = target === 'trio';
+    const skipTelegram = target === 'fb_only';
+    const publishMainFb = target === 'quad';
 
     try {
       const res = await fetch('/api/publish', {
@@ -217,6 +224,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         body: JSON.stringify({
           id: post.id,
           skip_whatsapp: skipWhatsApp,
+          skip_telegram: skipTelegram,
           publish_main_fb: publishMainFb,
         }),
       });
@@ -532,7 +540,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     onClick={() => handlePublishNow('both')}
                     disabled={publishingTarget !== null}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50"
-                    title="1-Click immediate publish to Facebook & WhatsApp"
+                    title="1-Click immediate publish to Facebook, WhatsApp & Telegram"
                   >
                     {publishingTarget === 'both' ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -540,6 +548,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                       <div className="flex items-center gap-1">
                         <FacebookIcon className="w-3.5 h-3.5" />
                         <WhatsAppIcon className="w-3.5 h-3.5" />
+                        <TelegramIcon className="w-3.5 h-3.5" />
                       </div>
                     )}
                     <span>{publishingTarget === 'both' ? 'Posting...' : 'Post Now'}</span>
@@ -561,24 +570,24 @@ export const PostCard: React.FC<PostCardProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
-                  {/* TRIO: Post to Inkhel Xtra FB + Inkhel.com Main FB + WhatsApp */}
+                  {/* QUAD: Post to Inkhel Xtra FB + Inkhel.com Main FB + WhatsApp + Telegram */}
                   <button
-                    onClick={() => handlePublishNow('trio')}
+                    onClick={() => handlePublishNow('quad')}
                     disabled={publishingTarget !== null}
                     className="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50 whitespace-nowrap min-w-0"
-                    title="Xtra Facebook + Inkhel.com Facebook + WhatsApp Channel a ruala post na"
+                    title="Xtra Facebook + Inkhel.com Facebook + WhatsApp Channel + Telegram Channel a ruala post na"
                   >
-                    {publishingTarget === 'trio' && (
+                    {publishingTarget === 'quad' && (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     )}
-                    <span>TRIO</span>
+                    <span>QUAD</span>
                   </button>
 
                   <button
                     onClick={() => handleToggleQueue('queued')}
                     disabled={isQueueing}
                     className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 font-medium text-xs transition-all shadow-xs disabled:opacity-50 whitespace-nowrap min-w-0"
-                    title="Add to Facebook queue (will auto-drip every 30m)"
+                    title="Add to Facebook queue (posts to Xtra FB, WhatsApp & Telegram)"
                   >
                     {isQueueing ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -593,7 +602,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     onClick={() => handlePublishNow('fb_only')}
                     disabled={publishingTarget !== null}
                     className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50 whitespace-nowrap min-w-0"
-                    title="Facebook Page chiaha post na (No WhatsApp)"
+                    title="Facebook Page chiaha post na (No WhatsApp/Telegram)"
                   >
                     {publishingTarget === 'fb_only' ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -603,17 +612,17 @@ export const PostCard: React.FC<PostCardProps> = ({
                     <span>Xtra FB</span>
                   </button>
 
-                  {/* Post to FB & WhatsApp */}
+                  {/* Post to Xtra FB, WhatsApp & Telegram (X/W/T) */}
                   <button
                     onClick={() => handlePublishNow('both')}
                     disabled={publishingTarget !== null}
                     className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-all disabled:opacity-50 whitespace-nowrap min-w-0"
-                    title="Facebook Page leh WhatsApp Channel-a post rualna"
+                    title="Facebook Page, WhatsApp Channel, leh Telegram Channel-a post rualna"
                   >
                     {publishingTarget === 'both' && (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     )}
-                    <span>Xtra/Whatsapp</span>
+                    <span>X/W/T</span>
                   </button>
                 </div>
               )}

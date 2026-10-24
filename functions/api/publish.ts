@@ -124,7 +124,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return Response.json({
       success: true,
       postId: fbResult.postId,
-      message: `Successfully published to Facebook Page${mainFbNotice}${waNotice}!`,
+      message: `Successfully published to Facebook Page${mainFbNotice}${waNotice}${tgNotice}!`,
     });
   } catch (err: any) {
     return Response.json(
