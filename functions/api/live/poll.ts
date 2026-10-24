@@ -963,10 +963,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             console.warn('[HT Photo] FotMob lookup error:', e.message);
           }
         }
-        // Tier 2: ESPN photo fallback
-        if (!htPhotoToUse) {
-          htPhotoToUse = summary.matchImages?.[0] || summary.matchImage || '';
-        }
+        // Strict: NO ESPN archive photo fallback (avoids older match away jersey file photos). If no FotMob live photo, fallback directly to Scorecard Graphic!
 
         try {
           const insertLock = await env.DB.prepare(
@@ -1164,7 +1161,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           let chosenPhoto = '';
 
-          // 1. TIER 1: Check FotMob first for Premier League and Champions League
+          // 1. FotMob live match photo for PL & UCL
           const isPlOrUcl = match.league === 'PL' || match.league === 'UCL';
           if (isPlOrUcl) {
             try {
@@ -1176,56 +1173,21 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 winningScorers,
                 isDraw,
               });
-              if (fotmobRes.bestPhoto) {
+              // Strictly avoid reusing the Half Time photo!
+              const freshPhoto = fotmobRes.allPhotos.find((p) => p !== htPhoto);
+              if (freshPhoto) {
+                chosenPhoto = freshPhoto;
+                console.log(`[FT Photo] Selected fresh FotMob HD photo: ${chosenPhoto}`);
+              } else if (fotmobRes.bestPhoto && fotmobRes.bestPhoto !== htPhoto) {
                 chosenPhoto = fotmobRes.bestPhoto;
-                console.log(`[FT Photo] Selected FotMob HD photo: ${chosenPhoto}`);
+                console.log(`[FT Photo] Selected FotMob best photo: ${chosenPhoto}`);
               }
             } catch (fotmobErr: any) {
-              console.warn('[FT Photo] FotMob lookup error, falling back to ESPN:', fotmobErr.message);
+              console.warn('[FT Photo] FotMob lookup error:', fotmobErr.message);
             }
           }
 
-          // 2. TIER 2: If no FotMob photo, check ESPN match photos
-          if (!chosenPhoto && photoCandidates.length > 0) {
-            if (isDraw) {
-              const diff = photoCandidates.find((c: any) => c.url !== htPhoto);
-              chosenPhoto = diff?.url || photoCandidates[0]?.url || '';
-            } else {
-              const winTokens = [winningTeamName, ...winningScorers].map((t: string) => t.toLowerCase().trim()).filter(Boolean);
-              const loseTokens = [losingTeamName].map((t: string) => t.toLowerCase().trim()).filter(Boolean);
-
-              let bestPhoto = '';
-              let bestScore = -999;
-
-              for (const cand of photoCandidates) {
-                const text = (cand.caption || '').toLowerCase();
-                let score = 0;
-
-                const hasWinner = winTokens.some((w: string) => text.includes(w));
-                const hasLoser = loseTokens.some((l: string) => text.includes(l));
-
-                if (hasWinner) score += 60;
-                if (/celebrat|goal|score|winner|double|lead|brace/i.test(text)) score += 20;
-                if (hasLoser && !hasWinner) score -= 60; // Penalize losing team celebrating!
-                if (cand.url === htPhoto) score -= 15; // Soft penalty if reused from HT
-
-                if (score > bestScore) {
-                  bestScore = score;
-                  bestPhoto = cand.url;
-                }
-              }
-
-              if (bestPhoto && bestScore > 0) {
-                chosenPhoto = bestPhoto;
-              } else {
-                const neutralPhoto = photoCandidates.find((c: any) => {
-                  const text = (c.caption || '').toLowerCase();
-                  return !loseTokens.some((l: string) => text.includes(l));
-                });
-                chosenPhoto = neutralPhoto?.url || photoCandidates[0]?.url || '';
-              }
-            }
-          }
+          // Strict: NO ESPN archive photo fallback (prevents old away jersey file photos). If no fresh FotMob photo, fallback directly to Scorecard Graphic!
 
           // Facebook Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const fbImage =
