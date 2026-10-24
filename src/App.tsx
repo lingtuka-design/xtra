@@ -5,6 +5,7 @@ import { ImageModal } from './components/ImageModal';
 import { CreatePostCard } from './components/CreatePostCard';
 import { LiveMatchesPanel } from './components/LiveMatchesPanel';
 import { GraphicMakerPanel } from './components/GraphicMakerPanel';
+import { FixturesMakerPanel } from './components/FixturesMakerPanel';
 import { LoginModal } from './components/LoginModal';
 import { Post } from './types';
 import { Search, AlertCircle, ArrowUp, Clock, PenSquare, Radio, Sparkles } from 'lucide-react';
@@ -28,6 +29,7 @@ export default function App() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'create' | 'live' | 'queue' | 'graphic' | 'published'>('create');
+  const [graphicMode, setGraphicMode] = useState<'stats' | 'fixtures'>('stats');
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
   const handleLogout = () => {
@@ -409,7 +411,17 @@ export default function App() {
           {activeTab === 'live' ? (
             <LiveMatchesPanel />
           ) : activeTab === 'graphic' ? (
-            <GraphicMakerPanel onPostCreated={fetchPosts} />
+            graphicMode === 'fixtures' ? (
+              <FixturesMakerPanel
+                onPostCreated={fetchPosts}
+                onSwitchMode={(mode) => setGraphicMode(mode)}
+              />
+            ) : (
+              <GraphicMakerPanel
+                onPostCreated={fetchPosts}
+                onSwitchMode={(mode) => setGraphicMode(mode)}
+              />
+            )
           ) : activeTab === 'create' ? (
             <CreatePostCard
               onPostCreated={handlePostCreated}

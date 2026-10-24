@@ -15,11 +15,13 @@ import {
   Trash2,
   Check,
   X,
+  Calendar,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
 interface GraphicMakerPanelProps {
   onPostCreated?: (silent?: boolean) => Promise<void>;
+  onSwitchMode?: (mode: 'stats' | 'fixtures') => void;
 }
 
 export interface ScorecardProject {
@@ -239,7 +241,7 @@ const InkhelSvgLogo = () => (
   </svg>
 );
 
-export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
+export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = ({ onSwitchMode }) => {
   const [league, setLeague] = useState('MIZORAM PREMIER LEAGUE');
   const [status, setStatus] = useState<'FULL TIME' | 'HALF TIME'>('FULL TIME');
 
@@ -668,6 +670,65 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
 
   return (
     <div className="space-y-6 mb-8">
+      {/* Top Bar: Graphic Studio Mode Switcher (Stats Card vs Fixtures) */}
+      <div className="bg-white border border-stone-200/90 rounded-2xl p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-amber-500/10 text-amber-600 rounded-xl">
+            <Trophy className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-sm font-black text-stone-900 uppercase tracking-wide flex items-center gap-2">
+              <span>Graphic Studio</span>
+              <span className="text-[10px] bg-stone-100 text-stone-600 font-bold px-2 py-0.5 rounded-full border border-stone-200">
+                HD Generator
+              </span>
+            </h2>
+            <p className="text-xs text-stone-500">Thlan tur: Match Stats Card emaw Upcoming Fixtures Graphic</p>
+          </div>
+        </div>
+
+        {/* Dropdown / Segmented Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Dropdown Menu */}
+          <div className="relative">
+            <select
+              value="stats"
+              onChange={(e) => {
+                if (onSwitchMode) onSwitchMode(e.target.value as 'stats' | 'fixtures');
+              }}
+              className="bg-[#EFECE6] border border-stone-300 font-bold text-xs py-1.5 pl-3 pr-8 rounded-xl text-stone-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="stats">📊 Stats Card</option>
+              <option value="fixtures">📅 Fixtures</option>
+            </select>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-1.5 bg-[#EFECE6] p-1 rounded-xl border border-stone-300/80">
+            <button
+              type="button"
+              onClick={() => {
+                if (onSwitchMode) onSwitchMode('stats');
+              }}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-extrabold uppercase tracking-wide transition-all flex items-center gap-1.5 bg-amber-500 text-stone-950 shadow-xs"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Stats Card</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (onSwitchMode) onSwitchMode('fixtures');
+              }}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-extrabold uppercase tracking-wide transition-all flex items-center gap-1.5 text-stone-600 hover:text-stone-900"
+            >
+              <Calendar className="w-3.5 h-3.5 text-stone-500" />
+              <span>Fixtures</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Top Banner Header */}
       <div className="bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 border border-stone-800 rounded-3xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
