@@ -1255,14 +1255,16 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 winningScorers,
                 isDraw,
               });
-              // Strictly avoid reusing the Half Time photo!
-              const freshPhoto = fotmobRes.allPhotos.find((p) => p !== htPhoto);
-              if (freshPhoto) {
-                chosenPhoto = freshPhoto;
-                console.log(`[FT Photo] Selected fresh FotMob HD photo: ${chosenPhoto}`);
-              } else if (fotmobRes.bestPhoto && fotmobRes.bestPhoto !== htPhoto) {
+              // Pick best photo strictly avoiding Half Time photo!
+              if (fotmobRes.bestPhoto && fotmobRes.bestPhoto !== htPhoto) {
                 chosenPhoto = fotmobRes.bestPhoto;
                 console.log(`[FT Photo] Selected FotMob best photo: ${chosenPhoto}`);
+              } else if (fotmobRes.allPhotos && fotmobRes.allPhotos.length > 0) {
+                const runnerUp = fotmobRes.allPhotos.find((p) => p !== htPhoto);
+                if (runnerUp) {
+                  chosenPhoto = runnerUp;
+                  console.log(`[FT Photo] Selected FotMob runner-up photo: ${chosenPhoto}`);
+                }
               }
             } catch (fotmobErr: any) {
               console.warn('[FT Photo] FotMob lookup error:', fotmobErr.message);
@@ -1419,10 +1421,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                   );
 
                   // Pick a fresh photo strictly different from the Full Time photo
-                  let ratingsPhoto = ratingsRes.bestPhoto || '';
-                  if (!ratingsPhoto || ratingsPhoto === ftPhoto) {
-                    const diffEspn = (summary.matchImages || []).find((u: string) => u !== ftPhoto);
-                    if (diffEspn) ratingsPhoto = diffEspn;
+                  let ratingsPhoto = '';
+                  if (ratingsRes.bestPhoto && ratingsRes.bestPhoto !== ftPhoto) {
+                    ratingsPhoto = ratingsRes.bestPhoto;
+                  } else if (ratingsRes.allPhotos && ratingsRes.allPhotos.length > 0) {
+                    const runnerUp = ratingsRes.allPhotos.find((u: string) => u !== ftPhoto);
+                    if (runnerUp) ratingsPhoto = runnerUp;
                   }
 
                   const ratingsCardImage =

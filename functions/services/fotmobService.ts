@@ -36,6 +36,7 @@ interface PhotoCandidate {
   text: string;
   elapsed?: number;
   source: 'commentary' | 'content';
+  score?: number;
 }
 
 export const fotmobService = {
@@ -214,8 +215,6 @@ export const fotmobService = {
         return { potm, allPhotos: [] };
       }
 
-      const allPhotos = [...new Set(candidates.map((c) => c.url))];
-
       // 7. Token setup for Winner / Leading team vs Losing team
       const winTokens: string[] = [];
       if (options.winningTeam) winTokens.push(...options.winningTeam.toLowerCase().split(/\s+/));
@@ -235,10 +234,7 @@ export const fotmobService = {
       const wTokens = cleanTokens(winTokens);
       const lTokens = cleanTokens(loseTokens);
 
-      // 8. Smart Photo Selection: Prioritize real in-match player action & celebration photos
-      let bestCandidate = candidates[0];
-      let bestScore = -999;
-
+      // 8. Smart Photo Selection: Heavily prioritize Winning Team Goal Celebration photos
       for (const cand of candidates) {
         let score = 0;
         // Commentary photos are live pitch-side photos from today's game
@@ -248,39 +244,67 @@ export const fotmobService = {
           if (typeof cand.elapsed === 'number' && cand.elapsed > 0) {
             score += 150 + Math.min(cand.elapsed, 120); // Action photo bonus + latest minute boost
           } else {
-            score -= 100; // Penalty for pre-match / static / scoreboard photos
+            score -= 150; // Penalty for pre-match / static / scoreboard photos
           }
         }
 
         const info = `${cand.url} ${cand.title} ${cand.text}`.toLowerCase();
 
-        // Penalize static stadium / big screen / atmosphere photos
-        if (/stadium|bridge|evening|atmosphere|tunnel|warmup|scoreboard|screen|view/i.test(info)) {
-          score -= 90;
+        // Only penalize static stadium / atmosphere if pre-match
+        if (
+          (!cand.elapsed || cand.elapsed <= 0) &&
+          /\b(stadium|bridge|evening|atmosphere|tunnel|warmup|scoreboard|screen|view)\b/i.test(info)
+        ) {
+          score -= 150;
+        }
+
+        // Penalize sad reactions, injuries, woe
+        if (/\b(woe|injury|injured|limp|limping|pain|blow|frustrat|down|sorrow|unfortunate)\b/i.test(info)) {
+          score -= 180;
         }
 
         // Boost real match play / action keywords
-        if (/goal|celebrat|tackle|save|shot|header|control|battle|strike|run|fight|chance|effort|on top/i.test(info)) {
+        if (/\b(goal|celebrat|tackle|save|shot|header|control|battle|strike|run|fight|chance|effort|on top)\b/i.test(info)) {
           score += 40;
         }
 
         // Check winner / leading mentions
         const hasWinner = wTokens.some((t) => info.includes(t));
         const hasLoser = lTokens.some((t) => info.includes(t));
+        const hasScorer = (options.winningScorers || []).some((s) => {
+          const parts = s.toLowerCase().split(/\s+/);
+          return parts.some((p) => p.length >= 3 && info.includes(p));
+        });
 
-        if (hasWinner) score += 90;
+        if (hasWinner) score += 120;
         if (hasLoser && !hasWinner) score -= 80;
+
+        // Massive Boost for Winning Team Goal Celebration / Victory photos!
+        const isCelebration =
+          /\b(celebrat|celebration|celebrates|celebrating|cheer|cheering|joy|ecstasy|hugs?|mobbed|delight|historic|win|winner|winners|victory|victorious|lead|leads|leading|triumph|clinch|clinched|seal|sealed|screamer|strike|scored|scores|goal|goals)\b/i.test(
+            info
+          );
+
+        if (hasWinner && isCelebration) {
+          score += 350; // Guaranteed highest priority for winning goal celebration!
+        }
+        if (hasScorer) {
+          score += 150; // Additional bonus for scorer photo
+        }
 
         // In draw, latest in-match action photo of players on pitch
         if (options.isDraw && cand.source === 'commentary' && typeof cand.elapsed === 'number' && cand.elapsed > 0) {
-          score += 30;
+          score += 50;
         }
 
-        if (score > bestScore) {
-          bestScore = score;
-          bestCandidate = cand;
-        }
+        cand.score = score;
       }
+
+      // Sort candidates so the absolute best scored photo is at index 0
+      candidates.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+      const allPhotos = [...new Set(candidates.map((c) => c.url))];
+      const bestCandidate = candidates[0];
 
       return {
         bestPhoto: bestCandidate.url,
