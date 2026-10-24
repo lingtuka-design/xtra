@@ -582,10 +582,11 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = ({ onSwitchMo
     }
   };
 
-  // Convert external image URLs to use safe proxy if necessary
+  // Convert external image URLs to use safe proxy if necessary (ESPN already has open CORS)
   const getSafeImageSrc = (url: string) => {
     if (!url) return '';
     if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+    if (url.includes('espncdn.com')) return url;
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
   };
 
@@ -603,7 +604,8 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = ({ onSwitchMo
     try {
       // Snapshot cardRef unscaled at exact 819x1024 with no scale distortion
       const dataUrl = await toPng(cardRef.current, {
-        cacheBust: true,
+        includeQueryParams: true,
+        cacheBust: false,
         pixelRatio: 1,
         width: 819,
         height: 1024,
@@ -627,6 +629,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = ({ onSwitchMo
       console.error('Download snapshot failed:', err);
       try {
         const fallbackUrl = await toPng(cardRef.current, {
+          includeQueryParams: true,
           pixelRatio: 1,
           width: 819,
           height: 1024,

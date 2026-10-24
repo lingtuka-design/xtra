@@ -153,10 +153,11 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
     setTimeout(() => setActionNotice(null), 3500);
   };
 
-  // Convert external image URLs to use safe proxy
+  // Convert external image URLs to use safe proxy if needed (ESPN already has open CORS)
   const getSafeImageSrc = (url: string) => {
     if (!url) return '';
     if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+    if (url.includes('espncdn.com')) return url;
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
   };
 
@@ -395,7 +396,8 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
 
       const dataUrl = await toPng(cardRef.current, {
         pixelRatio: 2,
-        cacheBust: true,
+        includeQueryParams: true,
+        cacheBust: false,
       });
 
       const link = document.createElement('a');
