@@ -167,8 +167,8 @@ const DotMatrixSvg = () => (
 // Soccer Ball Icon for Scorers
 const SoccerBallIcon = () => (
   <svg
-    width="18"
-    height="18"
+    width="22"
+    height="22"
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -188,11 +188,11 @@ const SoccerBallIcon = () => (
 const RedCardIcon = () => (
   <div
     style={{
-      width: '12px',
-      height: '16px',
+      width: '14px',
+      height: '19px',
       backgroundColor: '#DC2626',
       borderRadius: '2px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.2)',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.2)',
       transform: 'rotate(8deg)',
     }}
   />
@@ -1491,7 +1491,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    paddingTop: '58px',
+                    paddingTop: '46px',
                     color: '#ffffff',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                   }}
@@ -1618,14 +1618,14 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     </div>
 
                     {/* Events Section (Scorers & Red Cards) */}
-                    <div className="w-[655px] flex flex-col items-center mt-3.5 mb-4 px-5 min-h-[52px]">
+                    <div className="w-[655px] flex flex-col items-center mt-3.5 mb-4 px-4 min-h-[52px]">
                       {/* Goal Scorers Row */}
                       {(homeScorersList.length > 0 || awayScorersList.length > 0) && (
                         <div className="w-full flex items-start justify-between">
                           {/* Home Scorers */}
                           <div
-                            className="text-right text-[15.5px] font-bold text-white leading-[1.38] flex-1 pr-3"
-                            style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                            className="text-right text-[19px] font-extrabold text-white leading-[1.35] flex-1 pr-3.5"
+                            style={{ textShadow: '0 2px 5px rgba(0, 0, 0, 0.95)' }}
                           >
                             {homeScorersList.map((s, idx) => (
                               <div key={idx}>{s}</div>
@@ -1633,14 +1633,14 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                           </div>
 
                           {/* Center Ball Icon */}
-                          <div className="w-[36px] flex justify-center items-center pt-0.5 shrink-0">
+                          <div className="w-[40px] flex justify-center items-center pt-0.5 shrink-0">
                             <SoccerBallIcon />
                           </div>
 
                           {/* Away Scorers */}
                           <div
-                            className="text-left text-[15.5px] font-bold text-white leading-[1.38] flex-1 pl-3"
-                            style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                            className="text-left text-[19px] font-extrabold text-white leading-[1.35] flex-1 pl-3.5"
+                            style={{ textShadow: '0 2px 5px rgba(0, 0, 0, 0.95)' }}
                           >
                             {awayScorersList.map((s, idx) => (
                               <div key={idx}>{s}</div>
@@ -1654,8 +1654,8 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                         <div className={`w-full flex items-start justify-between ${homeScorersList.length > 0 || awayScorersList.length > 0 ? 'mt-2' : ''}`}>
                           {/* Home Red Cards */}
                           <div
-                            className="text-right text-[14px] font-bold text-rose-300 leading-[1.35] flex-1 pr-3"
-                            style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                            className="text-right text-[17.5px] font-extrabold text-rose-300 leading-[1.35] flex-1 pr-3.5"
+                            style={{ textShadow: '0 2px 5px rgba(0, 0, 0, 0.95)' }}
                           >
                             {homeRedCardList.map((s, idx) => (
                               <div key={idx}>{s}</div>
@@ -1663,14 +1663,14 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                           </div>
 
                           {/* Center Red Card Icon */}
-                          <div className="w-[36px] flex justify-center items-center pt-0.5 shrink-0">
+                          <div className="w-[40px] flex justify-center items-center pt-0.5 shrink-0">
                             <RedCardIcon />
                           </div>
 
                           {/* Away Red Cards */}
                           <div
-                            className="text-left text-[14px] font-bold text-rose-300 leading-[1.35] flex-1 pl-3"
-                            style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.9)' }}
+                            className="text-left text-[17.5px] font-extrabold text-rose-300 leading-[1.35] flex-1 pl-3.5"
+                            style={{ textShadow: '0 2px 5px rgba(0, 0, 0, 0.95)' }}
                           >
                             {awayRedCardList.map((s, idx) => (
                               <div key={idx}>{s}</div>
@@ -1682,7 +1682,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
 
                     {/* 7 Stats Cards */}
                     {includeStats && (
-                      <div className="w-[550px] flex flex-col gap-[9px]">
+                      <div className="w-[630px] flex flex-col gap-[10px]">
                         {statsList.map((s, idx) => {
                           let homePct = 50;
                           let awayPct = 50;
@@ -1701,17 +1701,17 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                           return (
                             <div
                               key={idx}
-                              className="bg-white rounded-[15px] h-[48px] px-5 flex items-center justify-between"
-                              style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)' }}
+                              className="bg-white rounded-[16px] h-[52px] px-6 flex items-center justify-between"
+                              style={{ boxShadow: '0 4px 14px rgba(0, 0, 0, 0.38)' }}
                             >
-                              <div className="text-[25px] font-black text-[#0B1B3D] w-[60px] text-left">
+                              <div className="text-[29px] font-black text-[#0B1B3D] w-[72px] text-left">
                                 {s.home}
                               </div>
-                              <div className="flex flex-col items-center w-[260px]">
-                                <div className="text-[12px] font-black text-[#0B1B3D] uppercase tracking-[0.6px] mb-1">
+                              <div className="flex flex-col items-center w-[320px]">
+                                <div className="text-[14.5px] font-black text-[#0B1B3D] uppercase tracking-[0.8px] mb-1.5">
                                   {s.label}
                                 </div>
-                                <div className="w-[250px] h-[7px] bg-[#D1D5DB] rounded-full relative overflow-hidden flex">
+                                <div className="w-[300px] h-[8px] bg-[#D1D5DB] rounded-full relative overflow-hidden flex">
                                   <div
                                     className="bg-[#B91C1C] h-full rounded-l-full"
                                     style={{ width: `${homePct}%` }}
@@ -1722,7 +1722,7 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                                   />
                                 </div>
                               </div>
-                              <div className="text-[25px] font-black text-[#0B1B3D] w-[60px] text-right">
+                              <div className="text-[29px] font-black text-[#0B1B3D] w-[72px] text-right">
                                 {s.away}
                               </div>
                             </div>
@@ -1732,13 +1732,13 @@ export const GraphicMakerPanel: React.FC<GraphicMakerPanelProps> = () => {
                     )}
 
                     {/* Footer Branding */}
-                    <div className="relative z-10 flex flex-col items-center justify-center mt-[18px]">
-                      <div className="flex items-center justify-center scale-90">
+                    <div className="relative z-10 flex flex-col items-center justify-center mt-[22px]">
+                      <div className="flex items-center justify-center scale-95">
                         <InkhelSvgLogo />
                       </div>
                       {brandLogo === 'fb' && (
                         <div
-                          className="text-[16px] font-extrabold text-white -mt-1"
+                          className="text-[17px] font-extrabold text-white -mt-1"
                           style={{
                             letterSpacing: '0.6px',
                             textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
