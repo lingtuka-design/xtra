@@ -280,39 +280,42 @@ export const espnService = {
       statusDesc.toLowerCase() === 'full time' ||
       statusDesc.toLowerCase() === 'final';
 
-    // Extract match photos from ESPN news articles if available
+    // Extract match photos strictly from ESPN match recap article or verified match articles
     const matchImages: string[] = [];
+
+    // 1. Check official dedicated match recap article (data.article)
+    if (data.article && Array.isArray(data.article.images)) {
+      for (const img of data.article.images) {
+        if (img?.url && !matchImages.includes(img.url)) {
+          matchImages.push(img.url);
+        }
+      }
+    }
+
+    // 2. Check data.news.articles with strict match checking
     if (Array.isArray(data.news?.articles)) {
-      const homeName = (home?.team?.displayName || '').toLowerCase();
-      const awayName = (away?.team?.displayName || '').toLowerCase();
-      const homeShort = (home?.team?.shortDisplayName || '').toLowerCase();
-      const awayShort = (away?.team?.shortDisplayName || '').toLowerCase();
+      const homeName = (home?.team?.displayName || '').toLowerCase().trim();
+      const awayName = (away?.team?.displayName || '').toLowerCase().trim();
+      const homeShort = (home?.team?.shortDisplayName || '').toLowerCase().trim();
+      const awayShort = (away?.team?.shortDisplayName || '').toLowerCase().trim();
 
       for (const a of data.news.articles) {
         const headline = (a.headline || '').toLowerCase();
         const desc = (a.description || '').toLowerCase();
-        const isMatch =
-          (homeName && headline.includes(homeName)) ||
-          (awayName && headline.includes(awayName)) ||
-          (homeShort && headline.includes(homeShort)) ||
-          (awayShort && headline.includes(awayShort)) ||
-          (homeName && desc.includes(homeName)) ||
-          (awayName && desc.includes(awayName));
+        const combined = `${headline} ${desc}`;
+
+        // Strict matching: Must mention both teams, OR one team with match clash keywords
+        const mentionsHome = (homeName && combined.includes(homeName)) || (homeShort && combined.includes(homeShort));
+        const mentionsAway = (awayName && combined.includes(awayName)) || (awayShort && combined.includes(awayShort));
+        const hasMatchKeywords = /vs|against|beat|draw|drew|win|won|defeat|clash|equaliser|held/i.test(combined);
+
+        const isMatch = (mentionsHome && mentionsAway) || ((mentionsHome || mentionsAway) && hasMatchKeywords);
 
         if (isMatch && Array.isArray(a.images)) {
           for (const img of a.images) {
-            if (img.url && !matchImages.includes(img.url)) {
+            if (img?.url && !matchImages.includes(img.url)) {
               matchImages.push(img.url);
             }
-          }
-        }
-      }
-
-      // If no explicit match article found, fallback to first article's images
-      if (matchImages.length === 0 && data.news.articles[0]?.images) {
-        for (const img of data.news.articles[0].images) {
-          if (img.url && !matchImages.includes(img.url)) {
-            matchImages.push(img.url);
           }
         }
       }
