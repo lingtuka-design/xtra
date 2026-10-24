@@ -156,6 +156,7 @@ export const espnService = {
     };
     matchImage?: string;
     matchImages?: string[];
+    matchPhotos?: { url: string; caption: string }[];
   }> {
     const res = await fetch(
       `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueSlug}/summary?event=${eventId}`,
@@ -282,12 +283,17 @@ export const espnService = {
 
     // Extract match photos strictly from ESPN match recap article or verified match articles
     const matchImages: string[] = [];
+    const matchPhotos: { url: string; caption: string }[] = [];
 
     // 1. Check official dedicated match recap article (data.article)
     if (data.article && Array.isArray(data.article.images)) {
       for (const img of data.article.images) {
         if (img?.url && !matchImages.includes(img.url)) {
           matchImages.push(img.url);
+          matchPhotos.push({
+            url: img.url,
+            caption: `${img.caption || img.name || ''} ${data.article.headline || ''}`.trim(),
+          });
         }
       }
     }
@@ -315,6 +321,10 @@ export const espnService = {
           for (const img of a.images) {
             if (img?.url && !matchImages.includes(img.url)) {
               matchImages.push(img.url);
+              matchPhotos.push({
+                url: img.url,
+                caption: `${img.caption || img.name || ''} ${a.headline || ''}`.trim(),
+              });
             }
           }
         }
@@ -342,6 +352,7 @@ export const espnService = {
       stats,
       matchImage,
       matchImages,
+      matchPhotos,
     };
   },
 };

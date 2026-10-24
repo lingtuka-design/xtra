@@ -1052,11 +1052,68 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             }
           } catch {}
 
-          const availablePhotos = summary.matchImages || (summary.matchImage ? [summary.matchImage] : []);
-          // Prefer a photo that is different from Half Time photo
-          const diffPhoto = availablePhotos.find((p) => p !== htPhoto);
-          // If a new/different photo exists, use it! Otherwise, reuse the match photo (as requested)
-          const chosenPhoto = diffPhoto || availablePhotos[0] || summary.matchImage || '';
+          // Determine FT Photo smartly based on match outcome:
+          // 1) If Draw: Any match action photo is fine.
+          // 2) If Winner: Strictly prioritize photos of the WINNING team and filter out photos celebrating the losing team!
+          const homeScoreNum = parseInt(summary.score.home || '0', 10);
+          const awayScoreNum = parseInt(summary.score.away || '0', 10);
+          const isDraw = homeScoreNum === awayScoreNum;
+
+          const winningTeamName = homeScoreNum > awayScoreNum ? match.home_team : (awayScoreNum > homeScoreNum ? match.away_team : '');
+          const losingTeamName = homeScoreNum > awayScoreNum ? match.away_team : (awayScoreNum > homeScoreNum ? match.home_team : '');
+
+          const winningScorers = goalEvents
+            .filter((ev: any) => {
+              if (homeScoreNum > awayScoreNum) return summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : true;
+              if (awayScoreNum > homeScoreNum) return summary.awayTeamId && ev.teamId ? ev.teamId === summary.awayTeamId : true;
+              return false;
+            })
+            .map((ev: any) => ev.athleteName)
+            .filter(Boolean);
+
+          const photoCandidates = summary.matchPhotos || (summary.matchImages || []).map((u: string) => ({ url: u, caption: '' }));
+
+          let chosenPhoto = '';
+          if (photoCandidates.length > 0) {
+            if (isDraw) {
+              const diff = photoCandidates.find((c: any) => c.url !== htPhoto);
+              chosenPhoto = diff?.url || photoCandidates[0]?.url || '';
+            } else {
+              const winTokens = [winningTeamName, ...winningScorers].map((t: string) => t.toLowerCase().trim()).filter(Boolean);
+              const loseTokens = [losingTeamName].map((t: string) => t.toLowerCase().trim()).filter(Boolean);
+
+              let bestPhoto = '';
+              let bestScore = -999;
+
+              for (const cand of photoCandidates) {
+                const text = (cand.caption || '').toLowerCase();
+                let score = 0;
+
+                const hasWinner = winTokens.some((w: string) => text.includes(w));
+                const hasLoser = loseTokens.some((l: string) => text.includes(l));
+
+                if (hasWinner) score += 60;
+                if (/celebrat|goal|score|winner|double|lead|brace/i.test(text)) score += 20;
+                if (hasLoser && !hasWinner) score -= 60; // Penalize losing team celebrating!
+                if (cand.url === htPhoto) score -= 15; // Soft penalty if reused from HT
+
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestPhoto = cand.url;
+                }
+              }
+
+              if (bestPhoto && bestScore > 0) {
+                chosenPhoto = bestPhoto;
+              } else {
+                const neutralPhoto = photoCandidates.find((c: any) => {
+                  const text = (c.caption || '').toLowerCase();
+                  return !loseTokens.some((l: string) => text.includes(l));
+                });
+                chosenPhoto = neutralPhoto?.url || photoCandidates[0]?.url || '';
+              }
+            }
+          }
 
           // Facebook Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
           const fbImage =
