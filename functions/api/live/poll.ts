@@ -1,5 +1,6 @@
 import { Env } from '../../types';
 import { espnService } from '../../services/espnService';
+import { fotmobService } from '../../services/fotmobService';
 import { facebookPoster } from '../../services/facebookPoster';
 import { whatsappPoster } from '../../services/whatsappPoster';
 
@@ -878,7 +879,27 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       if (summary.status.isHalftime) {
         const htEventId = `ht_${match.event_id}`;
         let claimed = false;
-        const htPhotoToUse = summary.matchImages?.[0] || summary.matchImage || '';
+        // 1. Tier 1 (FotMob) for PL and UCL at Half Time
+        let htPhotoToUse = '';
+        if (match.league === 'PL' || match.league === 'UCL') {
+          try {
+            const fotmobRes = await fotmobService.getMatchPhotos({
+              homeTeam: match.home_team,
+              awayTeam: match.away_team,
+              isDraw: true,
+            });
+            if (fotmobRes.bestPhoto) {
+              htPhotoToUse = fotmobRes.bestPhoto;
+            }
+          } catch (e: any) {
+            console.warn('[HT Photo] FotMob lookup error:', e.message);
+          }
+        }
+        // Tier 2: ESPN photo fallback
+        if (!htPhotoToUse) {
+          htPhotoToUse = summary.matchImages?.[0] || summary.matchImage || '';
+        }
+
         try {
           const insertLock = await env.DB.prepare(
             'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
@@ -1074,7 +1095,30 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           const photoCandidates = summary.matchPhotos || (summary.matchImages || []).map((u: string) => ({ url: u, caption: '' }));
 
           let chosenPhoto = '';
-          if (photoCandidates.length > 0) {
+
+          // 1. TIER 1: Check FotMob first for Premier League and Champions League
+          const isPlOrUcl = match.league === 'PL' || match.league === 'UCL';
+          if (isPlOrUcl) {
+            try {
+              const fotmobRes = await fotmobService.getMatchPhotos({
+                homeTeam: match.home_team,
+                awayTeam: match.away_team,
+                winningTeam: isDraw ? undefined : winningTeamName,
+                losingTeam: isDraw ? undefined : losingTeamName,
+                winningScorers,
+                isDraw,
+              });
+              if (fotmobRes.bestPhoto) {
+                chosenPhoto = fotmobRes.bestPhoto;
+                console.log(`[FT Photo] Selected FotMob HD photo: ${chosenPhoto}`);
+              }
+            } catch (fotmobErr: any) {
+              console.warn('[FT Photo] FotMob lookup error, falling back to ESPN:', fotmobErr.message);
+            }
+          }
+
+          // 2. TIER 2: If no FotMob photo, check ESPN match photos
+          if (!chosenPhoto && photoCandidates.length > 0) {
             if (isDraw) {
               const diff = photoCandidates.find((c: any) => c.url !== htPhoto);
               chosenPhoto = diff?.url || photoCandidates[0]?.url || '';
