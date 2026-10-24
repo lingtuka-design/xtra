@@ -8,10 +8,19 @@ export interface FotmobMatchResult {
   };
 }
 
+interface PhotoCandidate {
+  url: string;
+  title: string;
+  text: string;
+  elapsed?: number;
+  source: 'commentary' | 'content';
+}
+
 export const fotmobService = {
   /**
    * Fetch high-resolution pitch-side action photos and POTM from FotMob
    * Priority #1 for Premier League and Champions League matches
+   * Includes FotMob Live Ticker Commentary (LTC) photos from IMAGO / pitch-side
    */
   async getMatchPhotos(options: {
     homeTeam: string;
@@ -81,71 +90,111 @@ export const fotmobService = {
         return { allPhotos: [] };
       }
 
-      // 4. Fetch Match Details
-      const detailsRes = await fetch(`https://www.fotmob.com/api/data/matchDetails?matchId=${matched.id}`, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          Accept: 'application/json, text/plain, */*',
-        },
-      });
+      // 4. Fetch Match Details & Live Commentary in parallel
+      const [detailsRes, ltcRes] = await Promise.all([
+        fetch(`https://www.fotmob.com/api/data/matchDetails?matchId=${matched.id}`, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'application/json, text/plain, */*',
+          },
+        }).catch(() => null),
+        fetch(`https://data.fotmob.com/webcl/ltc/gsm/${matched.id}_en.json.gz`, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        }).catch(() => null),
+      ]);
 
-      if (!detailsRes.ok) {
-        console.warn(`FotMob matchDetails failed with status: ${detailsRes.status}`);
-        return { allPhotos: [] };
+      const candidates: PhotoCandidate[] = [];
+
+      // 5. Extract Live Commentary Photos (IMAGO / pitch-side photos uploaded in real-time)
+      if (ltcRes && ltcRes.ok) {
+        try {
+          const ltcData = (await ltcRes.json()) as any;
+          const pulseItems = ltcData.PulseInfo?.Items || [];
+          for (const item of pulseItems) {
+            const imgContent = item.Content?.find((c: any) => c.Type === 'image' && c.Media?.[0]?.Url);
+            if (imgContent?.Media?.[0]?.Url) {
+              const url = imgContent.Media[0].Url;
+              const title = item.Content?.find((c: any) => c.Type === 'title')?.Translations?.en || '';
+              const text = item.Content?.find((c: any) => c.Type === 'text')?.Translations?.en || '';
+              candidates.push({
+                url,
+                title,
+                text,
+                elapsed: item.Elapsed,
+                source: 'commentary',
+              });
+            }
+          }
+        } catch (e: any) {
+          console.warn('[FotMob LTC] Failed to parse commentary:', e.message);
+        }
       }
 
-      const detailsData = (await detailsRes.json()) as any;
-      const content = detailsData.content || {};
-
-      // 5. Extract Player of the Match (POTM) if available
+      // 6. Extract Player of the Match (POTM) & content photos from Match Details
       let potm: { name: string; rating: string; team: string } | undefined = undefined;
-      const potmRaw = content.matchFacts?.playerOfTheMatch;
-      if (potmRaw?.name) {
-        potm = {
-          name: potmRaw.name.fullName || `${potmRaw.name.firstName || ''} ${potmRaw.name.lastName || ''}`.trim(),
-          rating: String(potmRaw.rating?.num || ''),
-          team: potmRaw.teamName || '',
-        };
+
+      if (detailsRes && detailsRes.ok) {
+        try {
+          const detailsData = (await detailsRes.json()) as any;
+          const content = detailsData.content || {};
+
+          const potmRaw = content.matchFacts?.playerOfTheMatch;
+          if (potmRaw?.name) {
+            potm = {
+              name: potmRaw.name.fullName || `${potmRaw.name.firstName || ''} ${potmRaw.name.lastName || ''}`.trim(),
+              rating: String(potmRaw.rating?.num || ''),
+              team: potmRaw.teamName || '',
+            };
+          }
+
+          const contentStr = JSON.stringify(content);
+          const regex = /https?:\/\/[^"\s']+\.(?:jpg|jpeg|png|webp)/gi;
+          const matches = contentStr.match(regex) || [];
+
+          const contentPhotos = [...new Set(matches)].filter((url) => {
+            const u = url.toLowerCase();
+            const isActionHost =
+              u.includes('performgroup.com') ||
+              u.includes('stories.dazn.com') ||
+              u.includes('fotmob.com/wp-content') ||
+              u.includes('images.fotmob.com/images/pulse') ||
+              u.includes('images.fotmob.com/image_resources/playerimages');
+            const isUi =
+              u.includes('logo') ||
+              u.includes('teamlogo') ||
+              u.includes('heatmap') ||
+              u.includes('fallback') ||
+              u.includes('weather') ||
+              u.includes('badge');
+            return isActionHost && !isUi;
+          });
+
+          for (const u of contentPhotos) {
+            if (!candidates.some((c) => c.url === u)) {
+              candidates.push({
+                url: u,
+                title: '',
+                text: '',
+                source: 'content',
+              });
+            }
+          }
+        } catch (e: any) {
+          console.warn('[FotMob Details] Parse error:', e.message);
+        }
       }
 
-      // 6. Extract action photos (Perform Group / Omnisport / DAZN / Editorial)
-      const contentStr = JSON.stringify(content);
-      const regex = /https?:\/\/[^"\s']+\.(?:jpg|jpeg|png|webp)/gi;
-      const matches = contentStr.match(regex) || [];
-
-      // Filter only real pitch action / press images (exclude UI logos, icons, banners, heatmaps)
-      const actionPhotos = [...new Set(matches)].filter((url) => {
-        const u = url.toLowerCase();
-        const isActionHost =
-          u.includes('performgroup.com') ||
-          u.includes('stories.dazn.com') ||
-          u.includes('fotmob.com/wp-content') ||
-          u.includes('images.fotmob.com/image_resources/playerimages');
-        const isUi =
-          u.includes('logo') ||
-          u.includes('teamlogo') ||
-          u.includes('heatmap') ||
-          u.includes('fallback') ||
-          u.includes('weather') ||
-          u.includes('badge');
-        return isActionHost && !isUi;
-      });
-
-      if (actionPhotos.length === 0) {
+      if (candidates.length === 0) {
         return { potm, allPhotos: [] };
       }
 
-      // 7. Smart Winner / Draw Photo Selection
-      if (options.isDraw) {
-        return {
-          bestPhoto: actionPhotos[0],
-          allPhotos: actionPhotos,
-          potm,
-        };
-      }
+      const allPhotos = [...new Set(candidates.map((c) => c.url))];
 
-      // Score candidates to prioritize winning team celebration
+      // 7. Token setup for Winner / Leading team vs Losing team
       const winTokens: string[] = [];
       if (options.winningTeam) winTokens.push(...options.winningTeam.toLowerCase().split(/\s+/));
       if (options.winningScorers) {
@@ -164,28 +213,40 @@ export const fotmobService = {
       const wTokens = cleanTokens(winTokens);
       const lTokens = cleanTokens(loseTokens);
 
-      let bestPhoto = actionPhotos[0];
+      // 8. Smart Photo Selection: Prioritize Commentary pitch-side celebration photos
+      let bestCandidate = candidates[0];
       let bestScore = -999;
 
-      for (const url of actionPhotos) {
-        const u = url.toLowerCase();
+      for (const cand of candidates) {
         let score = 0;
+        // Commentary photos are live pitch-side photos from today's game
+        if (cand.source === 'commentary') score += 100;
 
-        const hasWinner = wTokens.some((t) => u.includes(t));
-        const hasLoser = lTokens.some((t) => u.includes(t));
+        const info = `${cand.url} ${cand.title} ${cand.text}`.toLowerCase();
 
-        if (hasWinner) score += 80;
-        if (hasLoser && !hasWinner) score -= 80; // Penalize losing player / celebration photo
+        // Check winner / leading mentions
+        const hasWinner = wTokens.some((t) => info.includes(t));
+        const hasLoser = lTokens.some((t) => info.includes(t));
+
+        if (hasWinner) score += 90;
+        if (hasLoser && !hasWinner) score -= 80;
+
+        if (info.includes('goal') || info.includes('celebrat')) score += 30;
+
+        // In draw, latest commentary photo is great
+        if (options.isDraw && cand.source === 'commentary') {
+          score += 20;
+        }
 
         if (score > bestScore) {
           bestScore = score;
-          bestPhoto = url;
+          bestCandidate = cand;
         }
       }
 
       return {
-        bestPhoto: bestScore >= 0 ? bestPhoto : actionPhotos[0],
-        allPhotos: actionPhotos,
+        bestPhoto: bestCandidate.url,
+        allPhotos,
         potm,
       };
     } catch (err: any) {

@@ -883,10 +883,18 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         let htPhotoToUse = '';
         if (match.league === 'PL' || match.league === 'UCL') {
           try {
+            const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
+            const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
+            const leadingTeam = isHomeLeading ? match.home_team : isAwayLeading ? match.away_team : undefined;
+            const trailingTeam = isHomeLeading ? match.away_team : isAwayLeading ? match.home_team : undefined;
+            const isHtDraw = (match.home_score || 0) === (match.away_score || 0);
+
             const fotmobRes = await fotmobService.getMatchPhotos({
               homeTeam: match.home_team,
               awayTeam: match.away_team,
-              isDraw: true,
+              winningTeam: leadingTeam,
+              losingTeam: trailingTeam,
+              isDraw: isHtDraw,
             });
             if (fotmobRes.bestPhoto) {
               htPhotoToUse = fotmobRes.bestPhoto;
