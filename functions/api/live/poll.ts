@@ -3,6 +3,13 @@ import { espnService } from '../../services/espnService';
 import { fotmobService } from '../../services/fotmobService';
 import { facebookPoster } from '../../services/facebookPoster';
 import { whatsappPoster } from '../../services/whatsappPoster';
+import { telegramPoster } from '../../services/telegramPoster';
+
+// Helper to convert WhatsApp formatted footer to Telegram
+function toTelegramCaption(text: string): string {
+  return text.replace(/👉 _Inkhel WhatsApp Channel_/g, '👉 _Inkhel Telegram Channel_')
+             .replace(/📲 _Inkhel WhatsApp Channel_/g, '📲 _Inkhel Telegram Channel_');
+}
 
 // Dynamic hashtag generator based on match competition
 function getLeagueHashtag(leagueName: string): string {
@@ -586,6 +593,18 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               console.error('WhatsApp Lineup Post error:', waErr.message);
             }
 
+            // 3. Post to Telegram Channel
+            try {
+              await telegramPoster.postNews(
+                toTelegramCaption(waLineup),
+                undefined,
+                env.TELEGRAM_BOT_TOKEN,
+                env.TELEGRAM_CHANNEL_ID
+              );
+            } catch (tgErr: any) {
+              console.error('Telegram Lineup Post error:', tgErr.message);
+            }
+
             totalPosted++;
             logDetails.push(`Lineup posted: ${match.home_team} vs ${match.away_team}`);
           }
@@ -710,6 +729,18 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 console.error('WhatsApp Live Goal Post error:', waErr.message);
               }
 
+              // 3. Post to Telegram Channel
+              try {
+                await telegramPoster.postNews(
+                  toTelegramCaption(waCaption),
+                  undefined,
+                  env.TELEGRAM_BOT_TOKEN,
+                  env.TELEGRAM_CHANNEL_ID
+                );
+              } catch (tgErr: any) {
+                console.error('Telegram Live Goal Post error:', tgErr.message);
+              }
+
               totalPosted++;
               logDetails.push(`Goal posted: ${ev.athleteName || 'Goal'} (${ev.minute}) - ${match.home_team} vs ${match.away_team}`);
             }
@@ -785,6 +816,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 console.error('WhatsApp VAR Alert error:', waErr.message);
               }
 
+              try {
+                await telegramPoster.postNews(
+                  toTelegramCaption(waVar),
+                  undefined,
+                  env.TELEGRAM_BOT_TOKEN,
+                  env.TELEGRAM_CHANNEL_ID
+                );
+              } catch (tgErr: any) {
+                console.error('Telegram VAR Alert error:', tgErr.message);
+              }
+
               totalPosted++;
               logDetails.push(`VAR Disallowed Goal posted: ${match.home_team} vs ${match.away_team} (${ev.minute})`);
             }
@@ -850,6 +892,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 );
               } catch (waErr: any) {
                 console.error('WA Score Drop VAR Alert error:', waErr.message);
+              }
+
+              try {
+                await telegramPoster.postNews(
+                  toTelegramCaption(waVar),
+                  undefined,
+                  env.TELEGRAM_BOT_TOKEN,
+                  env.TELEGRAM_CHANNEL_ID
+                );
+              } catch (tgErr: any) {
+                console.error('Telegram Score Drop VAR Alert error:', tgErr.message);
               }
 
               totalPosted++;
@@ -928,6 +981,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 );
               } catch (waErr: any) {
                 console.error('WhatsApp Red Card Alert error:', waErr.message);
+              }
+
+              try {
+                await telegramPoster.postNews(
+                  toTelegramCaption(waRed),
+                  undefined,
+                  env.TELEGRAM_BOT_TOKEN,
+                  env.TELEGRAM_CHANNEL_ID
+                );
+              } catch (tgErr: any) {
+                console.error('Telegram Red Card Alert error:', tgErr.message);
               }
 
               totalPosted++;
@@ -1075,6 +1139,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             );
           } catch (waErr: any) {
             console.error('WA HT Stats error:', waErr.message);
+          }
+
+          try {
+            await telegramPoster.postNews(
+              toTelegramCaption(waHT),
+              waImage,
+              env.TELEGRAM_BOT_TOKEN,
+              env.TELEGRAM_CHANNEL_ID
+            );
+          } catch (tgErr: any) {
+            console.error('Telegram HT Stats error:', tgErr.message);
           }
 
           totalPosted++;
@@ -1254,6 +1329,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             console.error('WA FT Stats error:', waErr.message);
           }
 
+          try {
+            await telegramPoster.postNews(
+              toTelegramCaption(waFT),
+              waImage,
+              env.TELEGRAM_BOT_TOKEN,
+              env.TELEGRAM_CHANNEL_ID
+            );
+          } catch (tgErr: any) {
+            console.error('Telegram FT Stats error:', tgErr.message);
+          }
+
           totalPosted++;
           logDetails.push(`Full Time stats posted: ${match.home_team} vs ${match.away_team}`);
 
@@ -1350,6 +1436,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                       awayLogo: match.away_logo,
                       status: 'FT',
                       leagueName,
+                      homeScorers: '',
+                      awayScorers: '',
                       channel: 'fb',
                     });
 
@@ -1376,6 +1464,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                     );
                   } catch (e: any) {
                     console.error('WA Ratings post error:', e.message);
+                  }
+
+                  try {
+                    await telegramPoster.postNews(
+                      toTelegramCaption(waRatings),
+                      ratingsPhoto || ratingsCardImage,
+                      env.TELEGRAM_BOT_TOKEN,
+                      env.TELEGRAM_CHANNEL_ID
+                    );
+                  } catch (e: any) {
+                    console.error('Telegram Ratings post error:', e.message);
                   }
 
                   totalPosted++;

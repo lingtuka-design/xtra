@@ -11,6 +11,8 @@ database_id = "d382c966-7c09-40cc-aaec-33f4e417a10d"
 # Environment Variables (Public defaults)
 [vars]
 DEFAULT_SOURCES = "David_Ornstein,footballontnt,ESPNUK,433,MadridXtra,brfootball,Squawka,UtdDistrict"
+TELEGRAM_BOT_TOKEN = "8870071622:AAFX5cDesVs40kyAKLOTnmE1-8bFw5XKrf0"
+TELEGRAM_CHANNEL_ID = "-1004342755067"
 
 # Secrets to set via `wrangler secret put <KEY>` or Cloudflare Pages Dashboard:
 # 1. GEMINI_API_KEY       -> From Google AI Studio (Free Tier)

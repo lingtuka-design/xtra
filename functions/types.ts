@@ -12,6 +12,8 @@ export interface Env {
   WHATSAPP_API_TOKEN?: string;
   WHATSAPP_CHANNEL_ID?: string;
   WHATSAPP_API_URL?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHANNEL_ID?: string;
 }
 
 export interface TweetPhoto {

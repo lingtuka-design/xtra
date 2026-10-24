@@ -1,12 +1,13 @@
 import { Env, PostRecord } from '../types';
 import { facebookPoster } from '../services/facebookPoster';
 import { whatsappPoster } from '../services/whatsappPoster';
+import { telegramPoster } from '../services/telegramPoster';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
   try {
-    const body = (await request.json()) as { id: number; skip_whatsapp?: boolean };
+    const body = (await request.json()) as { id: number; skip_whatsapp?: boolean; skip_telegram?: boolean };
 
     if (!body.id) {
       return Response.json({ success: false, error: 'Post ID is required' }, { status: 400 });
@@ -72,6 +73,26 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         }
       } catch (waErr: any) {
         console.warn('WhatsApp broadcast error:', waErr.message);
+      }
+    }
+
+    // Simultaneously publish to Telegram Channel unless skip_telegram is true
+    let tgNotice = '';
+    if (!body.skip_telegram) {
+      try {
+        const tgRes = await telegramPoster.postNews(
+          post.mizo_translation,
+          post.primary_image_url,
+          env.TELEGRAM_BOT_TOKEN,
+          env.TELEGRAM_CHANNEL_ID
+        );
+        if (tgRes.success) {
+          tgNotice = ' & Telegram';
+        } else {
+          console.warn('Telegram broadcast failed:', tgRes.error);
+        }
+      } catch (tgErr: any) {
+        console.warn('Telegram broadcast error:', tgErr.message);
       }
     }
 

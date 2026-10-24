@@ -1,6 +1,7 @@
 import { Env, SyncResult } from '../types';
 import { facebookPoster } from './facebookPoster';
 import { whatsappPoster } from './whatsappPoster';
+import { telegramPoster } from './telegramPoster';
 
 export class SyncService {
   /**
@@ -119,6 +120,24 @@ export class SyncService {
               }
             } catch (waErr: any) {
               console.warn('[WA Channel Drip] Error in WhatsApp drip broadcast:', waErr.message);
+            }
+
+            // Broadcast to Telegram Channel simultaneously
+            try {
+              console.log(`[Telegram Drip] Auto-publishing post #${nextQueued.id} to Telegram Channel...`);
+              const tgRes = await telegramPoster.postNews(
+                nextQueued.mizo_translation,
+                nextQueued.primary_image_url,
+                env.TELEGRAM_BOT_TOKEN,
+                env.TELEGRAM_CHANNEL_ID
+              );
+              if (tgRes.success) {
+                console.log(`[Telegram Drip] Post #${nextQueued.id} successfully published to Telegram Channel.`);
+              } else {
+                console.warn(`[Telegram Drip] Telegram post #${nextQueued.id} failed:`, tgRes.error);
+              }
+            } catch (tgErr: any) {
+              console.warn('[Telegram Drip] Error in Telegram drip broadcast:', tgErr.message);
             }
           } else {
             await env.DB.prepare(

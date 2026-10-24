@@ -1,6 +1,7 @@
 import { Env, PostRecord } from '../types';
 import { facebookPoster } from '../services/facebookPoster';
 import { whatsappPoster } from '../services/whatsappPoster';
+import { telegramPoster } from '../services/telegramPoster';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
@@ -111,6 +112,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       facebook_status?: 'queued' | 'none';
       publish_now?: boolean;
       skip_whatsapp?: boolean;
+      skip_telegram?: boolean;
     };
 
     if (!body.mizo_translation || !body.mizo_translation.trim()) {
@@ -207,6 +209,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             console.log('WhatsApp broadcast result:', waRes);
           } catch (waErr: any) {
             console.error('WhatsApp broadcast failed:', waErr.message);
+          }
+        }
+
+        // Also broadcast to Telegram Channel unless skip_telegram is true
+        if (!body.skip_telegram) {
+          try {
+            console.log('Broadcasting manual post to Telegram Channel...');
+            const tgRes = await telegramPoster.postNews(
+              mizoCaption,
+              photoUrl || undefined,
+              env.TELEGRAM_BOT_TOKEN,
+              env.TELEGRAM_CHANNEL_ID
+            );
+            console.log('Telegram broadcast result:', tgRes);
+          } catch (tgErr: any) {
+            console.error('Telegram broadcast failed:', tgErr.message);
           }
         }
 
