@@ -111,6 +111,9 @@ export const PostCard: React.FC<PostCardProps> = ({
     isNight?: boolean
   ) => {
     if (!scheduledTime) return 'Scheduled';
+    if (scheduledTime === 'In-post mek...') {
+      return 'In-post mek...';
+    }
     if (isNight) {
       return `Zing ${scheduledTime}`;
     }

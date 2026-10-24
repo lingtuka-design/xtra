@@ -22,22 +22,20 @@ export default {
         .catch((err) => console.warn('[Xtra Cron] Live Goal Poll warning:', err.message))
     );
 
-    // 2. Transfer News Sync & Queue Drip (Runs every 5 minutes: :00, :05, :10, etc.)
-    if (minute % 5 === 0) {
-      ctx.waitUntil(
-        fetch('https://xtra-byd.pages.dev/api/sync', {
-          method: 'POST',
-          headers: { 'User-Agent': 'Xtra-Cron-Worker/1.0' },
+    // 2. Queue Drip Auto-Publisher (Checks every minute: publishes if 45m interval is met)
+    ctx.waitUntil(
+      fetch('https://xtra-byd.pages.dev/api/sync', {
+        method: 'POST',
+        headers: { 'User-Agent': 'Xtra-Cron-Worker/1.0' },
+      })
+        .then(async (res) => {
+          const body = await res.text();
+          console.log(`[Xtra Cron] Queue Drip: HTTP ${res.status} - ${body.substring(0, 120)}`);
         })
-          .then(async (res) => {
-            const body = await res.text();
-            console.log(`[Xtra Cron] 5-Min Sync: HTTP ${res.status} - ${body.substring(0, 120)}`);
-          })
-          .catch((err) => {
-            console.error('[Xtra Cron] 5-Min Sync error:', err);
-          })
-      );
-    }
+        .catch((err) => {
+          console.error('[Xtra Cron] Queue Drip error:', err);
+        })
+    );
 
     // 3. Keep-alive ping for WhatsApp Bot microservice
     if (env.WHATSAPP_API_URL && minute % 5 === 0) {

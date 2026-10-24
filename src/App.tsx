@@ -100,13 +100,24 @@ export default function App() {
     return Math.min(total, 5);
   }, [posts]);
 
+  // Helper to parse SQLite UTC timestamps into epoch milliseconds
+  const parseUtcMs = (dateStr?: string | null): number => {
+    if (!dateStr) return 0;
+    if (dateStr.includes('+0000')) return new Date(dateStr).getTime();
+    const iso = dateStr.includes('T')
+      ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z')
+      : dateStr.replace(' ', 'T') + 'Z';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? new Date(dateStr).getTime() : d.getTime();
+  };
+
   // FIFO sorted queued posts for drip scheduling
   const queuedSortedList = useMemo(() => {
     return posts
       .filter((p) => p.facebook_status === 'queued')
       .sort((a, b) => {
-        const timeA = new Date(a.updated_at || a.created_at).getTime();
-        const timeB = new Date(b.updated_at || b.created_at).getTime();
+        const timeA = parseUtcMs(a.updated_at || a.created_at);
+        const timeB = parseUtcMs(b.updated_at || b.created_at);
         return timeA - timeB;
       });
   }, [posts]);
@@ -116,8 +127,8 @@ export default function App() {
     return posts
       .filter((p) => p.facebook_status === 'published' && (p.publish_source === 'queue' || !p.publish_source))
       .sort((a, b) => {
-        const timeA = new Date(a.updated_at || a.created_at).getTime();
-        const timeB = new Date(b.updated_at || b.created_at).getTime();
+        const timeA = parseUtcMs(a.updated_at || a.created_at);
+        const timeB = parseUtcMs(b.updated_at || b.created_at);
         return timeB - timeA;
       })[0];
   }, [posts]);
@@ -138,21 +149,18 @@ export default function App() {
     const DRIP_INTERVAL_MS = 45 * 60 * 1000;
     const INITIAL_DELAY_MS = 5 * 60 * 1000;
 
-    let baseCursor = now;
-    if (lastPublished?.updated_at) {
-      const lastPubMs = new Date(lastPublished.updated_at).getTime();
-      if (!isNaN(lastPubMs) && now - lastPubMs < DRIP_INTERVAL_MS) {
-        baseCursor = Math.max(baseCursor, lastPubMs + DRIP_INTERVAL_MS);
-      }
-    }
+    const lastPubMs = lastPublished?.updated_at ? parseUtcMs(lastPublished.updated_at) : 0;
+    const firstQueuedMs = queuedSortedList[0] ? parseUtcMs(queuedSortedList[0].updated_at || queuedSortedList[0].created_at) : 0;
 
-    if (queuedSortedList.length > 0) {
-      const firstQueuedMs = new Date(
-        queuedSortedList[0].updated_at || queuedSortedList[0].created_at
-      ).getTime();
-      if (!isNaN(firstQueuedMs) && now - firstQueuedMs < INITIAL_DELAY_MS) {
-        baseCursor = Math.max(baseCursor, firstQueuedMs + INITIAL_DELAY_MS);
-      }
+    let baseCursor = 0;
+    if (lastPubMs > 0) {
+      baseCursor = Math.max(baseCursor, lastPubMs + DRIP_INTERVAL_MS);
+    }
+    if (firstQueuedMs > 0) {
+      baseCursor = Math.max(baseCursor, firstQueuedMs + INITIAL_DELAY_MS);
+    }
+    if (baseCursor === 0) {
+      baseCursor = now;
     }
 
     const pushPastNightPause = (timeMs: number): { scheduledMs: number; isNightPaused: boolean } => {
@@ -193,7 +201,12 @@ export default function App() {
       const istM = istDate.getUTCMinutes();
       const h24 = istH.toString().padStart(2, '0');
       const m24 = istM.toString().padStart(2, '0');
-      const scheduledTimeStr = `${h24}:${m24}`;
+
+      const isDueNow = scheduledMs <= now;
+      let scheduledTimeStr = `${h24}:${m24}`;
+      if (isDueNow && index === 0) {
+        scheduledTimeStr = 'In-post mek...';
+      }
 
       map.set(post.id, {
         position: index + 1,
