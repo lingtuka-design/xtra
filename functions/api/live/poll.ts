@@ -319,7 +319,14 @@ function formatPlayerRatingsPost(
   leagueName: string
 ): string {
   const fmtList = (list: { name: string; rating?: string }[]) =>
-    list.map((p) => (p.rating ? `${p.name} (${p.rating})` : p.name)).join(', ');
+    list
+      .map((p) => {
+        if (!p.rating) return p.name;
+        // Prevent Facebook from auto-converting "8)" into sunglasses smiley 😎
+        const safeRating = p.rating.endsWith('8') ? `${p.rating}\u200B` : p.rating;
+        return `${p.name} (${safeRating})`;
+      })
+      .join(', ');
 
   const homeStartersText = fmtList(homeStarters);
   const homeSubsText = homeSubs.length > 0 ? `\n\nSubs : ${fmtList(homeSubs)}` : '';
