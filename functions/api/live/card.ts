@@ -148,7 +148,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding-top: 58px;
+      padding-top: 46px;
     }
     .bg-layer {
       position: absolute;
@@ -260,49 +260,49 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       margin-top: 14px;
       margin-bottom: 16px;
       min-height: 52px;
-      padding: 0 20px;
+      padding: 0 16px;
     }
     .home-scorers {
       text-align: right;
-      font-size: 15.5px;
-      font-weight: 700;
+      font-size: 19px;
+      font-weight: 800;
       color: #ffffff;
-      line-height: 1.38;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+      line-height: 1.35;
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
       flex: 1;
-      padding-right: 12px;
+      padding-right: 14px;
     }
     .away-scorers {
       text-align: left;
-      font-size: 15.5px;
-      font-weight: 700;
+      font-size: 19px;
+      font-weight: 800;
       color: #ffffff;
-      line-height: 1.38;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+      line-height: 1.35;
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
       flex: 1;
-      padding-left: 12px;
+      padding-left: 14px;
     }
     .stats-table {
-      width: 550px;
+      width: 630px;
       display: flex;
       flex-direction: column;
-      gap: 9px;
+      gap: 10px;
     }
     .stat-pill {
       background: #ffffff;
-      border-radius: 15px;
-      height: 48px;
-      padding: 0 20px;
+      border-radius: 16px;
+      height: 52px;
+      padding: 0 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
     }
     .stat-num {
-      font-size: 25px;
+      font-size: 29px;
       font-weight: 900;
       color: #0B1B3D;
-      width: 60px;
+      width: 72px;
     }
     .stat-num.left {
       text-align: left;
@@ -314,19 +314,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 260px;
+      width: 320px;
     }
     .stat-label {
-      font-size: 12px;
+      font-size: 14.5px;
       font-weight: 900;
       color: #0B1B3D;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.8px;
       text-transform: uppercase;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
     }
     .stat-bar-track {
-      width: 250px;
-      height: 7px;
+      width: 300px;
+      height: 8px;
       background: #D1D5DB;
       border-radius: 999px;
       position: relative;
@@ -350,16 +350,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      margin-top: 18px;
+      margin-top: 22px;
     }
     .brand-svg-box {
       display: flex;
       align-items: center;
       justify-content: center;
-      transform: scale(0.92);
+      transform: scale(0.96);
     }
     .brand-xtra-text {
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 800;
       color: #ffffff;
       letter-spacing: 0.6px;
@@ -401,8 +401,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           <div class="home-scorers">
             ${homeScorersList.map((s) => `<div>${s}</div>`).join('')}
           </div>
-          <div style="width: 36px; display: flex; justify-content: center; align-items: center; padding-top: 2px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
+          <div style="width: 40px; display: flex; justify-content: center; align-items: center; padding-top: 2px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
               <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
               <polygon points="12,7.5 15.5,10 14.2,14 9.8,14 8.5,10" fill="#111827"/>
               <line x1="12" y1="7.5" x2="12" y2="2" stroke="#111827" stroke-width="1.2"/>
@@ -420,13 +420,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
       ${(homeRedCardList.length > 0 || awayRedCardList.length > 0) ? `
         <div style="width: 100%; display: flex; align-items: flex-start; justify-content: space-between; margin-top: 8px;">
-          <div class="home-scorers" style="color: #fca5a5; font-size: 14px;">
+          <div class="home-scorers" style="color: #fca5a5; font-size: 17.5px;">
             ${homeRedCardList.map((s) => `<div>${s}</div>`).join('')}
           </div>
-          <div style="width: 36px; display: flex; justify-content: center; align-items: center; padding-top: 2px;">
-            <div style="width: 12px; height: 16px; background-color: #DC2626; border-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.8); transform: rotate(8deg);"></div>
+          <div style="width: 40px; display: flex; justify-content: center; align-items: center; padding-top: 2px;">
+            <div style="width: 14px; height: 19px; background-color: #DC2626; border-radius: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.8); transform: rotate(8deg);"></div>
           </div>
-          <div class="away-scorers" style="color: #fca5a5; font-size: 14px;">
+          <div class="away-scorers" style="color: #fca5a5; font-size: 17.5px;">
             ${awayRedCardList.map((s) => `<div>${s}</div>`).join('')}
           </div>
         </div>
