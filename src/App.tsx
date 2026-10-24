@@ -27,7 +27,7 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'graphic' | 'create' | 'live' | 'queue' | 'published'>('graphic');
+  const [activeTab, setActiveTab] = useState<'create' | 'live' | 'queue' | 'graphic' | 'published'>('create');
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
   const handleLogout = () => {
@@ -307,18 +307,7 @@ export default function App() {
         <main className={`flex-1 min-w-0 w-full mx-auto ${activeTab === 'graphic' ? 'max-w-5xl' : 'max-w-2xl'}`}>
           {/* Top Primary Tabs */}
           <div className="flex items-center gap-1.5 p-1 bg-[#EFECE6] border border-stone-300/80 rounded-2xl mb-3.5 text-xs font-bold uppercase tracking-wide overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setActiveTab('graphic')}
-              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
-                activeTab === 'graphic'
-                  ? 'bg-stone-900 text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>GRAPHIC</span>
-            </button>
-
+            {/* 1. CREATE POST */}
             <button
               onClick={() => setActiveTab('create')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
@@ -331,6 +320,7 @@ export default function App() {
               <span>CREATE POST</span>
             </button>
 
+            {/* 2. LIVE MATCHES */}
             <button
               onClick={() => setActiveTab('live')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
@@ -343,6 +333,7 @@ export default function App() {
               <span>LIVE MATCHES</span>
             </button>
 
+            {/* 3. SCHEDULED */}
             <button
               onClick={() => setActiveTab('queue')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
@@ -365,6 +356,20 @@ export default function App() {
               )}
             </button>
 
+            {/* 4. GRAPHIC */}
+            <button
+              onClick={() => setActiveTab('graphic')}
+              className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
+                activeTab === 'graphic'
+                  ? 'bg-stone-900 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>GRAPHIC</span>
+            </button>
+
+            {/* 5. PUBLISHED */}
             <button
               onClick={() => setActiveTab('published')}
               className={`flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 font-bold uppercase tracking-wide whitespace-nowrap ${
