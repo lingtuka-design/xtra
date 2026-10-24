@@ -235,16 +235,34 @@ export const fotmobService = {
       const wTokens = cleanTokens(winTokens);
       const lTokens = cleanTokens(loseTokens);
 
-      // 8. Smart Photo Selection: Prioritize Commentary pitch-side celebration photos
+      // 8. Smart Photo Selection: Prioritize real in-match player action & celebration photos
       let bestCandidate = candidates[0];
       let bestScore = -999;
 
       for (const cand of candidates) {
         let score = 0;
         // Commentary photos are live pitch-side photos from today's game
-        if (cand.source === 'commentary') score += 100;
+        if (cand.source === 'commentary') {
+          score += 100;
+          // Heavily prioritize real in-match action photos over static stadium/pre-match photos
+          if (typeof cand.elapsed === 'number' && cand.elapsed > 0) {
+            score += 150 + Math.min(cand.elapsed, 120); // Action photo bonus + latest minute boost
+          } else {
+            score -= 100; // Penalty for pre-match / static / scoreboard photos
+          }
+        }
 
         const info = `${cand.url} ${cand.title} ${cand.text}`.toLowerCase();
+
+        // Penalize static stadium / big screen / atmosphere photos
+        if (/stadium|bridge|evening|atmosphere|tunnel|warmup|scoreboard|screen|view/i.test(info)) {
+          score -= 90;
+        }
+
+        // Boost real match play / action keywords
+        if (/goal|celebrat|tackle|save|shot|header|control|battle|strike|run|fight|chance|effort|on top/i.test(info)) {
+          score += 40;
+        }
 
         // Check winner / leading mentions
         const hasWinner = wTokens.some((t) => info.includes(t));
@@ -253,11 +271,9 @@ export const fotmobService = {
         if (hasWinner) score += 90;
         if (hasLoser && !hasWinner) score -= 80;
 
-        if (info.includes('goal') || info.includes('celebrat')) score += 30;
-
-        // In draw, latest commentary photo is great
-        if (options.isDraw && cand.source === 'commentary') {
-          score += 20;
+        // In draw, latest in-match action photo of players on pitch
+        if (options.isDraw && cand.source === 'commentary' && typeof cand.elapsed === 'number' && cand.elapsed > 0) {
+          score += 30;
         }
 
         if (score > bestScore) {
@@ -374,7 +390,7 @@ export const fotmobService = {
         }).catch(() => null),
       ]);
 
-      const photoList: string[] = [];
+      const ratingsCandidates: PhotoCandidate[] = [];
 
       // Extract commentary photos
       if (ltcRes && ltcRes.ok) {
@@ -384,7 +400,13 @@ export const fotmobService = {
           for (const item of pulseItems) {
             const imgContent = item.Content?.find((c: any) => c.Type === 'image' && c.Media?.[0]?.Url);
             if (imgContent?.Media?.[0]?.Url) {
-              photoList.push(imgContent.Media[0].Url);
+              ratingsCandidates.push({
+                url: imgContent.Media[0].Url,
+                title: item.Content?.find((c: any) => c.Type === 'title')?.Translations?.en || '',
+                text: item.Content?.find((c: any) => c.Type === 'text')?.Translations?.en || '',
+                elapsed: item.Elapsed,
+                source: 'commentary',
+              });
             }
           }
         } catch {}
@@ -453,8 +475,13 @@ export const fotmobService = {
               ul.includes('heatmap') ||
               ul.includes('fallback') ||
               ul.includes('weather');
-            if (isAction && !isUi && !photoList.includes(u)) {
-              photoList.push(u);
+            if (isAction && !isUi && !ratingsCandidates.some((c) => c.url === u)) {
+              ratingsCandidates.push({
+                url: u,
+                title: '',
+                text: '',
+                source: 'content',
+              });
             }
           }
         } catch (e: any) {
@@ -462,13 +489,28 @@ export const fotmobService = {
         }
       }
 
-      const allPhotos = [...new Set(photoList)];
-      // Pick a fresh photo that is NOT the FT photo
-      let bestPhoto: string | undefined = undefined;
+      // Sort photo candidates to strongly prioritize real match action photos
+      ratingsCandidates.sort((a, b) => {
+        const score = (c: PhotoCandidate) => {
+          let s = 0;
+          if (c.source === 'commentary') {
+            s += 100;
+            if (typeof c.elapsed === 'number' && c.elapsed > 0) s += 150 + Math.min(c.elapsed, 120);
+            else s -= 100;
+          }
+          const info = `${c.title} ${c.text}`.toLowerCase();
+          if (/stadium|bridge|evening|atmosphere|tunnel|warmup|scoreboard|screen|view/i.test(info)) s -= 90;
+          if (/goal|celebrat|tackle|save|shot|header|control|battle|strike|run|fight|on top/i.test(info)) s += 40;
+          return s;
+        };
+        return score(b) - score(a);
+      });
+
+      const allPhotos = [...new Set(ratingsCandidates.map((c) => c.url))];
       const exclude = options.excludePhoto || '';
 
       const diffPhoto = allPhotos.find((p) => p !== exclude);
-      bestPhoto = diffPhoto || allPhotos[0];
+      const bestPhoto = diffPhoto || allPhotos[0];
 
       return {
         matchFound: true,
