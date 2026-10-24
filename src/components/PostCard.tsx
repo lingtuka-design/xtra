@@ -107,23 +107,14 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const formatQueueTime = (
-    mins?: number,
     scheduledTime?: string,
     isNight?: boolean
   ) => {
-    if (mins === undefined || mins === null) return 'Drip 45m';
-
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    const timeRemaining = h > 0 ? (m === 0 ? `${h}h` : `${h}h ${m}m`) : `${m}m`;
-
+    if (!scheduledTime) return 'Scheduled';
     if (isNight) {
-      return `Zing ${scheduledTime || '7:00 AM'} • ~${timeRemaining}`;
+      return `Zing ${scheduledTime}`;
     }
-
-    if (mins <= 1) return '~1 min left';
-    if (mins < 60) return `~${mins} mins left`;
-    return `~${timeRemaining} left (${scheduledTime || ''})`;
+    return `Scheduled: ${scheduledTime}`;
   };
 
   const handleCopy = () => {
@@ -318,17 +309,20 @@ export const PostCard: React.FC<PostCardProps> = ({
               </span>
 
               {isQueued && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-950 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full shadow-2xs">
+                <span
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-950 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full shadow-2xs"
+                  title={queueEstimatedMinutes ? `In-post hun tur: ${queueScheduledTime || ''} (~${queueEstimatedMinutes}m left)` : undefined}
+                >
                   <Clock className="w-3 h-3 text-amber-700 animate-pulse flex-shrink-0" />
                   {queuePosition ? (
                     <span>
                       {queuePosition === 1 ? 'Next in queue' : `Queue #${queuePosition}`}{' '}
                       <span className="font-bold text-amber-900">
-                        ({formatQueueTime(queueEstimatedMinutes, queueScheduledTime, isNightPaused)})
+                        ({formatQueueTime(queueScheduledTime, isNightPaused)})
                       </span>
                     </span>
                   ) : (
-                    <span>Scheduled</span>
+                    <span>Scheduled ({formatQueueTime(queueScheduledTime, isNightPaused)})</span>
                   )}
                 </span>
               )}

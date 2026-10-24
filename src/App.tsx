@@ -191,10 +191,9 @@ export default function App() {
       const istDate = new Date(scheduledMs + 5.5 * 3600 * 1000);
       const istH = istDate.getUTCHours();
       const istM = istDate.getUTCMinutes();
-      const ampm = istH >= 12 ? 'PM' : 'AM';
-      const displayH = istH % 12 === 0 ? 12 : istH % 12;
-      const displayM = istM.toString().padStart(2, '0');
-      const scheduledTimeStr = `${displayH}:${displayM} ${ampm}`;
+      const h24 = istH.toString().padStart(2, '0');
+      const m24 = istM.toString().padStart(2, '0');
+      const scheduledTimeStr = `${h24}:${m24}`;
 
       map.set(post.id, {
         position: index + 1,
