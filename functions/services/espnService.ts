@@ -35,6 +35,8 @@ export interface MatchEvent {
   teamId?: string;
   athleteName?: string;
   scoringPlay: boolean;
+  isOwnGoal?: boolean;
+  isPenalty?: boolean;
 }
 
 function formatEspnDate(d: Date): string {
@@ -172,15 +174,49 @@ export const espnService = {
     const away = comp?.competitors?.find((c: any) => c.homeAway === 'away');
 
     const keyEvents = data.keyEvents || [];
-    const events: MatchEvent[] = keyEvents.map((ke: any) => ({
-      id: String(ke.id),
-      type: ke.type?.type || 'event',
-      text: ke.text || '',
-      minute: ke.clock?.displayValue || '',
-      teamId: ke.team?.id,
-      athleteName: ke.participants?.[0]?.athlete?.displayName,
-      scoringPlay: Boolean(ke.scoringPlay),
-    }));
+    const events: MatchEvent[] = keyEvents.map((ke: any) => {
+      const typeType = (ke.type?.type || '').toLowerCase();
+      const typeText = (ke.type?.text || '').toLowerCase();
+      const eventText = (ke.text || '').toLowerCase();
+
+      const isOwnGoal =
+        typeType.includes('own-goal') ||
+        typeText.includes('own goal') ||
+        eventText.includes('own goal') ||
+        eventText.includes('(og)') ||
+        eventText.includes(' og ');
+
+      const isPenalty =
+        typeType.includes('penalty-kick') ||
+        typeText.includes('penalty') ||
+        (eventText.includes('penalty') && !eventText.includes('missed') && !eventText.includes('saved'));
+
+      let athleteName = ke.participants?.[0]?.athlete?.displayName || ke.participants?.[0]?.athlete?.shortName;
+      if (!athleteName && isOwnGoal) {
+        const ogMatch = ke.text?.match(/own goal by ([^,.]+)/i);
+        if (ogMatch) athleteName = ogMatch[1].trim();
+      }
+
+      if (athleteName) {
+        if (isOwnGoal && !athleteName.toLowerCase().includes('(og)')) {
+          athleteName = `${athleteName} (OG)`;
+        } else if (isPenalty && !athleteName.toLowerCase().includes('(p)') && !athleteName.toLowerCase().includes('(pen)')) {
+          athleteName = `${athleteName} (Pen)`;
+        }
+      }
+
+      return {
+        id: String(ke.id),
+        type: ke.type?.type || 'event',
+        text: ke.text || '',
+        minute: ke.clock?.displayValue || '',
+        teamId: ke.team?.id,
+        athleteName,
+        scoringPlay: Boolean(ke.scoringPlay),
+        isOwnGoal,
+        isPenalty,
+      };
+    });
 
     // Extract official confirmed lineups if available (Both teams must have 11 starters)
     let lineups: {

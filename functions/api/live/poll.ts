@@ -123,6 +123,19 @@ ${awayStarters.join(', ')}
 👉 _Inkhel WhatsApp Channel_`;
 }
 
+// Helper to format Scorer Name with (OG) or (Pen)
+function formatScorerDisplay(ev: any): string {
+  let name = ev.athleteName || 'Goal';
+  const isOg =
+    ev.isOwnGoal ||
+    (ev.text || '').toLowerCase().includes('own goal') ||
+    (ev.type || '').toLowerCase().includes('own-goal');
+  if (isOg && !name.toLowerCase().includes('(og)')) {
+    name = `${name} (OG)`;
+  }
+  return name;
+}
+
 // Helper to format Half Time post for Facebook
 // Helper to format grouped match scorers: e.g. "(Nicolas Jackson 6', 60')  (Erling Haaland 52')"
 function formatMatchScorersDisplay(goalEvents: any[], homeTeamId?: string, awayTeamId?: string): string {
@@ -133,7 +146,7 @@ function formatMatchScorersDisplay(goalEvents: any[], homeTeamId?: string, awayT
     if (teamGoals.length === 0) return '';
     const playerMap = new Map<string, string[]>();
     for (const ev of teamGoals) {
-      const name = ev.athleteName || 'Goal';
+      const name = formatScorerDisplay(ev);
       const m = ev.minute ? `${ev.minute.replace(/'/g, '')}'` : '';
       if (!playerMap.has(name)) playerMap.set(name, []);
       if (m) playerMap.get(name)!.push(m);
@@ -681,13 +694,15 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 finalAwayScore = 1;
               }
 
+              const scorerName = formatScorerDisplay(ev);
+
               // New Goal! Auto-Post to Inkhel Xtra Facebook + WhatsApp Channel!
               const fbCaption = formatGoalPost(
                 match.home_team,
                 match.away_team,
                 String(finalHomeScore),
                 String(finalAwayScore),
-                ev.athleteName,
+                scorerName,
                 ev.minute || 'Goal',
                 leagueName
               );
@@ -697,7 +712,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 match.away_team,
                 String(finalHomeScore),
                 String(finalAwayScore),
-                ev.athleteName,
+                scorerName,
                 ev.minute || 'Goal',
                 leagueName
               );
@@ -1051,12 +1066,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           const homeScorers = goalEvents
             .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : true))
-            .map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`)
+            .map((ev: any) => `${formatScorerDisplay(ev)} (${ev.minute})`)
             .join(',');
 
           const awayScorers = goalEvents
             .filter((ev: any) => (summary.awayTeamId && ev.teamId ? ev.teamId === summary.awayTeamId : false))
-            .map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`)
+            .map((ev: any) => `${formatScorerDisplay(ev)} (${ev.minute})`)
             .join(',');
 
           const fbHT = formatHalfTimePost(
@@ -1176,12 +1191,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           const homeScorers = goalEvents
             .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : true))
-            .map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`)
+            .map((ev: any) => `${formatScorerDisplay(ev)} (${ev.minute})`)
             .join(',');
 
           const awayScorers = goalEvents
             .filter((ev: any) => (summary.awayTeamId && ev.teamId ? ev.teamId === summary.awayTeamId : false))
-            .map((ev: any) => `${ev.athleteName || 'Goal'} (${ev.minute})`)
+            .map((ev: any) => `${formatScorerDisplay(ev)} (${ev.minute})`)
             .join(',');
 
           const fbFT = formatFullTimePost(
