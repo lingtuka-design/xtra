@@ -146,8 +146,17 @@ function formatMatchScorersDisplay(goalEvents: any[], homeTeamId?: string, awayT
     if (teamGoals.length === 0) return '';
     const playerMap = new Map<string, string[]>();
     for (const ev of teamGoals) {
-      const name = formatScorerDisplay(ev);
-      const m = ev.minute ? `${ev.minute.replace(/'/g, '')}'` : '';
+      const name = (ev.athleteName || 'Goal').replace(/\s*\((?:OG|Pen)\)/gi, '').trim();
+      const isOg =
+        ev.isOwnGoal ||
+        (ev.text || '').toLowerCase().includes('own goal') ||
+        (ev.type || '').toLowerCase().includes('own-goal');
+      const isPen =
+        ev.isPenalty ||
+        (ev.text || '').toLowerCase().includes('penalty');
+
+      const tag = isOg ? ' OG' : isPen ? ' Pen' : '';
+      const m = ev.minute ? `${ev.minute.replace(/'/g, '')}'${tag}` : (tag ? tag.trim() : '');
       if (!playerMap.has(name)) playerMap.set(name, []);
       if (m) playerMap.get(name)!.push(m);
     }
@@ -184,21 +193,19 @@ function formatHalfTimePost(
   stats: any,
   leagueName: string
 ): string {
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '';
+  const header = `⏰${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (HT)`;
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '\n';
   const statsSection = stats
     ? `📊 Match Stats (HT):
 Possession: ${stats.home.possession} - ${stats.away.possession}
 Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
 Corners: ${stats.home.corners} - ${stats.away.corners}
-Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
+Fouls: ${stats.home.fouls} - ${stats.away.fouls}
+`
     : '';
 
-  return `⏸️ HALF TIME
-
-${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
-
+  return `${header}
 ${scorersSection}${statsSection}🏆 ${leagueName}
-
 #InkhelxtraLive ${getLeagueHashtag(leagueName)} #HalfTime`;
 }
 
@@ -212,18 +219,18 @@ function formatWhatsAppHalfTime(
   stats: any,
   leagueName: string
 ): string {
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '';
+  const header = `⏰ *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (HT)*`;
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '\n';
   const statsSection = stats
     ? `📊 *Match Stats (HT):*
 Possession: ${stats.home.possession} - ${stats.away.possession}
 Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
 Corners: ${stats.home.corners} - ${stats.away.corners}
-Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
+Fouls: ${stats.home.fouls} - ${stats.away.fouls}
+`
     : '';
 
-  return `⏸️ *HALF TIME*
-
-*${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}*
+  return `${header}
 ${scorersSection}${statsSection}🏆 *${leagueName}*
 
 👉 _Inkhel WhatsApp Channel_`;
@@ -239,21 +246,19 @@ function formatFullTimePost(
   stats: any,
   leagueName: string
 ): string {
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '';
+  const header = `🚨${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (FT)`;
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '\n';
   const statsSection = stats
     ? `📊 Final Match Stats:
 Possession: ${stats.home.possession} - ${stats.away.possession}
 Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
 Corners: ${stats.home.corners} - ${stats.away.corners}
-Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
+Fouls: ${stats.home.fouls} - ${stats.away.fouls}
+`
     : '';
 
-  return `🏁 FULL TIME RESULT!
-
-${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}
-
+  return `${header}
 ${scorersSection}${statsSection}🏆 ${leagueName}
-
 #InkhelxtraLive ${getLeagueHashtag(leagueName)} #FullTime`;
 }
 
@@ -267,18 +272,18 @@ function formatWhatsAppFullTime(
   stats: any,
   leagueName: string
 ): string {
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '';
+  const header = `🚨 *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (FT)*`;
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '\n';
   const statsSection = stats
     ? `📊 *Final Match Stats:*
 Possession: ${stats.home.possession} - ${stats.away.possession}
 Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
 Corners: ${stats.home.corners} - ${stats.away.corners}
-Fouls: ${stats.home.fouls} - ${stats.away.fouls}\n\n`
+Fouls: ${stats.home.fouls} - ${stats.away.fouls}
+`
     : '';
 
-  return `🏁 *FULL TIME RESULT!*
-
-*${homeTeam} ${homeScore} - ${awayScore} ${awayTeam}*
+  return `${header}
 ${scorersSection}${statsSection}🏆 *${leagueName}*
 
 👉 _Inkhel WhatsApp Channel_`;
