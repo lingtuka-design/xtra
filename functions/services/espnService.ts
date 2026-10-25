@@ -56,26 +56,40 @@ export const espnService = {
     ];
 
     const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const dYesterday = formatEspnDate(yesterday);
+    const dToday = formatEspnDate(now);
     const dTomorrow = formatEspnDate(tomorrow);
+    const dDayAfter = formatEspnDate(dayAfter);
 
     const allMatches: EspnMatch[] = [];
     const seenIds = new Set<string>();
 
     for (const l of leagues) {
       const endpoints = [
-        `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard`,
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${dToday}`,
         `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${dTomorrow}`,
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${dDayAfter}`,
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${dYesterday}`,
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard`,
       ];
 
-      for (const endpoint of endpoints) {
-        try {
-          const res = await fetch(endpoint, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-          });
-          if (!res.ok) continue;
+      try {
+        const responses = await Promise.all(
+          endpoints.map((ep) =>
+            fetch(ep, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            })
+              .then((r) => (r.ok ? ((r.json() as unknown) as any) : null))
+              .catch(() => null)
+          )
+        );
 
-          const data = (await res.json()) as any;
+        for (const data of responses) {
+          if (!data) continue;
           const events = data.events || [];
 
           for (const ev of events) {
@@ -121,9 +135,9 @@ export const espnService = {
               },
             });
           }
-        } catch (err) {
-          console.warn(`ESPN fetch error for ${l.key} (${endpoint}):`, err);
         }
+      } catch (err: any) {
+        console.warn(`ESPN fetch error for ${l.key}:`, err.message);
       }
     }
 

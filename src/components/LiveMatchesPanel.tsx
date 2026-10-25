@@ -79,7 +79,7 @@ export const LiveMatchesPanel: React.FC = () => {
         if (res.ok) {
           const data = (await res.json()) as any;
           if (data.success && data.posted > 0) {
-            setStatusMessage(`⚽ Goal thar ${data.posted} post a ni ta! (Inkhel Xtra FB & WhatsApp-ah a lut nghal e)`);
+            setStatusMessage(`⚽ Goal thar ${data.posted} post a ni ta! (Inkhel Xtra FB, WhatsApp & Telegram-ah a lut nghal e)`);
             fetchMatches(true);
           }
         }
@@ -560,7 +560,7 @@ export const LiveMatchesPanel: React.FC = () => {
           </span>
         </span>
         <span>
-          Auto-posts to <strong>Inkhel Xtra FB</strong> + <strong>WhatsApp</strong>
+          Auto-posts to <strong>Inkhel Xtra FB</strong> + <strong>WhatsApp</strong> + <strong>Telegram</strong>
         </span>
       </div>
     </div>
