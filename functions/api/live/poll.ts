@@ -23,6 +23,9 @@ function getLeagueHashtag(leagueName: string): string {
   if (l.includes('indian') || l.includes('isl')) {
     return '#IndianSuperLeague #ISL';
   }
+  if (l.includes('liga') || l.includes('la liga')) {
+    return '#LaLiga #ElClasico';
+  }
   return '#Football';
 }
 
@@ -529,12 +532,16 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           ? 'uefa.champions'
           : match.league === 'ISL'
           ? 'ind.1'
+          : match.league === 'LL'
+          ? 'esp.1'
           : 'eng.1';
       const leagueName =
         match.league === 'UCL'
           ? 'UEFA Champions League'
           : match.league === 'ISL'
           ? 'Indian Super League'
+          : match.league === 'LL'
+          ? 'La Liga'
           : 'Premier League';
 
       let summary;
@@ -1030,9 +1037,9 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       if (summary.status.isHalftime) {
         const htEventId = `ht_${match.event_id}`;
         let claimed = false;
-        // 1. Tier 1 (FotMob) for PL and UCL at Half Time
+        // 1. Tier 1 (FotMob) for PL, La Liga and UCL at Half Time
         let htPhotoToUse = '';
-        if (match.league === 'PL' || match.league === 'UCL') {
+        if (match.league === 'PL' || match.league === 'UCL' || match.league === 'LL') {
           try {
             const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
             const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
@@ -1263,9 +1270,9 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           let chosenPhoto = '';
 
-          // 1. FotMob live match photo for PL & UCL
-          const isPlOrUcl = match.league === 'PL' || match.league === 'UCL';
-          if (isPlOrUcl) {
+          // 1. FotMob live match photo for PL, La Liga & UCL
+          const isTier1 = match.league === 'PL' || match.league === 'UCL' || match.league === 'LL';
+          if (isTier1) {
             try {
               const fotmobRes = await fotmobService.getMatchPhotos({
                 homeTeam: match.home_team,

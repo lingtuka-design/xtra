@@ -1,6 +1,6 @@
 export interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL' | 'ISL';
+  league: 'PL' | 'UCL' | 'ISL' | 'LL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -47,10 +47,11 @@ function formatEspnDate(d: Date): string {
 }
 
 export const espnService = {
-  // Fetch upcoming 24h schedule & active live matches for PL, UCL, and ISL (excluding finished FT matches)
+  // Fetch upcoming 24h schedule & active live matches for PL, La Liga (Barca & Real Madrid only), UCL, and ISL (excluding finished FT matches)
   async getFixtures(): Promise<EspnMatch[]> {
-    const leagues: { key: 'PL' | 'UCL' | 'ISL'; slug: string; name: string }[] = [
+    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL'; slug: string; name: string }[] = [
       { key: 'PL', slug: 'eng.1', name: 'PL' },
+      { key: 'LL', slug: 'esp.1', name: 'La Liga' },
       { key: 'UCL', slug: 'uefa.champions', name: 'UCL' },
       { key: 'ISL', slug: 'ind.1', name: 'ISL' },
     ];
@@ -105,6 +106,19 @@ export const espnService = {
             const home = comp.competitors?.find((c: any) => c.homeAway === 'home');
             const away = comp.competitors?.find((c: any) => c.homeAway === 'away');
             if (!home || !away) continue;
+
+            // For La Liga: Strictly only include Barcelona and Real Madrid matches with their opponents
+            if (l.key === 'LL') {
+              const isBarcaOrMadrid = (team: any) => {
+                const id = String(team?.id || '');
+                if (id === '83' || id === '86') return true;
+                const name = `${team?.displayName || ''} ${team?.name || ''} ${team?.shortDisplayName || ''}`.toLowerCase();
+                return name.includes('barcelona') || name.includes('barca') || name.includes('real madrid');
+              };
+
+              const hasTargetTeam = isBarcaOrMadrid(home.team) || isBarcaOrMadrid(away.team);
+              if (!hasTargetTeam) continue;
+            }
 
             seenIds.add(ev.id);
             allMatches.push({
