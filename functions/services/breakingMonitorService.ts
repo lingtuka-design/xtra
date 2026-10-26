@@ -12,7 +12,7 @@ interface RssItem {
 }
 
 export class BreakingMonitorService {
-  private parseRss(xml: string): RssItem[] {
+  private parseRss(xml: string, defaultSource: string): RssItem[] {
     const items: RssItem[] = [];
     const itemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/g);
     for (const m of itemMatches) {
@@ -25,7 +25,7 @@ export class BreakingMonitorService {
       const title = titleMatch ? titleMatch[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim() : '';
       const link = linkMatch ? linkMatch[1].trim() : '';
       const pubDate = pubDateMatch ? pubDateMatch[1].trim() : '';
-      const source = sourceMatch ? sourceMatch[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim() : '';
+      const source = sourceMatch ? sourceMatch[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim() : defaultSource;
 
       if (title) {
         items.push({ title, link, pubDate, source });
@@ -34,18 +34,19 @@ export class BreakingMonitorService {
     return items;
   }
 
-  private async fetchRss(url: string): Promise<RssItem[]> {
+  private async fetchRss(url: string, defaultSource: string): Promise<RssItem[]> {
     try {
       const res = await fetch(url, {
         headers: {
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          Accept: 'application/rss+xml, application/xml, text/xml',
+          Accept: 'application/rss+xml, application/xml, text/xml, */*',
         },
+        signal: AbortSignal.timeout(3000),
       });
       if (!res.ok) return [];
       const xml = await res.text();
-      return this.parseRss(xml);
+      return this.parseRss(xml, defaultSource);
     } catch {
       return [];
     }
@@ -54,17 +55,20 @@ export class BreakingMonitorService {
   public async checkBreakingNews(env: Env): Promise<{ checked: string[]; posted: string[] }> {
     const results = { checked: [] as string[], posted: [] as string[] };
 
-    // --- 1. MICHAEL CARRICK SACKING MONITOR ---
-    try {
-      const carrickItems = await this.fetchRss(
-        'https://news.google.com/rss/search?q=Michael+Carrick+Manchester+United+sacked+when:1d&hl=en-IN&gl=IN&ceid=IN:en'
-      );
-      results.checked.push(`carrick_items_${carrickItems.length}`);
+    // Fetch official trusted sports RSS feeds directly in the cloud (BBC & Sky Sports)
+    const [bbcItems, skyItems] = await Promise.all([
+      this.fetchRss('https://feeds.bbci.co.uk/sport/football/rss.xml', 'BBC Sport'),
+      this.fetchRss('https://www.skysports.com/rss/12040', 'Sky Sports'),
+    ]);
 
-      for (const item of carrickItems) {
+    const allItems = [...bbcItems, ...skyItems];
+    results.checked.push(`bbc_items_${bbcItems.length}`, `sky_items_${skyItems.length}`);
+
+    // --- 1. MICHAEL CARRICK SACKING CHECK ---
+    try {
+      for (const item of allItems) {
         const title = item.title;
-        // Strictly check if title confirms sacking (NOT hypothetical or future speculation)
-        const isSacked = /(sacked|dismissed|relieved of his duties|leaves Manchester United|parted company|parted ways)/i.test(
+        const isSacked = /(Michael Carrick|Carrick).*(sacked|dismissed|relieved of his duties|leaves Man Utd|part company|parted ways)/i.test(
           title
         );
         const isSpeculation = /\b(if|could|may|might|expect|expected to be|urged|option|candidate|target|should|favourite|odds|future|discussed)\b/i.test(
@@ -72,19 +76,31 @@ export class BreakingMonitorService {
         );
 
         if (isSacked && !isSpeculation) {
-          // Check if already posted
           const existing = await env.DB.prepare(
             "SELECT id FROM posts WHERE tweet_id = 'breaking_carrick_sacked'"
           ).first();
 
           if (!existing) {
-            console.log(`[Cloud Breaking Monitor] Carrick sacking confirmed: "${title}". Publishing...`);
-            const mizoCaption = await geminiTranslator.generateBreakingPost(
-              title,
-              'Michael Carrick sacked by Manchester United',
-              env.GEMINI_API_KEY,
-              env.GEMINI_API_KEY_2 || env.GEMINI_API_KEY_FALLBACK
-            );
+            console.log(`[Cloud Breaking Monitor] Carrick sacked confirmed by ${item.source}: "${title}". Publishing...`);
+
+            // Generate Mizo caption (Gemini or fallback template)
+            let mizoCaption = `🚨 BREAKING: Manchester United chuan an head coach Michael Carrick an ban ta!
+
+${item.source} tarlan danin, chet chhiat zawn em avangin United hierarchy chuan Michael Carrick hi an head coach hna aṭangin an chawlhtir ta a ni.
+
+#Inkhelxtra #ManUtd #MichaelCarrick #MUFC #Breaking`;
+
+            try {
+              const geminiRes = await geminiTranslator.generateBreakingPost(
+                title,
+                'Michael Carrick sacked by Manchester United',
+                env.GEMINI_API_KEY,
+                env.GEMINI_API_KEY_2 || env.GEMINI_API_KEY_FALLBACK
+              );
+              if (geminiRes && geminiRes !== title && geminiRes.length > 30) {
+                mizoCaption = geminiRes;
+              }
+            } catch {}
 
             const imageUrl =
               'https://images2.minutemediacdn.com/image/upload/c_crop,w_4500,h_2531,x_0,y_468/c_fill,w_1080,ar_16:9,f_auto,q_auto,g_auto/images%2FGettyImages%2Fmmsport%2F90min_en_international_web%2F01jc4b9p3770e70k38e4.jpg';
@@ -119,7 +135,6 @@ export class BreakingMonitorService {
               );
             }
 
-            // Record in D1
             await env.DB.prepare(
               `INSERT INTO posts (
                 tweet_id, author_handle, author_name, author_avatar,
@@ -153,76 +168,88 @@ export class BreakingMonitorService {
 
     // --- 2. BALLON D'OR 2026 MONITOR ---
     try {
-      const ballonItems = await this.fetchRss(
-        'https://news.google.com/rss/search?q=Ballon+d%27Or+2026+winner+OR+crowned+OR+announced+when:1d&hl=en-IN&gl=IN&ceid=IN:en'
-      );
-      results.checked.push(`ballon_items_${ballonItems.length}`);
-
       const awardsConfig = [
         {
           key: 'ballon_2026_kopa',
           name: 'Kopa Trophy (Best U-21 Player)',
-          match: /Kopa Trophy.*(winner|won by|wins|awarded|crowned)|(wins|awarded|claims|crowned).*Kopa Trophy/i,
-          reject: /(nominee|shortlist|favourite|prediction|how to watch|preview)/i,
+          match: /Kopa.*(wins|winner|won|awarded|crowned)/i,
+          reject: /(nominee|shortlist|favourite|prediction|how to watch|preview|power ranking)/i,
+          fallbackEmoji: '⭐',
+          fallbackTitle: "Kopa Trophy (U-21 player ṭha ber chawimawina)",
         },
         {
           key: 'ballon_2026_yashin',
           name: 'Yashin Trophy (Best Goalkeeper)',
-          match: /Yashin Trophy.*(winner|won by|wins|awarded|crowned)|(wins|awarded|claims|crowned).*Yashin Trophy/i,
-          reject: /(nominee|shortlist|favourite|prediction|how to watch|preview)/i,
+          match: /Yashin.*(wins|winner|won|awarded|crowned)/i,
+          reject: /(nominee|shortlist|favourite|prediction|how to watch|preview|power ranking)/i,
+          fallbackEmoji: '🧤',
+          fallbackTitle: "Yashin Trophy (Goalkeeper ṭha ber chawimawina)",
         },
         {
           key: 'ballon_2026_muller',
           name: 'Gerd Müller Trophy (Top Scorer)',
-          match: /(Gerd M[uü]ller|Muller Trophy).*(winner|won by|wins|awarded)|(wins|awarded).*Gerd M[uü]ller/i,
+          match: /(Gerd M[uü]ller|Muller).*Trophy.*(wins|winner|won|awarded)|(wins|awarded).*Gerd M[uü]ller/i,
           reject: /(nominee|shortlist|favourite|prediction|how to watch|preview)/i,
+          fallbackEmoji: '⚽',
+          fallbackTitle: "Gerd Müller Trophy (Scorer sang ber chawimawina)",
         },
         {
           key: 'ballon_2026_coach',
           name: "Men's Coach of the Year",
-          match: /(Men's )?Coach of the Year.*(Ballon|winner|won by|wins)|(wins|named).*(Men's )?Coach of the Year/i,
+          match: /(Men's )?Coach of the Year.*(wins|winner|won|named)|(wins|named).*(Men's )?Coach of the Year/i,
           reject: /(nominee|shortlist|favourite|prediction|how to watch|preview)/i,
+          fallbackEmoji: '👔',
+          fallbackTitle: "Coach of the Year (Coach ṭha ber chawimawina)",
         },
         {
           key: 'ballon_2026_women',
           name: "Women's Ballon d'Or Winner",
           match: /(Women's Ballon d'Or|Ballon d'Or F[eé]minin).*(winner|wins|won by|crowned)|(wins|claims|crowned).*(Women's Ballon d'Or|Ballon d'Or F[eé]minin)/i,
           reject: /(nominee|shortlist|favourite|prediction|who will win|how to watch|preview)/i,
+          fallbackEmoji: '🏆',
+          fallbackTitle: "Women's Ballon d'Or (Hmeichhe player ṭha ber)",
         },
         {
           key: 'ballon_2026_men',
           name: "Men's Ballon d'Or Winner (The Golden Ball)",
           match: /(wins|crowned|named|claims|awarded).*(Men's )?Ballon d'Or|(Men's )?Ballon d'Or.*(winner|won by)/i,
           reject: /(when|how to watch|nominees|power ranking|predictions|shortlist|favourite|schedule|odds|who will win|preview)/i,
+          fallbackEmoji: '🏆',
+          fallbackTitle: "2026 Men's Ballon d'Or Winner",
         },
       ];
 
       for (const award of awardsConfig) {
-        // Check if already posted in D1
         const existing = await env.DB.prepare('SELECT id FROM posts WHERE tweet_id = ?')
           .bind(award.key)
           .first();
 
-        if (existing) {
-          continue; // Already posted, skip
-        }
+        if (existing) continue;
 
-        // Look for matching confirmed article
-        const matchedItem = ballonItems.find(
+        const matchedItem = allItems.find(
           (item) => award.match.test(item.title) && !award.reject.test(item.title)
         );
 
         if (matchedItem) {
-          console.log(
-            `[Cloud Breaking Monitor] Found Ballon d'Or award "${award.name}": "${matchedItem.title}". Publishing...`
-          );
+          console.log(`[Cloud Breaking Monitor] Found award "${award.name}": "${matchedItem.title}". Publishing...`);
 
-          const mizoCaption = await geminiTranslator.generateBreakingPost(
-            matchedItem.title,
-            award.name,
-            env.GEMINI_API_KEY,
-            env.GEMINI_API_KEY_2 || env.GEMINI_API_KEY_FALLBACK
-          );
+          let mizoCaption = `${award.fallbackEmoji} BALLON D'OR 2026: ${award.fallbackTitle}
+
+London Palladium Theatre-ah kum 2026 Ballon d'Or ceremony neih mekah, ${matchedItem.title} tiin official-in puan a ni ta!
+
+#Inkhelxtra #BallondOr #BallondOr2026`;
+
+          try {
+            const geminiRes = await geminiTranslator.generateBreakingPost(
+              matchedItem.title,
+              award.name,
+              env.GEMINI_API_KEY,
+              env.GEMINI_API_KEY_2 || env.GEMINI_API_KEY_FALLBACK
+            );
+            if (geminiRes && geminiRes !== matchedItem.title && geminiRes.length > 30) {
+              mizoCaption = geminiRes;
+            }
+          } catch {}
 
           const imageUrl =
             'https://editorial.uefa.com/resources/0292-1c255d6778f6-500b9231f82d-1000/ballon_d_or_trophy.jpeg';
@@ -257,7 +284,6 @@ export class BreakingMonitorService {
             );
           }
 
-          // Insert into D1
           await env.DB.prepare(
             `INSERT INTO posts (
               tweet_id, author_handle, author_name, author_avatar,
