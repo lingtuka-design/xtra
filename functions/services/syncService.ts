@@ -2,14 +2,23 @@ import { Env, SyncResult } from '../types';
 import { facebookPoster } from './facebookPoster';
 import { whatsappPoster } from './whatsappPoster';
 import { telegramPoster } from './telegramPoster';
+import { breakingMonitorService } from './breakingMonitorService';
 
 export class SyncService {
   /**
-   * News scraping is permanently disabled.
-   * runSync only processes the scheduled Facebook & WhatsApp Queue Drip.
+   * runSync processes:
+   * 0. 24/7 Overnight Cloud Breaking News & Ballon d'Or Monitor
+   * 1. Scheduled Facebook & WhatsApp Queue Drip
    */
   public async runSync(env: Env, _targetSource?: string): Promise<SyncResult[]> {
     const results: SyncResult[] = [];
+
+    // --- 0. 24/7 Overnight Cloud Monitor (Runs in Cloudflare, even if user's PC is off) ---
+    try {
+      await breakingMonitorService.checkBreakingNews(env);
+    } catch (bmErr: any) {
+      console.warn('[Cloud Breaking Monitor] Run error:', bmErr.message);
+    }
 
     // Process the next queued item for Facebook & WhatsApp
     try {

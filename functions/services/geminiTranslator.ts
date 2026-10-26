@@ -33,6 +33,75 @@ export class GeminiTranslator {
   ];
 
   /**
+   * Free tier optimization: minimizes API calls and token consumption
+   */
+  public async generateBreakingPost(
+    headline: string,
+    category: string,
+    primaryKey?: string,
+    fallbackKey?: string
+  ): Promise<string> {
+    const keys = [
+      (primaryKey || '').trim(),
+      (fallbackKey || '').trim(),
+      this.defaultPrimaryKey,
+      this.defaultFallbackKey,
+    ].filter(Boolean) as string[];
+
+    if (keys.length === 0) {
+      return headline;
+    }
+
+    const systemPrompt = `You are the senior Mizo sports journalist for Inkhel Xtra (Facebook page & WhatsApp channel with over 150k followers).
+Your task is to write a high-impact, professional sports news post in natural, grammatically correct Mizo.
+
+Strict Mizo Language Rules:
+1. Human proper nouns must have '-n' or "-a'n" attached (e.g., Michael Carrick-a'n, Lamine Yamal-a'n, Kylian Mbappé-a'n, Emiliano Martínez-a'n, Aitana Bonmatí-i'n).
+2. Clean, engaging sports journalism style with relevant emojis (🚨, 🏆, 🧤, ⭐, ⚽, 👔).
+3. Do NOT translate word-for-word. Write fluent, natural Mizo sports journalism that fans love reading.
+4. Conclude with appropriate hashtags: #Inkhelxtra #BallondOr2026 (or #ManUtd #Carrick).
+5. Output ONLY the final Mizo text, nothing else. No quotation marks around the entire output.`;
+
+    const userPrompt = `Event Headline: ${headline}\nAward Category: ${category}\nWrite the Mizo post now:`;
+
+    for (const model of this.modelChain) {
+      for (const key of keys) {
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [{ text: systemPrompt }, { text: userPrompt }],
+                  },
+                ],
+                generationConfig: {
+                  temperature: 0.3,
+                  maxOutputTokens: 1000,
+                },
+              }),
+            }
+          );
+
+          if (!res.ok) continue;
+          const data = (await res.json()) as any;
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (text) {
+            return text;
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    return headline;
+  }
+
+  /**
    * Batch translate multiple tweets in a single Gemini request
    * Free tier optimization: minimizes API calls and token consumption
    */
