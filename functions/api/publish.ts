@@ -27,6 +27,26 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return Response.json({ success: false, error: 'Post not found' }, { status: 404 });
     }
 
+    if (post.facebook_status === 'published') {
+      return Response.json({ success: false, error: 'Post is already published' }, { status: 400 });
+    }
+
+    if (post.facebook_status === 'publishing') {
+      return Response.json({ success: false, error: 'Post is currently being published' }, { status: 409 });
+    }
+
+    // Atomic claim lock: ensures rapid double-clicks or collisions with the drip queue are rejected
+    const claimRes = await env.DB.prepare(
+      "UPDATE posts SET facebook_status = 'publishing', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND facebook_status NOT IN ('publishing', 'published')"
+    ).bind(post.id).run();
+
+    if (!claimRes.success || (claimRes.meta?.changes !== undefined && claimRes.meta.changes === 0)) {
+      return Response.json({ success: false, error: 'Post is already being processed by another worker' }, { status: 409 });
+    }
+
+    // Determine whether this was a scheduled queue item or a direct publish
+    const publishSource = post.facebook_status === 'queued' ? 'queue' : 'direct';
+
     // Call Meta Graph API
     const fbResult = await facebookPoster.postNews(
       post.mizo_translation,
@@ -46,9 +66,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         error: fbResult.error,
       }, { status: 500 });
     }
-
-    // Determine whether this was a scheduled queue item or a direct publish
-    const publishSource = post.facebook_status === 'queued' ? 'queue' : 'direct';
 
     // Update DB with published status & Facebook post ID
     await env.DB.prepare(

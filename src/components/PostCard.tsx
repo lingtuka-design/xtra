@@ -278,10 +278,11 @@ export const PostCard: React.FC<PostCardProps> = ({
   const isQueued = post.facebook_status === 'queued';
   const isPublished = post.facebook_status === 'published';
   const isFailed = post.facebook_status === 'failed';
+  const isPublishing = post.facebook_status === 'publishing';
 
   return (
     <article className={`border-b border-stone-200/80 transition-colors duration-150 p-4 sm:p-5 ${
-      isQueued ? 'bg-blue-50/50' : 'bg-white hover:bg-[#FAF9F5]'
+      isQueued || isPublishing ? 'bg-blue-50/50' : 'bg-white hover:bg-[#FAF9F5]'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -335,6 +336,13 @@ export const PostCard: React.FC<PostCardProps> = ({
                   ) : (
                     <span>Scheduled ({formatQueueTime(queueScheduledTime, isNightPaused)})</span>
                   )}
+                </span>
+              )}
+
+              {isPublishing && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-950 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full shadow-2xs">
+                  <Loader2 className="w-3 h-3 text-amber-700 animate-spin flex-shrink-0" />
+                  <span>In-post mek...</span>
                 </span>
               )}
 
@@ -513,7 +521,12 @@ export const PostCard: React.FC<PostCardProps> = ({
           {/* Facebook Curation Button */}
           {!isPublished && (
             <>
-              {isFailed ? (
+              {isPublishing ? (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-medium">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                  <span>Post mek a ni...</span>
+                </div>
+              ) : isFailed ? (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     onClick={() => handlePublishNow('both')}

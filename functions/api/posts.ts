@@ -38,11 +38,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const stmt = env.DB.prepare(query);
     const { results } = await stmt.bind(...params).all<PostRecord>();
 
-    // When fetching general feed, always include all queued posts so they never vanish from the queue tab
+    // When fetching general feed, always include all queued/publishing posts so they never vanish from the queue tab
     let finalData = results || [];
     if (!fbStatus && (!source || source === 'all') && (!search || !search.trim())) {
       const { results: allQueued } = await env.DB.prepare(
-        "SELECT * FROM posts WHERE facebook_status = 'queued' ORDER BY updated_at ASC, id ASC"
+        "SELECT * FROM posts WHERE facebook_status IN ('queued', 'publishing') ORDER BY updated_at ASC, id ASC"
       ).all<PostRecord>();
 
       if (allQueued && allQueued.length > 0) {
@@ -75,7 +75,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const countRes = await env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 
     // Also get queue count for quick badge display
-    const queueCountRes = await env.DB.prepare("SELECT COUNT(*) as count FROM posts WHERE facebook_status = 'queued'").first<{ count: number }>();
+    const queueCountRes = await env.DB.prepare("SELECT COUNT(*) as count FROM posts WHERE facebook_status IN ('queued', 'publishing')").first<{ count: number }>();
 
     return Response.json({
       success: true,
@@ -282,7 +282,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       action?: 'reorder_queue';
       direction?: 'up' | 'down';
       mizo_translation?: string;
-      facebook_status?: 'none' | 'queued' | 'published' | 'failed';
+      facebook_status?: 'none' | 'queued' | 'published' | 'failed' | 'publishing';
     };
 
     // Queue reordering action (Move up / Move down in drip schedule)

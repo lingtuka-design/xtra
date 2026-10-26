@@ -93,7 +93,7 @@ export default function App() {
 
   // Count scheduled/queued posts
   const queueCount = useMemo(() => {
-    return posts.filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'failed').length;
+    return posts.filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'failed' || p.facebook_status === 'publishing').length;
   }, [posts]);
 
   // Count published posts (latest 5)
@@ -116,7 +116,7 @@ export default function App() {
   // FIFO sorted queued posts for drip scheduling
   const queuedSortedList = useMemo(() => {
     return posts
-      .filter((p) => p.facebook_status === 'queued')
+      .filter((p) => p.facebook_status === 'queued' || p.facebook_status === 'publishing')
       .sort((a, b) => {
         const timeA = parseUtcMs(a.updated_at || a.created_at);
         const timeB = parseUtcMs(b.updated_at || b.created_at);
@@ -226,7 +226,7 @@ export default function App() {
   // Filter posts based on activeTab (Queue or Published)
   const filteredPosts = useMemo(() => {
     let list = posts.filter((post) => {
-      if (activeTab === 'queue' && post.facebook_status !== 'queued' && post.facebook_status !== 'failed') return false;
+      if (activeTab === 'queue' && post.facebook_status !== 'queued' && post.facebook_status !== 'failed' && post.facebook_status !== 'publishing') return false;
       if (activeTab === 'published' && post.facebook_status !== 'published') return false;
 
       const query = searchQuery.toLowerCase().trim();

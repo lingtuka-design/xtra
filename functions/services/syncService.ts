@@ -56,9 +56,14 @@ export class SyncService {
           return results;
         }
 
-        // Condition 1: Check when the last post was published via the queue (must have 45 mins gap)
+        // Auto-heal: Clean up any stale publishing lock (> 10 minutes old) so items never get permanently stuck
+        await env.DB.prepare(
+          "UPDATE posts SET facebook_status = 'failed', error_message = 'Publishing lock timed out' WHERE facebook_status = 'publishing' AND updated_at < datetime('now', '-10 minutes')"
+        ).run();
+
+        // Condition 1: Check when the last post was published or started publishing via the queue (must have 45 mins gap)
         const lastPublished = await env.DB.prepare(
-          "SELECT updated_at FROM posts WHERE facebook_status = 'published' AND (publish_source IS NULL OR publish_source != 'direct') ORDER BY updated_at DESC LIMIT 1"
+          "SELECT updated_at FROM posts WHERE facebook_status IN ('published', 'publishing') AND (publish_source IS NULL OR publish_source != 'direct') ORDER BY updated_at DESC LIMIT 1"
         ).first<{ updated_at: string }>();
 
         if (lastPublished && lastPublished.updated_at) {
@@ -89,7 +94,18 @@ export class SyncService {
             return results;
           }
 
-          console.log(`[FB Queue Drip] Auto-publishing queued post #${nextQueued.id} to Facebook & WhatsApp...`);
+          // ATOMIC CLAIM LOCK: Mark post as 'publishing' before initiating network calls.
+          // This strictly prevents concurrent cron workers or sync requests from processing the exact same post.
+          const claimRes = await env.DB.prepare(
+            "UPDATE posts SET facebook_status = 'publishing', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND facebook_status = 'queued'"
+          ).bind(nextQueued.id).run();
+
+          if (!claimRes.success || (claimRes.meta?.changes !== undefined && claimRes.meta.changes === 0)) {
+            console.log(`[FB Queue Drip] Post #${nextQueued.id} was already claimed by another concurrent worker. Skipping.`);
+            return results;
+          }
+
+          console.log(`[FB Queue Drip] Auto-publishing queued post #${nextQueued.id} to Facebook, WhatsApp & Telegram...`);
           const fbRes = await facebookPoster.postNews(
             nextQueued.mizo_translation,
             nextQueued.primary_image_url,
