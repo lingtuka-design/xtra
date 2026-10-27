@@ -3,7 +3,7 @@ import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Spar
 
 interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL' | 'ISL' | 'LL';
+  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -36,7 +36,7 @@ export const LiveMatchesPanel: React.FC = () => {
   const [matches, setMatches] = useState<EspnMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'LL' | 'UCL' | 'ISL'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'EFL' | 'LL' | 'UCL' | 'ISL'>('ALL');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -267,13 +267,10 @@ export const LiveMatchesPanel: React.FC = () => {
               <h2 className="text-base sm:text-lg font-black tracking-tight text-stone-900 flex items-center gap-1.5">
                 Live Goal Tracker
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full border border-rose-200">
-                  PL • La Liga • UCL • ISL
+                  PL • Carabao Cup • La Liga • UCL • ISL
                 </span>
               </h2>
             </div>
-            <p className="text-[11px] text-stone-500 font-medium">
-              Darkar 24 chhunga match khelh tur leh active mekte chauh a lang a, match zawh (FT) tawh chu mahniin an bo zel ang.
-            </p>
           </div>
         </div>
 
@@ -299,6 +296,16 @@ export const LiveMatchesPanel: React.FC = () => {
               }`}
             >
               PL
+            </button>
+            <button
+              onClick={() => setActiveFilter('EFL')}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                activeFilter === 'EFL'
+                  ? 'bg-white text-stone-950 shadow-2xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              League Cup
             </button>
             <button
               onClick={() => setActiveFilter('LL')}
@@ -359,7 +366,7 @@ export const LiveMatchesPanel: React.FC = () => {
       {loading && matches.length === 0 ? (
         <div className="py-8 text-center text-stone-500 text-xs">
           <RefreshCw className="w-5 h-5 mx-auto animate-spin mb-2 text-stone-400" />
-          <span>PL, UCL leh ISL fixtures kan la khawm mek...</span>
+          <span>Fixtures kan la khawm mek...</span>
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="py-8 text-center text-stone-500 text-xs space-y-1">
@@ -392,10 +399,12 @@ export const LiveMatchesPanel: React.FC = () => {
                           ? 'bg-emerald-100 text-emerald-800'
                           : match.league === 'LL'
                           ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                          : match.league === 'EFL'
+                          ? 'bg-teal-100 text-teal-900 border border-teal-200'
                           : 'bg-purple-100 text-purple-800'
                       }`}
                     >
-                      {match.league === 'LL' ? 'La Liga' : match.league}
+                      {match.league === 'LL' ? 'La Liga' : match.league === 'EFL' ? 'League Cup' : match.league}
                     </span>
                     {isLive && (
                       <span className="flex items-center gap-1 text-rose-600 bg-rose-100/90 px-1.5 py-0.2 rounded animate-pulse font-extrabold">

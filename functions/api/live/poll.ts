@@ -26,6 +26,9 @@ function getLeagueHashtag(leagueName: string): string {
   if (l.includes('liga') || l.includes('la liga')) {
     return '#LaLiga #ElClasico';
   }
+  if (l.includes('carabao') || l.includes('league cup') || l.includes('efl')) {
+    return '#CarabaoCup #EFLCup #LeagueCup';
+  }
   return '#Football';
 }
 
@@ -534,6 +537,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           ? 'ind.1'
           : match.league === 'LL'
           ? 'esp.1'
+          : match.league === 'EFL'
+          ? 'eng.league_cup'
           : 'eng.1';
       const leagueName =
         match.league === 'UCL'
@@ -542,6 +547,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           ? 'Indian Super League'
           : match.league === 'LL'
           ? 'La Liga'
+          : match.league === 'EFL'
+          ? 'Carabao Cup'
           : 'Premier League';
 
       let summary;
@@ -1039,7 +1046,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         let claimed = false;
         // 1. Tier 1 (FotMob) for PL, La Liga and UCL at Half Time
         let htPhotoToUse = '';
-        if (match.league === 'PL' || match.league === 'UCL' || match.league === 'LL') {
+        if (match.league === 'PL' || match.league === 'UCL' || match.league === 'LL' || match.league === 'EFL') {
           try {
             const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
             const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
@@ -1271,7 +1278,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           let chosenPhoto = '';
 
           // 1. FotMob live match photo for PL, La Liga & UCL
-          const isTier1 = match.league === 'PL' || match.league === 'UCL' || match.league === 'LL';
+          const isTier1 = match.league === 'PL' || match.league === 'UCL' || match.league === 'LL' || match.league === 'EFL';
           if (isTier1) {
             try {
               const fotmobRes = await fotmobService.getMatchPhotos({

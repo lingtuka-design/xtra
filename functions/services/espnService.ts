@@ -1,6 +1,6 @@
 export interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL' | 'ISL' | 'LL';
+  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -47,10 +47,11 @@ function formatEspnDate(d: Date): string {
 }
 
 export const espnService = {
-  // Fetch upcoming 24h schedule & active live matches for PL, La Liga (Barca & Real Madrid only), UCL, and ISL (excluding finished FT matches)
+  // Fetch upcoming 24h schedule & active live matches for PL, Carabao Cup, La Liga (Barca & Real Madrid only), UCL, and ISL (excluding finished FT matches)
   async getFixtures(): Promise<EspnMatch[]> {
-    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL'; slug: string; name: string }[] = [
+    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL'; slug: string; name: string }[] = [
       { key: 'PL', slug: 'eng.1', name: 'PL' },
+      { key: 'EFL', slug: 'eng.league_cup', name: 'League Cup' },
       { key: 'LL', slug: 'esp.1', name: 'La Liga' },
       { key: 'UCL', slug: 'uefa.champions', name: 'UCL' },
       { key: 'ISL', slug: 'ind.1', name: 'ISL' },
