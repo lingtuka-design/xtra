@@ -2,6 +2,7 @@ import { Env, PostRecord } from '../types';
 import { facebookPoster } from '../services/facebookPoster';
 import { whatsappPoster } from '../services/whatsappPoster';
 import { telegramPoster } from '../services/telegramPoster';
+import { reorderQueue } from '../services/queueService';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
@@ -286,82 +287,14 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     };
 
     // Queue reordering action (Move up / Move down in drip schedule)
-    if (body.action === 'reorder_queue') {
-      if (!body.id || !body.direction) {
-        return Response.json({ success: false, error: 'Post ID and direction are required' }, { status: 400 });
-      }
-
-      // Query all queued posts ordered by FIFO
-      const { results } = await env.DB.prepare(
-        "SELECT id, updated_at, created_at FROM posts WHERE facebook_status = 'queued' ORDER BY updated_at ASC, id ASC"
-      ).all<{ id: number; updated_at: string; created_at: string }>();
-
-      const list = results || [];
-      const currentIndex = list.findIndex((p) => p.id === body.id);
-      if (currentIndex === -1) {
-        return Response.json({ success: false, error: 'Post not found in queue' }, { status: 404 });
-      }
-
-      const targetIndex = body.direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      if (targetIndex < 0 || targetIndex >= list.length) {
-        return Response.json({ success: true, message: 'Already at queue boundary' });
-      }
-
-      const current = list[currentIndex];
-      const target = list[targetIndex];
-
-      const parseSqliteUtc = (dateStr?: string | null): number => {
-        if (!dateStr) return 0;
-        const iso = dateStr.includes('T')
-          ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z')
-          : dateStr.replace(' ', 'T') + 'Z';
-        const t = new Date(iso).getTime();
-        return isNaN(t) ? 0 : t;
-      };
-
-      const formatSqliteUtc = (ms: number): string => {
-        const d = new Date(ms);
-        return d.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
-      };
-
-      const tCurrent = parseSqliteUtc(current.updated_at || current.created_at);
-      const tTarget = parseSqliteUtc(target.updated_at || target.created_at);
-
-      let newCurrentTime: string;
-      let newTargetTime: string;
-
-      if (body.direction === 'up') {
-        if (tCurrent > tTarget) {
-          newCurrentTime = target.updated_at || formatSqliteUtc(tTarget);
-          newTargetTime = current.updated_at || formatSqliteUtc(tCurrent);
-        } else {
-          newCurrentTime = formatSqliteUtc(tTarget - 1000);
-          newTargetTime = target.updated_at || formatSqliteUtc(tTarget);
-        }
-      } else {
-        if (tTarget > tCurrent) {
-          newCurrentTime = target.updated_at || formatSqliteUtc(tTarget);
-          newTargetTime = current.updated_at || formatSqliteUtc(tCurrent);
-        } else {
-          newTargetTime = formatSqliteUtc(tCurrent - 1000);
-          newCurrentTime = current.updated_at || formatSqliteUtc(tCurrent);
-        }
-      }
-
-      await env.DB.batch([
-        env.DB.prepare('UPDATE posts SET updated_at = ? WHERE id = ?').bind(newCurrentTime, current.id),
-        env.DB.prepare('UPDATE posts SET updated_at = ? WHERE id = ?').bind(newTargetTime, target.id),
-      ]);
-
-      const updated = await env.DB.prepare(
-        'SELECT * FROM posts WHERE id IN (?, ?)'
-      ).bind(current.id, target.id).all<PostRecord>();
-
-      return Response.json({
-        success: true,
-        message: `Post #${current.id} moved ${body.direction} in queue`,
-        updatedPosts: updated.results || [],
+    if (body.action === 'reorder_queue' || (body as any).action === 'swap_queue_order') {
+      const reorderRes = await reorderQueue(env.DB, {
+        id: body.id,
+        direction: body.direction,
+        postAId: (body as any).postAId,
+        postBId: (body as any).postBId,
       });
+      return Response.json(reorderRes);
     }
 
     if (!body.id) {

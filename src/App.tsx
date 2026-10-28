@@ -271,30 +271,54 @@ export default function App() {
     const currentPost = queuedSortedList[currentIndex];
     const targetPost = queuedSortedList[targetIndex];
 
-    const currentPostTime = currentPost.updated_at || currentPost.created_at;
-    const targetPostTime = targetPost.updated_at || targetPost.created_at;
+    const tCurrent = parseUtcMs(currentPost.updated_at || currentPost.created_at);
+    const tTarget = parseUtcMs(targetPost.updated_at || targetPost.created_at);
+
+    let newCurrentMs = tTarget;
+    let newTargetMs = tCurrent;
+
+    if (direction === 'up' && newCurrentMs >= newTargetMs) {
+      newCurrentMs = newTargetMs - 2000;
+    } else if (direction === 'down' && newCurrentMs <= newTargetMs) {
+      newCurrentMs = newTargetMs + 2000;
+    }
+
+    const newCurrentIso = new Date(newCurrentMs).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+    const newTargetIso = new Date(newTargetMs).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
 
     setPosts((prev) =>
       prev.map((p) => {
-        if (p.id === currentPost.id) return { ...p, updated_at: targetPostTime };
-        if (p.id === targetPost.id) return { ...p, updated_at: currentPostTime };
+        if (p.id === currentPost.id) return { ...p, updated_at: newCurrentIso };
+        if (p.id === targetPost.id) return { ...p, updated_at: newTargetIso };
         return p;
       })
     );
 
     try {
-      await fetch('/api/publish', {
-        method: 'POST',
+      const res = await fetch('/api/posts', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'swap_queue_order',
-          postAId: currentPost.id,
-          postBId: targetPost.id,
+          id,
+          action: 'reorder_queue',
+          direction,
         }),
       });
-      fetchPosts(true);
+      if (!res.ok) {
+        // Fallback for compatibility
+        await fetch('/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'swap_queue_order',
+            postAId: currentPost.id,
+            postBId: targetPost.id,
+          }),
+        });
+      }
+      await fetchPosts(true);
     } catch {
-      fetchPosts(true);
+      await fetchPosts(true);
     }
   };
 

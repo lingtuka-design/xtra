@@ -2,12 +2,24 @@ import { Env, PostRecord } from '../types';
 import { facebookPoster } from '../services/facebookPoster';
 import { whatsappPoster } from '../services/whatsappPoster';
 import { telegramPoster } from '../services/telegramPoster';
+import { reorderQueue } from '../services/queueService';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
   try {
-    const body = (await request.json()) as { id: number; skip_whatsapp?: boolean; skip_telegram?: boolean };
+    const body = (await request.json()) as any;
+
+    // Handle queue reordering if dispatched to /api/publish
+    if (body.action === 'swap_queue_order' || body.action === 'reorder_queue') {
+      const res = await reorderQueue(env.DB, {
+        id: body.id,
+        direction: body.direction,
+        postAId: body.postAId,
+        postBId: body.postBId,
+      });
+      return Response.json(res);
+    }
 
     if (!body.id) {
       return Response.json({ success: false, error: 'Post ID is required' }, { status: 400 });
