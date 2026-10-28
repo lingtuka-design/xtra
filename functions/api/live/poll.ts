@@ -675,7 +675,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       if (!isResultsOnly) {
         for (let i = 0; i < summary.events.length; i++) {
           const ev = summary.events[i];
-          if (ev.type.toLowerCase().includes('goal') || ev.scoringPlay) {
+          if (!ev.isShootout && (ev.type.toLowerCase().includes('goal') || ev.scoringPlay)) {
             // Atomic claim: Try inserting lock into D1 first.
             let claimed = false;
             try {

@@ -37,6 +37,7 @@ export interface MatchEvent {
   scoringPlay: boolean;
   isOwnGoal?: boolean;
   isPenalty?: boolean;
+  isShootout?: boolean;
 }
 
 function formatEspnDate(d: Date): string {
@@ -215,17 +216,25 @@ export const espnService = {
       const typeText = (ke.type?.text || '').toLowerCase();
       const eventText = (ke.text || '').toLowerCase();
 
+      const isShootout =
+        typeType.includes('shootout') ||
+        typeText.includes('shootout') ||
+        eventText.includes('shootout') ||
+        typeType.includes('penalty-shootout');
+
       const isOwnGoal =
-        typeType.includes('own-goal') ||
-        typeText.includes('own goal') ||
-        eventText.includes('own goal') ||
-        eventText.includes('(og)') ||
-        eventText.includes(' og ');
+        !isShootout &&
+        (typeType.includes('own-goal') ||
+          typeText.includes('own goal') ||
+          eventText.includes('own goal') ||
+          eventText.includes('(og)') ||
+          eventText.includes(' og '));
 
       const isPenalty =
-        typeType.includes('penalty-kick') ||
-        typeText.includes('penalty') ||
-        (eventText.includes('penalty') && !eventText.includes('missed') && !eventText.includes('saved'));
+        !isShootout &&
+        (typeType.includes('penalty-kick') ||
+          typeText.includes('penalty') ||
+          (eventText.includes('penalty') && !eventText.includes('missed') && !eventText.includes('saved')));
 
       let athleteName = ke.participants?.[0]?.athlete?.displayName || ke.participants?.[0]?.athlete?.shortName;
       if (!athleteName && isOwnGoal) {
@@ -233,7 +242,7 @@ export const espnService = {
         if (ogMatch) athleteName = ogMatch[1].trim();
       }
 
-      if (athleteName) {
+      if (athleteName && !isShootout) {
         if (isOwnGoal && !athleteName.toLowerCase().includes('(og)')) {
           athleteName = `${athleteName} (OG)`;
         } else if (isPenalty && !athleteName.toLowerCase().includes('(p)') && !athleteName.toLowerCase().includes('(pen)')) {
@@ -248,9 +257,10 @@ export const espnService = {
         minute: ke.clock?.displayValue || '',
         teamId: ke.team?.id,
         athleteName,
-        scoringPlay: Boolean(ke.scoringPlay),
+        scoringPlay: isShootout ? false : Boolean(ke.scoringPlay),
         isOwnGoal,
         isPenalty,
+        isShootout,
       };
     });
 
