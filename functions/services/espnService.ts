@@ -176,6 +176,13 @@ export const espnService = {
       isHalftime: boolean;
       isFullTime: boolean;
     };
+    shootout?: {
+      hasShootout: boolean;
+      home: string;
+      away: string;
+      homeWinner: boolean;
+      awayWinner: boolean;
+    };
     events: MatchEvent[];
     lineups?: {
       home: { team: string; formation?: string; starters: string[] };
@@ -339,10 +346,35 @@ export const espnService = {
       statusDesc.toLowerCase() === 'half time' ||
       shortDetail === 'HT';
 
+    const hasShootout =
+      statusName === 'STATUS_FINAL_PEN' ||
+      shortDetail === 'FT-Pens' ||
+      shortDetail === 'PENS' ||
+      shortDetail === 'PEN' ||
+      statusDesc.toLowerCase().includes('penalties') ||
+      statusDesc.toLowerCase().includes('shootout') ||
+      home?.shootoutScore !== undefined ||
+      away?.shootoutScore !== undefined;
+
+    const shootout =
+      hasShootout && (home?.shootoutScore !== undefined || away?.shootoutScore !== undefined)
+        ? {
+            hasShootout: true,
+            home: String(home?.shootoutScore ?? '0'),
+            away: String(away?.shootoutScore ?? '0'),
+            homeWinner: Boolean(home?.winner),
+            awayWinner: Boolean(away?.winner),
+          }
+        : undefined;
+
     const isFullTime =
       statusState === 'post' ||
       statusName === 'STATUS_FINAL' ||
+      statusName === 'STATUS_FINAL_PEN' ||
+      statusName === 'STATUS_FINAL_AET' ||
       shortDetail === 'FT' ||
+      shortDetail === 'FT-Pens' ||
+      shortDetail === 'AET' ||
       statusDesc.toLowerCase() === 'full time' ||
       statusDesc.toLowerCase() === 'final';
 
@@ -412,6 +444,7 @@ export const espnService = {
         isHalftime,
         isFullTime,
       },
+      shootout,
       events,
       lineups,
       stats,

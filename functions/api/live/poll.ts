@@ -250,10 +250,24 @@ function formatFullTimePost(
   awayScore: string,
   scorersText: string,
   stats: any,
-  leagueName: string
+  leagueName: string,
+  shootout?: { home: string; away: string; homeWinner: boolean; awayWinner: boolean }
 ): string {
-  const header = `🚨${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (FT)`;
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '\n';
+  let header = `🚨 ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (FT)`;
+  if (shootout) {
+    const winnerTeam = shootout.homeWinner
+      ? homeTeam
+      : shootout.awayWinner
+      ? awayTeam
+      : parseInt(shootout.home, 10) > parseInt(shootout.away, 10)
+      ? homeTeam
+      : awayTeam;
+    header += `\n🎯 (Penalties: ${homeTeam} ${shootout.home} - ${shootout.away} ${awayTeam})`;
+    if (winnerTeam) {
+      header += `\n🎯 ${winnerTeam}-te chuan penalty shootout-ah hnehna an chang!`;
+    }
+  }
+  const scorersSection = scorersText ? `\n⚽ ${scorersText}\n\n` : '\n';
   const statsSection = stats
     ? `📊 Final Match Stats:
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -276,10 +290,24 @@ function formatWhatsAppFullTime(
   awayScore: string,
   scorersText: string,
   stats: any,
-  leagueName: string
+  leagueName: string,
+  shootout?: { home: string; away: string; homeWinner: boolean; awayWinner: boolean }
 ): string {
-  const header = `🚨 *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (FT)*`;
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '\n';
+  let header = `🚨 *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (FT)*`;
+  if (shootout) {
+    const winnerTeam = shootout.homeWinner
+      ? homeTeam
+      : shootout.awayWinner
+      ? awayTeam
+      : parseInt(shootout.home, 10) > parseInt(shootout.away, 10)
+      ? homeTeam
+      : awayTeam;
+    header += `\n🎯 *(Penalties: ${homeTeam} ${shootout.home} - ${shootout.away} ${awayTeam})*`;
+    if (winnerTeam) {
+      header += `\n🎯 *${winnerTeam}-te chuan penalty shootout-ah hnehna an chang!*`;
+    }
+  }
+  const scorersSection = scorersText ? `\n⚽ ${scorersText}\n\n` : '\n';
   const statsSection = stats
     ? `📊 *Final Match Stats:*
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -1225,7 +1253,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             summary.score.away,
             scorersText,
             summary.stats,
-            leagueName
+            leagueName,
+            summary.shootout
           );
 
           const waFT = formatWhatsAppFullTime(
@@ -1235,8 +1264,24 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             summary.score.away,
             scorersText,
             summary.stats,
-            leagueName
+            leagueName,
+            summary.shootout
           );
+
+          // If shootout was already included with FT, mark pen event as posted
+          if (summary.shootout?.hasShootout) {
+            try {
+              await env.DB.prepare(
+                'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+              ).bind(
+                match.event_id,
+                `pen_${match.event_id}`,
+                'shootout',
+                'Pens',
+                `Shootout: ${summary.shootout.home}-${summary.shootout.away}`
+              ).run();
+            } catch {}
+          }
 
           const statsSummary = summary.stats
             ? `Possession: ${summary.stats.home.possession} - ${summary.stats.away.possession}  •  Shots (Target): ${summary.stats.home.shots}(${summary.stats.home.shotsOnTarget}) - ${summary.stats.away.shots}(${summary.stats.away.shotsOnTarget})`
@@ -1389,8 +1434,23 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
         }
 
-        // Auto untrack completed match (or wait for Ratings if track_ratings is enabled)
-        if (Number(match.track_ratings) === 1) {
+        // Auto untrack completed match (or wait for Shootout if cup match drew at 90m, or wait for Ratings)
+        const homeScoreNum = parseInt(summary.score.home || '0', 10);
+        const awayScoreNum = parseInt(summary.score.away || '0', 10);
+        const isDraw = homeScoreNum === awayScoreNum;
+        const isCupMatch =
+          match.league === 'EFL' ||
+          match.league === 'UCL' ||
+          match.league === 'UEL' ||
+          match.league === 'FA' ||
+          match.league === 'CDR';
+
+        if (isCupMatch && isDraw && !summary.shootout?.hasShootout) {
+          // Keep active to poll for upcoming penalty shootout
+          await env.DB.prepare(
+            'UPDATE live_tracked_matches SET status = "WAIT_SHOOTOUT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+          ).bind(match.event_id).run();
+        } else if (Number(match.track_ratings) === 1) {
           await env.DB.prepare(
             'UPDATE live_tracked_matches SET status = "FT_WAIT_RATINGS", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
           ).bind(match.event_id).run();
@@ -1399,6 +1459,158 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
           ).bind(match.event_id).run();
         }
+      }
+
+      // 4b. Check Dedicated Penalty Shootout Result (for matches that went to penalties after 90m FT)
+      if (summary.shootout?.hasShootout) {
+        const penEventId = `pen_${match.event_id}`;
+        let penClaimed = false;
+        try {
+          const insertLock = await env.DB.prepare(
+            'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+          ).bind(
+            match.event_id,
+            penEventId,
+            'shootout',
+            'Pens',
+            `Shootout: ${match.home_team} ${summary.shootout.home} - ${summary.shootout.away} ${match.away_team}`
+          ).run();
+          penClaimed = Boolean(insertLock.success);
+        } catch {
+          penClaimed = false;
+        }
+
+        if (penClaimed) {
+          const winnerTeam = summary.shootout.homeWinner
+            ? match.home_team
+            : summary.shootout.awayWinner
+            ? match.away_team
+            : parseInt(summary.shootout.home, 10) > parseInt(summary.shootout.away, 10)
+            ? match.home_team
+            : match.away_team;
+          const loserTeam = winnerTeam === match.home_team ? match.away_team : match.home_team;
+          const winnerPens = winnerTeam === match.home_team ? summary.shootout.home : summary.shootout.away;
+          const loserPens = winnerTeam === match.home_team ? summary.shootout.away : summary.shootout.home;
+
+          const fbShootout = `🎯 PENALTY SHOOTOUT RESULT! ⚽
+
+🚨 ${match.home_team} ${summary.score.home} - ${summary.score.away} ${match.away_team} (FT)
+🎯 Penalties: ${match.home_team} ${summary.shootout.home} - ${summary.shootout.away} ${match.away_team}
+
+${winnerTeam}-te chuan penalty shootout-ah ${winnerPens}-${loserPens} in hnehna an chang ta!
+
+🏆 ${leagueName}
+#InkhelxtraLive ${getLeagueHashtag(leagueName)} #PenaltyShootout #CarabaoCup #FullTime`;
+
+          const waShootout = `🎯 *PENALTY SHOOTOUT RESULT!* ⚽
+
+🚨 *${match.home_team} ${summary.score.home} - ${summary.score.away} ${match.away_team} (FT)*
+🎯 *Penalties: ${match.home_team} ${summary.shootout.home} - ${summary.shootout.away} ${match.away_team}*
+
+*${winnerTeam}*-te chuan penalty shootout-ah ${winnerPens}-${loserPens} in hnehna an chang ta!
+
+🏆 *${leagueName}*
+
+👉 _Inkhel WhatsApp Channel_`;
+
+          const photoCandidates = summary.matchPhotos || (summary.matchImages || []).map((u: string) => ({ url: u, caption: '' }));
+          const shootoutPhoto =
+            photoCandidates[0]?.url ||
+            buildCardImageUrl({
+              home: match.home_team,
+              away: match.away_team,
+              homeScore: summary.score.home,
+              awayScore: summary.score.away,
+              homeLogo: match.home_logo,
+              awayLogo: match.away_logo,
+              status: 'FT',
+              leagueName,
+              homeScorers: '',
+              awayScorers: '',
+              stats: summary.stats,
+              channel: 'fb',
+            });
+
+          if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+            try {
+              await facebookPoster.postNews(fbShootout, shootoutPhoto, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+            } catch (fbErr: any) {
+              console.error('FB Shootout error:', fbErr.message);
+            }
+          }
+
+          try {
+            await whatsappPoster.postNews(
+              waShootout,
+              shootoutPhoto,
+              env.WHATSAPP_API_TOKEN,
+              env.WHATSAPP_CHANNEL_ID,
+              env.WHATSAPP_API_URL
+            );
+          } catch (waErr: any) {
+            console.error('WA Shootout error:', waErr.message);
+          }
+
+          try {
+            await telegramPoster.postNews(
+              toTelegramCaption(waShootout),
+              shootoutPhoto,
+              env.TELEGRAM_BOT_TOKEN,
+              env.TELEGRAM_CHANNEL_ID
+            );
+          } catch (tgErr: any) {
+            console.error('Telegram Shootout error:', tgErr.message);
+          }
+
+          totalPosted++;
+          logDetails.push(`Penalty Shootout result posted: ${match.home_team} vs ${match.away_team}`);
+
+          // Now deactivate or transition to FT_WAIT_RATINGS
+          if (Number(match.track_ratings) === 1) {
+            await env.DB.prepare(
+              'UPDATE live_tracked_matches SET status = "FT_WAIT_RATINGS", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+            ).bind(match.event_id).run();
+          } else {
+            await env.DB.prepare(
+              'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+            ).bind(match.event_id).run();
+          }
+        }
+      }
+
+      // 4c. Safety guard for matches waiting for Shootout or Ratings
+      if (match.status === 'WAIT_SHOOTOUT' && !summary.shootout?.hasShootout) {
+        try {
+          const ftRow = await env.DB.prepare(
+            'SELECT created_at FROM posted_match_events WHERE event_id = ? AND match_event_id = ?'
+          ).bind(match.event_id, `ft_${match.event_id}`).first<{ created_at: string }>();
+          if (ftRow?.created_at) {
+            const ftTime = new Date(ftRow.created_at).getTime();
+            const elapsedMins = (Date.now() - ftTime) / 60000;
+            if (elapsedMins > 45) {
+              await env.DB.prepare(
+                'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+              ).bind(match.event_id).run();
+            }
+          }
+        } catch {}
+      }
+
+      if (match.status === 'FT_WAIT_RATINGS') {
+        try {
+          const ftRow = await env.DB.prepare(
+            'SELECT created_at FROM posted_match_events WHERE event_id = ? AND match_event_id = ?'
+          ).bind(match.event_id, `ft_${match.event_id}`).first<{ created_at: string }>();
+          if (ftRow?.created_at) {
+            const ftTime = new Date(ftRow.created_at).getTime();
+            const elapsedMins = (Date.now() - ftTime) / 60000;
+            if (elapsedMins > 15) {
+              await env.DB.prepare(
+                'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+              ).bind(match.event_id).run();
+            }
+          }
+        } catch {}
       }
 
       // 5. Check Player Ratings (if match.track_ratings === 1 and at least 1 minute has passed since Full Time)
