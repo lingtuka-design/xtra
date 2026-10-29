@@ -105,6 +105,14 @@ export const espnService = {
             // Automatically hide/exclude full time matches as requested
             if (state === 'post') continue;
 
+            // Strictly only include matches that are currently live OR within the upcoming 48 hours window
+            const matchTime = new Date(ev.date).getTime();
+            const minWindow = now.getTime() - 4 * 60 * 60 * 1000; // allow recently started active matches
+            const maxWindow = now.getTime() + 48 * 60 * 60 * 1000;
+            if (state !== 'in' && (matchTime < minWindow || matchTime > maxWindow)) {
+              continue;
+            }
+
             const home = comp.competitors?.find((c: any) => c.homeAway === 'home');
             const away = comp.competitors?.find((c: any) => c.homeAway === 'away');
             if (!home || !away) continue;

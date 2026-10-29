@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star } from 'lucide-react';
+import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star, Calendar } from 'lucide-react';
 
 interface EspnMatch {
   id: string;
@@ -226,6 +226,13 @@ export const LiveMatchesPanel: React.FC = () => {
         return false;
       }
 
+      // Strictly only include matches that are currently live OR within the 48-hour window
+      const matchTime = new Date(m.date).getTime();
+      const nowTime = Date.now();
+      const isLive = m.statusState === 'in';
+      const isWithin48h = isLive || (matchTime >= nowTime - 4 * 3600 * 1000 && matchTime <= nowTime + 48 * 3600 * 1000);
+      if (!isWithin48h) return false;
+
       if (activeFilter === 'ALL') return true;
       return m.league === activeFilter;
     })
@@ -234,6 +241,23 @@ export const LiveMatchesPanel: React.FC = () => {
       if (b.statusState === 'in' && a.statusState !== 'in') return 1;
       return new Date(a.date).getTime() - new Date(b.date).getTime();
     });
+
+  const todayStr = new Date().toDateString();
+  const tomorrowStr = new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
+
+  const liveMatches = filteredMatches.filter((m) => m.statusState === 'in');
+  const todayMatches = filteredMatches.filter(
+    (m) => m.statusState !== 'in' && new Date(m.date).toDateString() === todayStr
+  );
+  const tomorrowMatches = filteredMatches.filter(
+    (m) => m.statusState !== 'in' && new Date(m.date).toDateString() === tomorrowStr
+  );
+  const otherUpcomingMatches = filteredMatches.filter(
+    (m) =>
+      m.statusState !== 'in' &&
+      new Date(m.date).toDateString() !== todayStr &&
+      new Date(m.date).toDateString() !== tomorrowStr
+  );
 
   const trackedCount = matches.filter((m) => m.isTracked).length;
 
@@ -252,6 +276,201 @@ export const LiveMatchesPanel: React.FC = () => {
     } catch {
       return '';
     }
+  };
+
+  const renderMatchCard = (match: EspnMatch) => {
+    const isLive = match.statusState === 'in';
+    const isFT = match.statusState === 'post';
+
+    return (
+      <div
+        key={match.id}
+        className={`p-3 rounded-xl border transition-all select-none flex items-center justify-between gap-3 ${
+          match.isTracked
+            ? 'bg-rose-50/60 border-rose-300 shadow-xs'
+            : 'bg-[#FCFAF6] hover:bg-[#F7F4EE] border-stone-200/90'
+        }`}
+      >
+        {/* Match Teams Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase mb-1">
+            <span
+              className={`px-1.5 py-0.5 rounded font-black text-[10px] tracking-wide ${
+                match.league === 'UCL'
+                  ? 'bg-blue-100 text-blue-800'
+                  : match.league === 'ISL'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : match.league === 'LL'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                  : match.league === 'EFL'
+                  ? 'bg-teal-100 text-teal-900 border border-teal-200'
+                  : 'bg-purple-100 text-purple-800'
+              }`}
+            >
+              {match.league === 'LL' ? 'La Liga' : match.league === 'EFL' ? 'League Cup' : match.league}
+            </span>
+            {isLive && (
+              <span className="flex items-center gap-1 text-rose-600 bg-rose-100/90 px-1.5 py-0.2 rounded animate-pulse font-extrabold">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                LIVE {match.displayClock}
+              </span>
+            )}
+            {isFT && (
+              <span className="text-stone-500 bg-stone-200 px-1.5 py-0.2 rounded font-semibold">
+                FT
+              </span>
+            )}
+            {!isLive && !isFT && (
+              <span className="text-stone-500 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-stone-400" />
+                {formatMatchTime(match.date)}
+              </span>
+            )}
+          </div>
+
+          {/* Teams and Scores */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs font-bold text-stone-900">
+              <div className="flex items-center gap-1.5 min-w-0">
+                {match.homeTeam.logo ? (
+                  <img
+                    src={match.homeTeam.logo}
+                    alt=""
+                    className="w-4 h-4 object-contain shrink-0"
+                    loading="lazy"
+                  />
+                ) : null}
+                <span className="truncate">{match.homeTeam.name}</span>
+              </div>
+              {(isLive || isFT) && (
+                <span className="font-extrabold ml-2 text-stone-950 text-sm">
+                  {match.homeTeam.score}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-bold text-stone-900">
+              <div className="flex items-center gap-1.5 min-w-0">
+                {match.awayTeam.logo ? (
+                  <img
+                    src={match.awayTeam.logo}
+                    alt=""
+                    className="w-4 h-4 object-contain shrink-0"
+                    loading="lazy"
+                  />
+                ) : null}
+                <span className="truncate">{match.awayTeam.name}</span>
+              </div>
+              {(isLive || isFT) && (
+                <span className="font-extrabold ml-2 text-stone-950 text-sm">
+                  {match.awayTeam.score}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Track Mode Action Buttons */}
+        <div className="shrink-0 flex flex-col items-end gap-1.5 self-center">
+          <div className="flex items-center gap-1.5">
+            {/* Mode 1: Full Live */}
+            <button
+              type="button"
+              disabled={updatingId === match.id}
+              onClick={() =>
+                handleSetTrackMode(
+                  match,
+                  match.isTracked && match.trackMode === 'full' ? 'off' : 'full'
+                )
+              }
+              className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
+                match.isTracked && match.trackMode === 'full'
+                  ? 'bg-rose-600 text-white shadow-xs scale-102 ring-2 ring-rose-400'
+                  : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
+              }`}
+              title={
+                match.isTracked && match.trackMode === 'full'
+                  ? 'Click to turn off'
+                  : '🔥 Full Live: Goal tin, Lineup, VAR, HT & FT auto-posts'
+              }
+            >
+              {updatingId === match.id ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Flame
+                  className={`w-3.5 h-3.5 ${
+                    match.isTracked && match.trackMode === 'full'
+                      ? 'text-amber-200'
+                      : 'text-rose-500'
+                  }`}
+                />
+              )}
+              <span>Live</span>
+            </button>
+
+            {/* Mode 2: Results Only (HT & FT) */}
+            <button
+              type="button"
+              disabled={updatingId === match.id}
+              onClick={() =>
+                handleSetTrackMode(
+                  match,
+                  match.isTracked && match.trackMode === 'results_only' ? 'off' : 'results_only'
+                )
+              }
+              className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
+                match.isTracked && match.trackMode === 'results_only'
+                  ? 'bg-amber-600 text-white shadow-xs scale-102 ring-2 ring-amber-400'
+                  : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
+              }`}
+              title={
+                match.isTracked && match.trackMode === 'results_only'
+                  ? 'Click to turn off'
+                  : '📊 Results Only: Half Time & Full Time result chauh (Goal tin post lovin)'
+              }
+            >
+              {updatingId === match.id ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Clock
+                  className={`w-3.5 h-3.5 ${
+                    match.isTracked && match.trackMode === 'results_only'
+                      ? 'text-amber-100'
+                      : 'text-amber-600'
+                  }`}
+                />
+              )}
+              <span>HT/FT</span>
+            </button>
+          </div>
+
+          {/* Mode 3 / Addon: Player Ratings Checkbox */}
+          <button
+            type="button"
+            disabled={updatingId === match.id}
+            onClick={() => handleToggleRatings(match)}
+            className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
+              match.trackRatings
+                ? 'bg-amber-500 text-white border-amber-600 shadow-2xs font-extrabold ring-1 ring-amber-400'
+                : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
+            }`}
+            title={
+              match.trackRatings
+                ? '⭐ Player Ratings enabled (Click to turn off)'
+                : '⭐ Click to enable Player Ratings (Posts 1m after Full Time with fresh photo)'
+            }
+          >
+            <Star
+              className={`w-2.5 h-2.5 ${
+                match.trackRatings ? 'text-amber-100 fill-amber-100' : 'text-amber-500'
+              }`}
+            />
+            <span>Ratings</span>
+            {match.trackRatings && <CheckCircle2 className="w-2.5 h-2.5 text-white ml-0.5" />}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -370,205 +589,80 @@ export const LiveMatchesPanel: React.FC = () => {
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="py-8 text-center text-stone-500 text-xs space-y-1">
-          <p className="font-semibold text-stone-700">Vawiin/Naktukah match a awm rih lo e.</p>
-          <p className="text-[11px] text-stone-400">Matchday a thlen veleh fixtures a lo in-populate nghal ang.</p>
+          <p className="font-semibold text-stone-700">Darkar 48 chhunga match khelh tur a awm rih lo e.</p>
+          <p className="text-[11px] text-stone-400">Matchday a thlen hnaih veleh fixtures a lo in-populate nghal ang.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {filteredMatches.map((match) => {
-            const isLive = match.statusState === 'in';
-            const isFT = match.statusState === 'post';
-
-            return (
-              <div
-                key={match.id}
-                className={`p-3 rounded-xl border transition-all select-none flex items-center justify-between gap-3 ${
-                  match.isTracked
-                    ? 'bg-rose-50/60 border-rose-300 shadow-xs'
-                    : 'bg-[#FCFAF6] hover:bg-[#F7F4EE] border-stone-200/90'
-                }`}
-              >
-                {/* Match Teams Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase mb-1">
-                    <span
-                      className={`px-1.5 py-0.5 rounded font-black text-[10px] tracking-wide ${
-                        match.league === 'UCL'
-                          ? 'bg-blue-100 text-blue-800'
-                          : match.league === 'ISL'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : match.league === 'LL'
-                          ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                          : match.league === 'EFL'
-                          ? 'bg-teal-100 text-teal-900 border border-teal-200'
-                          : 'bg-purple-100 text-purple-800'
-                      }`}
-                    >
-                      {match.league === 'LL' ? 'La Liga' : match.league === 'EFL' ? 'League Cup' : match.league}
-                    </span>
-                    {isLive && (
-                      <span className="flex items-center gap-1 text-rose-600 bg-rose-100/90 px-1.5 py-0.2 rounded animate-pulse font-extrabold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-                        LIVE {match.displayClock}
-                      </span>
-                    )}
-                    {isFT && (
-                      <span className="text-stone-500 bg-stone-200 px-1.5 py-0.2 rounded font-semibold">
-                        FT
-                      </span>
-                    )}
-                    {!isLive && !isFT && (
-                      <span className="text-stone-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-stone-400" />
-                        {formatMatchTime(match.date)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Teams and Scores */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold text-stone-900">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {match.homeTeam.logo ? (
-                          <img
-                            src={match.homeTeam.logo}
-                            alt=""
-                            className="w-4 h-4 object-contain shrink-0"
-                            loading="lazy"
-                          />
-                        ) : null}
-                        <span className="truncate">{match.homeTeam.name}</span>
-                      </div>
-                      {(isLive || isFT) && (
-                        <span className="font-extrabold ml-2 text-stone-950 text-sm">
-                          {match.homeTeam.score}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs font-bold text-stone-900">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {match.awayTeam.logo ? (
-                          <img
-                            src={match.awayTeam.logo}
-                            alt=""
-                            className="w-4 h-4 object-contain shrink-0"
-                            loading="lazy"
-                          />
-                        ) : null}
-                        <span className="truncate">{match.awayTeam.name}</span>
-                      </div>
-                      {(isLive || isFT) && (
-                        <span className="font-extrabold ml-2 text-stone-950 text-sm">
-                          {match.awayTeam.score}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Track Mode Action Buttons */}
-                <div className="shrink-0 flex flex-col items-end gap-1.5 self-center">
-                  <div className="flex items-center gap-1.5">
-                    {/* Mode 1: Full Live */}
-                    <button
-                      type="button"
-                      disabled={updatingId === match.id}
-                      onClick={() =>
-                        handleSetTrackMode(
-                          match,
-                          match.isTracked && match.trackMode === 'full' ? 'off' : 'full'
-                        )
-                      }
-                      className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
-                        match.isTracked && match.trackMode === 'full'
-                          ? 'bg-rose-600 text-white shadow-xs scale-102 ring-2 ring-rose-400'
-                          : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
-                      }`}
-                      title={
-                        match.isTracked && match.trackMode === 'full'
-                          ? 'Click to turn off'
-                          : '🔥 Full Live: Goal tin, Lineup, VAR, HT & FT auto-posts'
-                      }
-                    >
-                      {updatingId === match.id ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Flame
-                          className={`w-3.5 h-3.5 ${
-                            match.isTracked && match.trackMode === 'full'
-                              ? 'text-amber-200'
-                              : 'text-rose-500'
-                          }`}
-                        />
-                      )}
-                      <span>Live</span>
-                    </button>
-
-                    {/* Mode 2: Results Only (HT & FT) */}
-                    <button
-                      type="button"
-                      disabled={updatingId === match.id}
-                      onClick={() =>
-                        handleSetTrackMode(
-                          match,
-                          match.isTracked && match.trackMode === 'results_only' ? 'off' : 'results_only'
-                        )
-                      }
-                      className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
-                        match.isTracked && match.trackMode === 'results_only'
-                          ? 'bg-amber-600 text-white shadow-xs scale-102 ring-2 ring-amber-400'
-                          : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
-                      }`}
-                      title={
-                        match.isTracked && match.trackMode === 'results_only'
-                          ? 'Click to turn off'
-                          : '📊 Results Only: Half Time & Full Time result chauh (Goal tin post lovin)'
-                      }
-                    >
-                      {updatingId === match.id ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Clock
-                          className={`w-3.5 h-3.5 ${
-                            match.isTracked && match.trackMode === 'results_only'
-                              ? 'text-amber-100'
-                              : 'text-amber-600'
-                          }`}
-                        />
-                      )}
-                      <span>HT/FT</span>
-                    </button>
-                  </div>
-
-                  {/* Mode 3 / Addon: Player Ratings Checkbox */}
-                  <button
-                    type="button"
-                    disabled={updatingId === match.id}
-                    onClick={() => handleToggleRatings(match)}
-                    className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
-                      match.trackRatings
-                        ? 'bg-amber-500 text-white border-amber-600 shadow-2xs font-extrabold ring-1 ring-amber-400'
-                        : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
-                    }`}
-                    title={
-                      match.trackRatings
-                        ? '⭐ Player Ratings enabled (Click to turn off)'
-                        : '⭐ Click to enable Player Ratings (Posts 1m after Full Time with fresh photo)'
-                    }
-                  >
-                    <Star
-                      className={`w-2.5 h-2.5 ${
-                        match.trackRatings ? 'text-amber-100 fill-amber-100' : 'text-amber-500'
-                      }`}
-                    />
-                    <span>Ratings</span>
-                    {match.trackRatings && <CheckCircle2 className="w-2.5 h-2.5 text-white ml-0.5" />}
-                  </button>
-                </div>
+        <div className="space-y-2">
+          {/* 1. Live Matches (if any) */}
+          {liveMatches.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[11px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg border border-rose-200 flex items-center gap-1.5 animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-rose-600" />
+                  Live Mek ({liveMatches.length})
+                </span>
+                <div className="h-px bg-stone-200 flex-1" />
               </div>
-            );
-          })}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {liveMatches.map(renderMatchCard)}
+              </div>
+            </div>
+          )}
+
+          {/* 2. Today's Matches */}
+          {todayMatches.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-800 px-2.5 py-1 rounded-lg border border-stone-200 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-stone-500" />
+                  Vawiin Match-te ({todayMatches.length})
+                </span>
+                <span className="text-xs text-stone-500 font-medium">
+                  {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', weekday: 'short' })}
+                </span>
+                <div className="h-px bg-stone-200 flex-1" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {todayMatches.map(renderMatchCard)}
+              </div>
+            </div>
+          )}
+
+          {/* 3. Tomorrow's Matches (Separated with clean top divider margin) */}
+          {tomorrowMatches.length > 0 && (
+            <div className={todayMatches.length > 0 || liveMatches.length > 0 ? "mt-7 pt-5 border-t border-stone-200" : "mb-6"}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider bg-amber-50 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                  Naktuk Match-te ({tomorrowMatches.length})
+                </span>
+                <span className="text-xs text-stone-500 font-medium">
+                  {new Date(Date.now() + 24 * 3600 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', weekday: 'short' })}
+                </span>
+                <div className="h-px bg-stone-200 flex-1" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {tomorrowMatches.map(renderMatchCard)}
+              </div>
+            </div>
+          )}
+
+          {/* 4. Other Upcoming Matches within 48h (if any) */}
+          {otherUpcomingMatches.length > 0 && (
+            <div className="mt-7 pt-5 border-t border-stone-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-700 px-2.5 py-1 rounded-lg border border-stone-200 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-stone-500" />
+                  Naktuk lehpek ({otherUpcomingMatches.length})
+                </span>
+                <div className="h-px bg-stone-200 flex-1" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {otherUpcomingMatches.map(renderMatchCard)}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
