@@ -1246,6 +1246,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             .map((ev: any) => `${formatScorerDisplay(ev)} (${ev.minute})`)
             .join(',');
 
+          const isShootoutConcluded = Boolean(summary.shootout?.hasShootout && summary.shootout.isFinal);
+
           const fbFT = formatFullTimePost(
             match.home_team,
             match.away_team,
@@ -1254,7 +1256,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             scorersText,
             summary.stats,
             leagueName,
-            summary.shootout
+            isShootoutConcluded ? summary.shootout : undefined
           );
 
           const waFT = formatWhatsAppFullTime(
@@ -1265,11 +1267,11 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             scorersText,
             summary.stats,
             leagueName,
-            summary.shootout
+            isShootoutConcluded ? summary.shootout : undefined
           );
 
           // If shootout was already included with FT, mark pen event as posted
-          if (summary.shootout?.hasShootout) {
+          if (isShootoutConcluded) {
             try {
               await env.DB.prepare(
                 'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
@@ -1278,7 +1280,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 `pen_${match.event_id}`,
                 'shootout',
                 'Pens',
-                `Shootout: ${summary.shootout.home}-${summary.shootout.away}`
+                `Shootout: ${summary.shootout!.home}-${summary.shootout!.away}`
               ).run();
             } catch {}
           }
@@ -1445,7 +1447,9 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           match.league === 'FA' ||
           match.league === 'CDR';
 
-        if (isCupMatch && isDraw && !summary.shootout?.hasShootout) {
+        const isShootoutConcluded = Boolean(summary.shootout?.hasShootout && summary.shootout.isFinal);
+
+        if (isCupMatch && isDraw && !isShootoutConcluded) {
           // Keep active to poll for upcoming penalty shootout
           await env.DB.prepare(
             'UPDATE live_tracked_matches SET status = "WAIT_SHOOTOUT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
@@ -1462,7 +1466,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       }
 
       // 4b. Check Dedicated Penalty Shootout Result (for matches that went to penalties after 90m FT)
-      if (summary.shootout?.hasShootout) {
+      // Strictly ONLY post when the shootout has completely concluded (isFinal === true)!
+      if (summary.shootout?.hasShootout && summary.shootout.isFinal) {
         const penEventId = `pen_${match.event_id}`;
         let penClaimed = false;
         try {
@@ -1579,7 +1584,7 @@ ${winnerTeam}-te chuan penalty shootout-ah ${winnerPens}-${loserPens} in hnehna 
       }
 
       // 4c. Safety guard for matches waiting for Shootout or Ratings
-      if (match.status === 'WAIT_SHOOTOUT' && !summary.shootout?.hasShootout) {
+      if (match.status === 'WAIT_SHOOTOUT' && (!summary.shootout?.hasShootout || !summary.shootout.isFinal)) {
         try {
           const ftRow = await env.DB.prepare(
             'SELECT created_at FROM posted_match_events WHERE event_id = ? AND match_event_id = ?'

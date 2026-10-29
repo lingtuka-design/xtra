@@ -179,6 +179,7 @@ export const espnService = {
     };
     shootout?: {
       hasShootout: boolean;
+      isFinal: boolean;
       home: string;
       away: string;
       homeWinner: boolean;
@@ -358,6 +359,7 @@ export const espnService = {
 
     const hasShootout =
       statusName === 'STATUS_FINAL_PEN' ||
+      statusName.includes('SHOOTOUT') ||
       shortDetail === 'FT-Pens' ||
       shortDetail === 'PENS' ||
       shortDetail === 'PEN' ||
@@ -366,10 +368,16 @@ export const espnService = {
       home?.shootoutScore !== undefined ||
       away?.shootoutScore !== undefined;
 
+    // A shootout is only FINAL when the shootout has completely concluded and winner is decided
+    const isShootoutFinal =
+      (statusState === 'post' || statusName === 'STATUS_FINAL_PEN' || shortDetail === 'FT-Pens') &&
+      (Boolean(home?.winner) || Boolean(away?.winner) || (Number(home?.shootoutScore || 0) > 0 || Number(away?.shootoutScore || 0) > 0));
+
     const shootout =
       hasShootout && (home?.shootoutScore !== undefined || away?.shootoutScore !== undefined)
         ? {
             hasShootout: true,
+            isFinal: isShootoutFinal,
             home: String(home?.shootoutScore ?? '0'),
             away: String(away?.shootoutScore ?? '0'),
             homeWinner: Boolean(home?.winner),
@@ -386,7 +394,8 @@ export const espnService = {
       shortDetail === 'FT-Pens' ||
       shortDetail === 'AET' ||
       statusDesc.toLowerCase() === 'full time' ||
-      statusDesc.toLowerCase() === 'final';
+      statusDesc.toLowerCase() === 'final' ||
+      (hasShootout && (statusName.includes('SHOOTOUT') || statusDesc.toLowerCase().includes('shootout') || shortDetail.includes('PEN')));
 
     // Extract match photos strictly from ESPN match recap article or verified match articles
     const matchImages: string[] = [];
