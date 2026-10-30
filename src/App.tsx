@@ -9,7 +9,7 @@ import { FixturesMakerPanel } from './components/FixturesMakerPanel';
 import { LoginModal } from './components/LoginModal';
 import { AnalyticsModal } from './components/AnalyticsModal';
 import { Post } from './types';
-import { Search, AlertCircle, ArrowUp, Clock, PenSquare, Radio, Sparkles } from 'lucide-react';
+import { Search, AlertCircle, ArrowUp, Clock, PenSquare, Radio, Sparkles, Moon } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
@@ -137,6 +137,14 @@ export default function App() {
       })[0];
   }, [posts]);
 
+  // Check if currently night pause (11 PM - 7 AM IST) for top-level banner & queue logic
+  const isNightPauseActive = useMemo(() => {
+    const istOffsetMs = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(Date.now() + istOffsetMs);
+    const istMins = istNow.getUTCHours() * 60 + istNow.getUTCMinutes();
+    return istMins < 7 * 60 || istMins >= 23 * 60;
+  }, []);
+
   // Map queue position & estimate with night pause awareness (11 PM - 7 AM IST)
   const queueInfoMap = useMemo(() => {
     const map = new Map<
@@ -152,30 +160,22 @@ export default function App() {
     const now = Date.now();
     const DRIP_INTERVAL_MS = 45 * 60 * 1000;
     const INITIAL_DELAY_MS = 5 * 60 * 1000;
+    const ACTIVE_START_MINS = 7 * 60; // 7:00 AM IST (420)
+    const ACTIVE_END_MINS = 23 * 60;  // 11:00 PM IST (1380)
+    const istOffsetMs = 5.5 * 60 * 60 * 1000;
+
+    const istNow = new Date(now + istOffsetMs);
+    const istNowTotalMins = istNow.getUTCHours() * 60 + istNow.getUTCMinutes();
+    const isCurrentlyNight = istNowTotalMins < ACTIVE_START_MINS || istNowTotalMins >= ACTIVE_END_MINS;
 
     const lastPubMs = lastPublished?.updated_at ? parseUtcMs(lastPublished.updated_at) : 0;
     const firstQueuedMs = queuedSortedList[0] ? parseUtcMs(queuedSortedList[0].updated_at || queuedSortedList[0].created_at) : 0;
 
-    let baseCursor = 0;
-    if (lastPubMs > 0) {
-      baseCursor = Math.max(baseCursor, lastPubMs + DRIP_INTERVAL_MS);
-    }
-    if (firstQueuedMs > 0) {
-      baseCursor = Math.max(baseCursor, firstQueuedMs + INITIAL_DELAY_MS);
-    }
-    if (baseCursor === 0) {
-      baseCursor = now;
-    }
-
     const pushPastNightPause = (timeMs: number): { scheduledMs: number; isNightPaused: boolean } => {
-      const istOffsetMs = 5.5 * 60 * 60 * 1000;
       const istDate = new Date(timeMs + istOffsetMs);
       const istHours = istDate.getUTCHours();
       const istMinutes = istDate.getUTCMinutes();
       const istTotalMinutes = istHours * 60 + istMinutes;
-
-      const ACTIVE_START_MINS = 7 * 60; // 7:00 AM IST
-      const ACTIVE_END_MINS = 23 * 60;  // 11:00 PM IST
 
       if (istTotalMinutes >= ACTIVE_END_MINS) {
         const minsToMidnight = 1440 - istTotalMinutes;
@@ -194,32 +194,52 @@ export default function App() {
       return { scheduledMs: timeMs, isNightPaused: false };
     };
 
+    let baseCursor = now;
+    if (isCurrentlyNight) {
+      // If we are currently in night pause, queue resumes at upcoming 7:00 AM IST
+      const { scheduledMs } = pushPastNightPause(now);
+      baseCursor = scheduledMs;
+    } else {
+      // During daytime active hours (7 AM - 11 PM IST):
+      let minReadyTime = 0;
+      if (lastPubMs > 0) {
+        minReadyTime = Math.max(minReadyTime, lastPubMs + DRIP_INTERVAL_MS);
+      }
+      if (firstQueuedMs > 0) {
+        minReadyTime = Math.max(minReadyTime, firstQueuedMs + INITIAL_DELAY_MS);
+      }
+      baseCursor = Math.max(now, minReadyTime);
+    }
+
     let cursor = baseCursor;
     queuedSortedList.forEach((post, index) => {
       const { scheduledMs, isNightPaused } = pushPastNightPause(cursor);
       const diffMs = Math.max(0, scheduledMs - now);
       const estimatedMinutes = Math.max(1, Math.round(diffMs / 60000));
 
-      const istDate = new Date(scheduledMs + 5.5 * 3600 * 1000);
+      const istDate = new Date(scheduledMs + istOffsetMs);
       const istH = istDate.getUTCHours();
       const istM = istDate.getUTCMinutes();
       const h24 = istH.toString().padStart(2, '0');
       const m24 = istM.toString().padStart(2, '0');
 
-      const isDueNow = scheduledMs <= now;
+      const isDueNow = scheduledMs <= now && !isCurrentlyNight;
       let scheduledTimeStr = `${h24}:${m24}`;
       if (isDueNow && index === 0) {
         scheduledTimeStr = 'In-post mek...';
       }
 
+      const nightFlag = isNightPaused || (isCurrentlyNight && index === 0);
+
       map.set(post.id, {
         position: index + 1,
         estimatedMinutes,
         scheduledTimeStr,
-        isNightPaused,
+        isNightPaused: nightFlag,
       });
 
-      cursor = scheduledMs + DRIP_INTERVAL_MS;
+      // Chain subsequent posts: next post is scheduled at least 45 mins after this one
+      cursor = Math.max(scheduledMs, now) + DRIP_INTERVAL_MS;
     });
 
     return map;
@@ -458,14 +478,38 @@ export default function App() {
             <>
               {/* FB Queue Explainer Banner when on Queue tab */}
               {activeTab === 'queue' && (
-                <div className="p-3 mb-4 rounded-xl bg-blue-50/80 border border-blue-200/80 flex items-center justify-between gap-3 text-xs text-blue-900 shadow-xs">
+                <div
+                  className={`p-3 mb-4 rounded-xl flex items-center justify-between gap-3 text-xs shadow-xs ${
+                    isNightPauseActive
+                      ? 'bg-indigo-50/90 border border-indigo-200 text-indigo-950'
+                      : 'bg-blue-50/80 border border-blue-200/80 text-blue-900'
+                  }`}
+                >
                   <div className="flex items-center gap-2 font-medium min-w-0">
-                    <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    {isNightPauseActive ? (
+                      <Moon className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    )}
                     <span className="truncate sm:whitespace-normal">
-                      <strong>Scheduled Queue:</strong> Minute 45 dan zelin Facebook & WhatsApp-ah a in-post ang (Active hours: 7:00 AM – 11:00 PM IST)
+                      {isNightPauseActive ? (
+                        <>
+                          <strong>🌙 Night Pause Active:</strong> Zan dar 11:00 PM – Zing dar 7:00 AM inkar chu Night Pause a nih avangin post a chhuak lo a, queue hi <strong>Zing dar 7:00 AM-ah</strong> a chhuak tan leh ang.
+                        </>
+                      ) : (
+                        <>
+                          <strong>Scheduled Queue:</strong> Minute 45 dan zelin Facebook & WhatsApp-ah a in-post ang (Active hours: 7:00 AM – 11:00 PM IST)
+                        </>
+                      )}
                     </span>
                   </div>
-                  <span className="font-semibold text-blue-700 bg-white border border-blue-200 px-2.5 py-0.5 rounded-full text-[11px] whitespace-nowrap flex-shrink-0 shadow-2xs">
+                  <span
+                    className={`font-semibold bg-white px-2.5 py-0.5 rounded-full text-[11px] whitespace-nowrap flex-shrink-0 shadow-2xs ${
+                      isNightPauseActive
+                        ? 'text-indigo-700 border border-indigo-200'
+                        : 'text-blue-700 border border-blue-200'
+                    }`}
+                  >
                     {queueCount} queued
                   </span>
                 </div>

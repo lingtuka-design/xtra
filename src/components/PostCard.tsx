@@ -19,7 +19,8 @@ import {
   AlertCircle,
   Loader2,
   Trash2,
-  Clock
+  Clock,
+  Moon
 } from 'lucide-react';
 
 const FacebookIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
@@ -123,7 +124,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     if (isNight) {
       return `Zing ${scheduledTime}`;
     }
-    return `Scheduled: ${scheduledTime}`;
+    return scheduledTime;
   };
 
   const handleCopy = () => {
@@ -322,14 +323,22 @@ export const PostCard: React.FC<PostCardProps> = ({
 
               {isQueued && (
                 <span
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-950 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full shadow-2xs"
-                  title={queueEstimatedMinutes ? `In-post hun tur: ${queueScheduledTime || ''} (~${queueEstimatedMinutes}m left)` : undefined}
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full shadow-2xs ${
+                    isNightPaused
+                      ? 'text-indigo-950 bg-indigo-50 border border-indigo-200'
+                      : 'text-amber-950 bg-amber-50 border border-amber-300'
+                  }`}
+                  title={queueEstimatedMinutes ? `In-post hun tur: ${isNightPaused ? 'Zing ' : ''}${queueScheduledTime || ''} (~${queueEstimatedMinutes}m left)` : undefined}
                 >
-                  <Clock className="w-3 h-3 text-amber-700 animate-pulse flex-shrink-0" />
+                  {isNightPaused ? (
+                    <Moon className="w-3 h-3 text-indigo-600 flex-shrink-0" />
+                  ) : (
+                    <Clock className="w-3 h-3 text-amber-700 animate-pulse flex-shrink-0" />
+                  )}
                   {queuePosition ? (
                     <span>
                       {queuePosition === 1 ? 'Next in queue' : `Queue #${queuePosition}`}{' '}
-                      <span className="font-bold text-amber-900">
+                      <span className={`font-bold ${isNightPaused ? 'text-indigo-900' : 'text-amber-900'}`}>
                         ({formatQueueTime(queueScheduledTime, isNightPaused)})
                       </span>
                     </span>
