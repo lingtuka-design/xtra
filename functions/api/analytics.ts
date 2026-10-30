@@ -3,7 +3,12 @@ import { Env } from '../types';
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env } = context;
 
-  if (!env.FB_PAGE_ACCESS_TOKEN || !env.FB_PAGE_ID) {
+  const rawToken = env.FB_PAGE_ACCESS_TOKEN || '';
+  const rawId = env.FB_PAGE_ID || '';
+  const cleanToken = rawToken.replace(/^\uFEFF/, '').trim();
+  const cleanId = rawId.replace(/^\uFEFF/, '').trim();
+
+  if (!cleanToken || !cleanId) {
     return Response.json(
       { success: false, error: 'Facebook Page credentials not configured in Cloudflare environment' },
       { status: 400 }
@@ -12,9 +17,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   try {
     // 1. Fetch recent feed from Facebook Graph API (up to 100 items)
+    // Send cleanToken via Authorization Bearer header to avoid URL encoding/truncation quirks
     const fbRes = await fetch(
-      `https://graph.facebook.com/v20.0/${env.FB_PAGE_ID}/feed?fields=id,message,created_time,permalink_url,shares,reactions.summary(total_count),comments.summary(total_count)&limit=100&access_token=${env.FB_PAGE_ACCESS_TOKEN}`,
-      { headers: { 'User-Agent': 'Xtra-Analytics/1.0' } }
+      `https://graph.facebook.com/v21.0/${cleanId}/feed?fields=id,message,created_time,permalink_url,shares,reactions.summary(total_count),comments.summary(total_count)&limit=100`,
+      {
+        headers: {
+          'Authorization': `Bearer ${cleanToken}`,
+          'User-Agent': 'Xtra-Analytics/1.0',
+        },
+      }
     );
 
     const fbData = (await fbRes.json()) as any;
