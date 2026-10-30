@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, RefreshCw, Radio, Download, LogOut, User } from 'lucide-react';
+import { Zap, RefreshCw, Radio, Download, LogOut, User, TrendingUp } from 'lucide-react';
 
 interface HeaderProps {
   onRefresh: () => void;
@@ -7,6 +7,7 @@ interface HeaderProps {
   totalPosts: number;
   currentUser?: { username: string } | null;
   onLogout?: () => void;
+  onOpenAnalytics?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   totalPosts,
   currentUser,
   onLogout,
+  onOpenAnalytics,
 }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -65,6 +67,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Status & Refresh Button */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Menu button right before Auto Drip */}
+          {onOpenAnalytics && (
+            <button
+              onClick={onOpenAnalytics}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/15 to-amber-500/5 hover:from-amber-500/25 hover:to-amber-500/10 border border-amber-300 text-stone-900 font-bold text-xs px-3 py-1.5 rounded-full shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              title="Peak Hours (Mipui luh tam hun) leh Top Performing Posts ranking enna"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-amber-600" />
+              <span>Page Analytics</span>
+            </button>
+          )}
+
           <div className="hidden md:flex items-center gap-2 text-xs text-stone-600 bg-white border border-stone-200 px-3 py-1.5 rounded-full shadow-xs">
             <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
             <span>Auto Drip Active</span>

@@ -7,6 +7,7 @@ import { LiveMatchesPanel } from './components/LiveMatchesPanel';
 import { GraphicMakerPanel } from './components/GraphicMakerPanel';
 import { FixturesMakerPanel } from './components/FixturesMakerPanel';
 import { LoginModal } from './components/LoginModal';
+import { AnalyticsModal } from './components/AnalyticsModal';
 import { Post } from './types';
 import { Search, AlertCircle, ArrowUp, Clock, PenSquare, Radio, Sparkles } from 'lucide-react';
 
@@ -31,6 +32,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'create' | 'live' | 'queue' | 'graphic' | 'published'>('create');
   const [graphicMode, setGraphicMode] = useState<'stats' | 'fixtures'>('stats');
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
 
   const handleLogout = () => {
     localStorage.removeItem('xtra_auth_token');
@@ -338,6 +340,7 @@ export default function App() {
         totalPosts={posts.length}
         currentUser={currentUser}
         onLogout={handleLogout}
+        onOpenAnalytics={() => setShowAnalyticsModal(true)}
       />
 
       <div className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-4 sm:py-6">
@@ -567,6 +570,12 @@ export default function App() {
       <ImageModal
         imageUrl={selectedImage}
         onClose={() => setSelectedImage(null)}
+      />
+
+      {/* Facebook Page Analytics Modal */}
+      <AnalyticsModal
+        isOpen={showAnalyticsModal}
+        onClose={() => setShowAnalyticsModal(false)}
       />
     </div>
   );
