@@ -1,5 +1,6 @@
 import { Env } from '../../types';
 import { MATCH_CARD_BG_FB, MATCH_CARD_BG_WA } from './card-bg';
+import { INKHEL_LOGO_B64 } from './inkhel-logo-b64';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
@@ -23,56 +24,210 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return lines.map((s) => s.trim()).filter(Boolean);
   };
 
+  if (isLineup) {
+    // EXACT LINEUP MODE - 100% faithful to user's uploaded design
+    const homeXI = parseList(url.searchParams.get('homeXI') || url.searchParams.get('homeStarters') || '');
+    const awayXI = parseList(url.searchParams.get('awayXI') || url.searchParams.get('awayStarters') || '');
+    const matchTime = url.searchParams.get('matchTime') || url.searchParams.get('time') || '06:00 PM';
+
+    const lineupHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${home} vs ${away} - Lineup</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 1024px;
+      height: 1024px;
+      overflow: hidden;
+      background-color: #FFFFFF;
+      position: relative;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* 1. League Title: Top Left */
+    .league-title {
+      position: absolute;
+      top: 60px;
+      left: 62px;
+      font-family: Impact, "Arial Black", sans-serif;
+      font-style: italic;
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #51565A;
+      text-transform: uppercase;
+    }
+    /* 2. Header: LINEUP Centered with Underline */
+    .header-box {
+      position: absolute;
+      top: 145px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header-text {
+      font-family: Impact, "Arial Black", sans-serif;
+      font-size: 58px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #111111;
+      text-transform: uppercase;
+      line-height: 1;
+      border-bottom: 5px solid #111111;
+      padding-bottom: 2px;
+    }
+    /* 3. Crests and Match Time Row */
+    .crests-row {
+      position: absolute;
+      top: 185px;
+      left: 0;
+      width: 1024px;
+      height: 235px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 85px;
+    }
+    .crest-container {
+      width: 230px;
+      height: 230px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .crest-img {
+      max-width: 220px;
+      max-height: 220px;
+      object-fit: contain;
+    }
+    .match-time {
+      font-family: Impact, "Arial Black", sans-serif;
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: #b51a36;
+      text-align: center;
+      white-space: nowrap;
+    }
+    /* 4. Lineup Player Columns */
+    .lineup-columns {
+      position: absolute;
+      top: 410px;
+      left: 0;
+      width: 1024px;
+      display: flex;
+      justify-content: center;
+      gap: 135px;
+    }
+    .xi-column {
+      width: 330px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+    .xi-column.left {
+      text-align: right;
+      align-items: flex-end;
+    }
+    .xi-column.right {
+      text-align: left;
+      align-items: flex-start;
+    }
+    .player-row {
+      font-size: 29px;
+      font-weight: 650;
+      color: #4B5563;
+      line-height: 1.25;
+      white-space: nowrap;
+      letter-spacing: -0.2px;
+    }
+    /* 5. Bottom Center Logo */
+    .bottom-logo-box {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .bottom-logo {
+      height: 48px;
+      object-fit: contain;
+    }
+    .xtra-tag {
+      font-family: Impact, "Arial Black", sans-serif;
+      font-style: italic;
+      font-size: 32px;
+      font-weight: 900;
+      color: #111111;
+      margin-left: 10px;
+      margin-top: 10px;
+      letter-spacing: 1px;
+    }
+    /* 6. Bottom Right Corner Black Triangle */
+    .br-triangle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 124px;
+      height: 139px;
+      background-color: #000000;
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    }
+  </style>
+</head>
+<body>
+  <div class="league-title">${league}</div>
+  <div class="header-box">
+    <div class="header-text">LINEUP</div>
+  </div>
+  <div class="crests-row">
+    <div class="crest-container">
+      ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="crest-img" />` : ''}
+    </div>
+    <div class="match-time">${matchTime}</div>
+    <div class="crest-container">
+      ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="crest-img" />` : ''}
+    </div>
+  </div>
+  <div class="lineup-columns">
+    <div class="xi-column left">
+      ${homeXI.map((p) => `<div class="player-row">${p}</div>`).join('')}
+    </div>
+    <div class="xi-column right">
+      ${awayXI.map((p) => `<div class="player-row">${p}</div>`).join('')}
+    </div>
+  </div>
+  <div class="bottom-logo-box">
+    <img src="${INKHEL_LOGO_B64}" class="bottom-logo" />
+    ${isFb ? '<span class="xtra-tag">Xtra</span>' : ''}
+  </div>
+  <div class="br-triangle"></div>
+</body>
+</html>`;
+
+    return new Response(lineupHtml, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+      },
+    });
+  }
+
   // Background style: uses exact base template containing user's official background and channel-specific logo
   const defaultBg = isFb ? MATCH_CARD_BG_FB : MATCH_CARD_BG_WA;
   const cardBgUrl = bgImage && bgImage.startsWith('http') ? bgImage : defaultBg;
 
-  let bodyHtml = '';
-
-  if (isLineup) {
-    // LINEUP MODE
-    const homeXI = parseList(url.searchParams.get('homeXI') || url.searchParams.get('homeStarters') || '');
-    const awayXI = parseList(url.searchParams.get('awayXI') || url.searchParams.get('awayStarters') || '');
-    const matchTime = url.searchParams.get('matchTime') || url.searchParams.get('time') || 'KICKOFF IST';
-
-    bodyHtml = `
-  <!-- 1. League Title -->
-  <div class="league-title">${league}</div>
-
-  <!-- 2. Header -->
-  <div class="status-container">
-    <div class="status-text">STARTING XI</div>
-  </div>
-
-  <!-- 3. Clubs & Time Row -->
-  <div class="clubs-row">
-    <div class="club-col left">
-      ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="club-logo" />` : ''}
-      <span class="club-name">${home}</span>
-    </div>
-    <div class="time-badge">
-      <span class="time-vs">VS</span>
-      <span class="time-ist">${matchTime}</span>
-    </div>
-    <div class="club-col right">
-      ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="club-logo" />` : ''}
-      <span class="club-name">${away}</span>
-    </div>
-  </div>
-
-  <!-- 4. XI Players -->
-  <div class="lineup-container">
-    <div class="xi-list left">
-      ${homeXI.map((p) => `<div class="player-item">${p}</div>`).join('')}
-    </div>
-    <div class="xi-divider"></div>
-    <div class="xi-list right">
-      ${awayXI.map((p) => `<div class="player-item">${p}</div>`).join('')}
-    </div>
-  </div>
-`;
-  } else {
-    // SCORECARD MODE (HT / FT)
+  // SCORECARD MODE (HT / FT)
     const homeScore = url.searchParams.get('homeScore') || '0';
     const awayScore = url.searchParams.get('awayScore') || '0';
     const isHT = rawStatus === 'HT' || rawStatus.includes('HALF');
@@ -120,7 +275,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       ''
     );
 
-    bodyHtml = `
+    const bodyHtml = `
   <!-- 1. League Title -->
   <div class="league-title">${league}</div>
 
@@ -183,7 +338,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     ` : ''}
   </div>
 `;
-  }
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -333,104 +487,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       border-radius: 3px;
       transform: rotate(14deg);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-    }
-
-    /* 5. Lineup Specific Styles */
-    .clubs-row {
-      margin-top: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 860px;
-      z-index: 10;
-    }
-    .club-col {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .club-col.left {
-      justify-content: flex-start;
-    }
-    .club-col.right {
-      justify-content: flex-end;
-      flex-direction: row-reverse;
-    }
-    .club-logo {
-      width: 90px;
-      height: 90px;
-      object-fit: contain;
-      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.15));
-    }
-    .club-name {
-      font-family: Impact, "Arial Black", sans-serif;
-      font-size: 32px;
-      font-weight: 900;
-      letter-spacing: 1px;
-      color: #111827;
-      text-transform: uppercase;
-    }
-    .time-badge {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 6px 18px;
-      background: #F3F4F6;
-      border: 2px solid #E5E7EB;
-      border-radius: 12px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-    }
-    .time-vs {
-      font-family: Impact, "Arial Black", sans-serif;
-      font-size: 20px;
-      letter-spacing: 2px;
-      color: #9E0A24;
-      line-height: 1;
-    }
-    .time-ist {
-      font-size: 15px;
-      font-weight: 800;
-      color: #374151;
-      letter-spacing: 0.5px;
-      margin-top: 2px;
-    }
-    .lineup-container {
-      margin-top: 22px;
-      width: 860px;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      z-index: 10;
-    }
-    .xi-list {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
-    .xi-list.left {
-      text-align: right;
-      padding-right: 36px;
-    }
-    .xi-list.right {
-      text-align: left;
-      padding-left: 36px;
-    }
-    .player-item {
-      font-size: 23px;
-      font-weight: 750;
-      color: #1F2937;
-      line-height: 1.35;
-      letter-spacing: -0.2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .xi-divider {
-      width: 2px;
-      height: 440px;
-      background: linear-gradient(to bottom, #E5E7EB 0%, #D1D5DB 50%, #E5E7EB 100%);
     }
   </style>
 </head>
