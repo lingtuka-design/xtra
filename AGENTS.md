@@ -41,7 +41,16 @@
 
 ---
 
-### 3. Workflow & Verification
+### 3. Competitions & Fixture Tracking (`functions/services/espnService.ts`)
+- Supported competitions: Premier League (`PL`), League Cup (`EFL`), La Liga (`LL`), Bundesliga (`BL`), Champions League (`UCL`), Indian Super League (`ISL`).
+- **Club Filtering Rules**:
+  - **La Liga (`LL`)**: Strictly only Barcelona and Real Madrid matches with their opponents.
+  - **Bundesliga (`BL`)**: Strictly only **Bayern Munich** matches with their opponents (ID: `132`).
+- **Hashtags**: Bundesliga fixtures auto-post with `#Bundesliga #FCBayern`.
+
+---
+
+### 4. Workflow & Verification
 - Always run `npm run typecheck` before committing.
 - Commit and push to `main` branch on `https://github.com/lingtuka-design/xtra.git`.
 - Deploy to Cloudflare Pages via `npm run deploy`.

@@ -1,6 +1,6 @@
 export interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL';
+  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -50,10 +50,11 @@ function formatEspnDate(d: Date): string {
 export const espnService = {
   // Fetch upcoming 24h schedule & active live matches for PL, Carabao Cup, La Liga (Barca & Real Madrid only), UCL, and ISL (excluding finished FT matches)
   async getFixtures(): Promise<EspnMatch[]> {
-    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL'; slug: string; name: string }[] = [
+    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL'; slug: string; name: string }[] = [
       { key: 'PL', slug: 'eng.1', name: 'PL' },
       { key: 'EFL', slug: 'eng.league_cup', name: 'League Cup' },
       { key: 'LL', slug: 'esp.1', name: 'La Liga' },
+      { key: 'BL', slug: 'ger.1', name: 'Bundesliga' },
       { key: 'UCL', slug: 'uefa.champions', name: 'UCL' },
       { key: 'ISL', slug: 'ind.1', name: 'ISL' },
     ];
@@ -127,6 +128,19 @@ export const espnService = {
               };
 
               const hasTargetTeam = isBarcaOrMadrid(home.team) || isBarcaOrMadrid(away.team);
+              if (!hasTargetTeam) continue;
+            }
+
+            // For Bundesliga: Strictly only include Bayern Munich matches with their opponents
+            if (l.key === 'BL') {
+              const isBayern = (team: any) => {
+                const id = String(team?.id || '');
+                if (id === '132') return true;
+                const name = `${team?.displayName || ''} ${team?.name || ''} ${team?.shortDisplayName || ''}`.toLowerCase();
+                return name.includes('bayern');
+              };
+
+              const hasTargetTeam = isBayern(home.team) || isBayern(away.team);
               if (!hasTargetTeam) continue;
             }
 
