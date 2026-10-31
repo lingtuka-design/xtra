@@ -50,7 +50,18 @@
 
 ---
 
-### 4. Workflow & Verification
+### 4. Official Club Twitter Match Photography Pipeline (`functions/services/clubPhotoService.ts`)
+- **Primary Source**: At Half Time (HT) and Full Time (FT), clean pitch-side photography is fetched directly from the verified official Club Twitter account(s) (`@BrentfordFC`, `@NFFC`, `@FCBayern`, `@Arsenal`, etc.).
+- **Strict Clean Photo Rules**:
+  - Automatically filters out graphic posters, score templates, matchday cards, and announcement graphics (`FULL-TIME`, `HALF-TIME`, `FT:`, `Lineup`, etc.).
+  - Prioritizes raw on-pitch action, goal celebrations, team hugs, striker passion, and multi-photo galleries.
+  - For Draw matches: scans both clubs to select the best celebration or high-intensity match action photo.
+  - HT vs FT deduplication: ensures the Full Time post does not reuse the Half Time celebration photo.
+- **Fallback**: If no club Twitter action photo is available, falls back to FotMob, and then to official dynamic scorecard graphics.
+
+---
+
+### 5. Workflow & Verification
 - Always run `npm run typecheck` before committing.
 - Commit and push to `main` branch on `https://github.com/lingtuka-design/xtra.git`.
 - Deploy to Cloudflare Pages via `npm run deploy`.

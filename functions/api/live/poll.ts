@@ -1,6 +1,7 @@
 import { Env } from '../../types';
 import { espnService } from '../../services/espnService';
 import { fotmobService } from '../../services/fotmobService';
+import { clubPhotoService } from '../../services/clubPhotoService';
 import { facebookPoster } from '../../services/facebookPoster';
 import { whatsappPoster } from '../../services/whatsappPoster';
 import { telegramPoster } from '../../services/telegramPoster';
@@ -1140,9 +1141,35 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       if (summary.status.isHalftime) {
         const htEventId = `ht_${match.event_id}`;
         let claimed = false;
-        // 1. Tier 1 (FotMob) for PL, La Liga, Bundesliga and UCL at Half Time
+        // 1. Check verified Club Official Twitter for clean on-pitch celebration/action photo
         let htPhotoToUse = '';
-        if (match.league === 'PL' || match.league === 'UCL' || match.league === 'LL' || match.league === 'BL' || match.league === 'EFL') {
+        try {
+          const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
+          const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
+          const leadingTeam = isHomeLeading ? match.home_team : isAwayLeading ? match.away_team : undefined;
+          const trailingTeam = isHomeLeading ? match.away_team : isAwayLeading ? match.home_team : undefined;
+          const isHtDraw = (match.home_score || 0) === (match.away_score || 0);
+
+          const clubPhoto = await clubPhotoService.getMatchActionPhoto({
+            homeTeam: match.home_team,
+            awayTeam: match.away_team,
+            winningTeam: leadingTeam,
+            losingTeam: trailingTeam,
+            isDraw: isHtDraw,
+            isHalftime: true,
+            env,
+          });
+
+          if (clubPhoto) {
+            htPhotoToUse = clubPhoto;
+            console.log(`[HT Photo] Selected clean Club Twitter photo: ${htPhotoToUse}`);
+          }
+        } catch (e: any) {
+          console.warn('[HT Photo] Club Twitter lookup error:', e.message);
+        }
+
+        // 2. If no Club Twitter photo, fallback to FotMob
+        if (!htPhotoToUse && (match.league === 'PL' || match.league === 'UCL' || match.league === 'LL' || match.league === 'BL' || match.league === 'EFL')) {
           try {
             const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
             const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
@@ -1424,9 +1451,31 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           let chosenPhoto = '';
 
-          // 1. FotMob live match photo for PL, La Liga, Bundesliga & UCL
+          // 1. Check verified Club Official Twitter for clean on-pitch celebration/action photo
+          try {
+            const clubPhoto = await clubPhotoService.getMatchActionPhoto({
+              homeTeam: match.home_team,
+              awayTeam: match.away_team,
+              winningTeam: isDraw ? undefined : winningTeamName,
+              losingTeam: isDraw ? undefined : losingTeamName,
+              winningScorers,
+              isDraw,
+              isHalftime: false,
+              avoidPhotoUrl: htPhoto,
+              env,
+            });
+
+            if (clubPhoto) {
+              chosenPhoto = clubPhoto;
+              console.log(`[FT Photo] Selected clean Club Twitter photo: ${chosenPhoto}`);
+            }
+          } catch (clubErr: any) {
+            console.warn('[FT Photo] Club Twitter lookup error:', clubErr.message);
+          }
+
+          // 2. If no clean Club Twitter photo, fallback to FotMob
           const isTier1 = match.league === 'PL' || match.league === 'UCL' || match.league === 'LL' || match.league === 'BL' || match.league === 'EFL';
-          if (isTier1) {
+          if (!chosenPhoto && isTier1) {
             try {
               const fotmobRes = await fotmobService.getMatchPhotos({
                 homeTeam: match.home_team,
