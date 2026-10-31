@@ -483,27 +483,32 @@ ${playerLine}🏆 *${leagueName}*
 
 // Helper to generate Square 1:1 Match Scorecard Graphic using user's custom design
 function buildCardImageUrl(options: {
+  type?: 'lineup' | 'score';
   home: string;
   away: string;
-  homeScore: string;
-  awayScore: string;
+  homeScore?: string;
+  awayScore?: string;
   homeLogo?: string;
   awayLogo?: string;
-  status: 'HT' | 'FT';
+  status: 'HT' | 'FT' | 'LINEUP';
   leagueName: string;
-  homeScorers: string;
-  awayScorers: string;
+  homeScorers?: string;
+  awayScorers?: string;
   homeRedCards?: string;
   awayRedCards?: string;
+  homeXI?: string[];
+  awayXI?: string[];
+  matchTime?: string;
   stats?: any;
   channel: 'fb' | 'wa';
   bgImage?: string;
 }): string {
   const q = new URLSearchParams();
+  if (options.type) q.set('type', options.type);
   q.set('home', options.home);
   q.set('away', options.away);
-  q.set('homeScore', options.homeScore);
-  q.set('awayScore', options.awayScore);
+  if (options.homeScore !== undefined) q.set('homeScore', options.homeScore);
+  if (options.awayScore !== undefined) q.set('awayScore', options.awayScore);
   if (options.homeLogo) q.set('homeLogo', options.homeLogo);
   if (options.awayLogo) q.set('awayLogo', options.awayLogo);
   q.set('status', options.status);
@@ -512,6 +517,9 @@ function buildCardImageUrl(options: {
   if (options.awayScorers) q.set('awayScorers', options.awayScorers);
   if (options.homeRedCards) q.set('homeRedCardScorers', options.homeRedCards);
   if (options.awayRedCards) q.set('awayRedCardScorers', options.awayRedCards);
+  if (options.homeXI && options.homeXI.length > 0) q.set('homeXI', options.homeXI.join(';'));
+  if (options.awayXI && options.awayXI.length > 0) q.set('awayXI', options.awayXI.join(';'));
+  if (options.matchTime) q.set('matchTime', options.matchTime);
   q.set('channel', options.channel);
   if (options.bgImage) q.set('bgImage', options.bgImage);
 
@@ -610,9 +618,11 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
 
           if (claimed) {
+            const homeClub = summary.lineups.home.team || match.home_team;
+            const awayClub = summary.lineups.away.team || match.away_team;
             const fbLineup = formatLineupPost(
-              summary.lineups.home.team || match.home_team,
-              summary.lineups.away.team || match.away_team,
+              homeClub,
+              awayClub,
               summary.lineups.home.formation,
               summary.lineups.away.formation,
               summary.lineups.home.starters,
@@ -621,8 +631,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             );
 
             const waLineup = formatWhatsAppLineup(
-              summary.lineups.home.team || match.home_team,
-              summary.lineups.away.team || match.away_team,
+              homeClub,
+              awayClub,
               summary.lineups.home.formation,
               summary.lineups.away.formation,
               summary.lineups.home.starters,
@@ -630,12 +640,55 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               leagueName
             );
 
+            // Format Kickoff IST for Lineup Card
+            let matchTimeIST = 'KICKOFF IST';
+            if (match.match_time) {
+              try {
+                matchTimeIST =
+                  new Date(match.match_time).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZone: 'Asia/Kolkata',
+                  }) + ' IST';
+              } catch {}
+            }
+
+            // Generate visual Starting XI Lineup Card
+            const fbLineupImg = buildCardImageUrl({
+              type: 'lineup',
+              status: 'LINEUP',
+              home: homeClub,
+              away: awayClub,
+              homeLogo: match.home_logo,
+              awayLogo: match.away_logo,
+              leagueName,
+              homeXI: summary.lineups.home.starters,
+              awayXI: summary.lineups.away.starters,
+              matchTime: matchTimeIST,
+              channel: 'fb',
+            });
+
+            const waLineupImg = buildCardImageUrl({
+              type: 'lineup',
+              status: 'LINEUP',
+              home: homeClub,
+              away: awayClub,
+              homeLogo: match.home_logo,
+              awayLogo: match.away_logo,
+              leagueName,
+              homeXI: summary.lineups.home.starters,
+              awayXI: summary.lineups.away.starters,
+              matchTime: matchTimeIST,
+              channel: 'wa',
+            });
+
             // 1. Post to Facebook Page
             if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
               try {
                 await facebookPoster.postNews(
                   fbLineup,
-                  undefined,
+                  fbLineupImg,
                   env.FB_PAGE_ID,
                   env.FB_PAGE_ACCESS_TOKEN
                 );
@@ -648,7 +701,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             try {
               await whatsappPoster.postNews(
                 waLineup,
-                undefined,
+                waLineupImg,
                 env.WHATSAPP_API_TOKEN,
                 env.WHATSAPP_CHANNEL_ID,
                 env.WHATSAPP_API_URL
@@ -661,7 +714,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             try {
               await telegramPoster.postNews(
                 toTelegramCaption(waLineup),
-                undefined,
+                waLineupImg,
                 env.TELEGRAM_BOT_TOKEN,
                 env.TELEGRAM_CHANNEL_ID
               );
