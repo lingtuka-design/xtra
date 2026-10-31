@@ -163,8 +163,21 @@ export class TwitterScraper {
     const tweets: ScrapedTweet[] = [];
 
     for (const inst of instructions) {
+      // Strictly skip pinned tweet containers
+      if (inst.type === 'TimelinePinEntry') {
+        continue;
+      }
+
       if (inst.type === 'TimelineAddEntries') {
         for (const entry of inst.entries || []) {
+          // Strictly skip pinned or promoted entries
+          if (
+            entry.entryId?.toLowerCase().includes('pin') ||
+            entry.entryId?.toLowerCase().includes('promoted')
+          ) {
+            continue;
+          }
+
           const itemContent = entry.content?.itemContent;
           if (itemContent?.itemType === 'TimelineTweet') {
             const tweetResult = itemContent.tweet_results?.result;

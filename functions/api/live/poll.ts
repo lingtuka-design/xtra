@@ -1157,6 +1157,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             losingTeam: trailingTeam,
             isDraw: isHtDraw,
             isHalftime: true,
+            matchTime: match.match_time,
             env,
           });
 
@@ -1462,6 +1463,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               isDraw,
               isHalftime: false,
               avoidPhotoUrl: htPhoto,
+              matchTime: match.match_time,
               env,
             });
 

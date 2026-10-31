@@ -152,6 +152,26 @@ export class ClubPhotoService {
       return [];
     }
 
+    // 1b. HARD REJECT: Pre-match arrivals, tunnel walk-ins, and stadium entry photos
+    const isPreMatchArrival =
+      lower.includes('checking in') ||
+      lower.includes('arriving') ||
+      lower.includes('arrival') ||
+      lower.includes('tunnel') ||
+      lower.includes('walk in') ||
+      lower.includes('walk-in') ||
+      lower.includes('warm-up') ||
+      lower.includes('warm up') ||
+      lower.includes('in the zone') ||
+      lower.includes('heading out') ||
+      lower.includes('kick-off approaching') ||
+      lower.includes('approaching ⏳');
+
+    if (isPreMatchArrival) {
+      console.log(`[ClubPhoto] Rejected pre-match arrival tweet: "${text.slice(0, 60)}"`);
+      return [];
+    }
+
     let baseScore = 10;
 
     // 2. High bonus for in-match tweets containing scorelines (e.g. "1-0", "2-0") or match hashtags (#BRENFO)
@@ -267,6 +287,7 @@ export class ClubPhotoService {
     isDraw?: boolean;
     isHalftime?: boolean;
     avoidPhotoUrl?: string;
+    matchTime?: string;
     env?: Env;
   }): Promise<string | null> {
     try {
@@ -296,12 +317,32 @@ export class ClubPhotoService {
       }
 
       const allCandidates: ClubPhotoCandidate[] = [];
+      const kickoffMs = options.matchTime ? new Date(options.matchTime).getTime() : NaN;
+      const nowMs = Date.now();
 
       // Query target club Twitter accounts
       for (const handle of handlesToCheck) {
         try {
-          const tweets = await this.scraper.getRecentTweets(handle, 12);
+          const tweets = await this.scraper.getRecentTweets(handle, 15);
           for (const t of tweets) {
+            const tweetMs = new Date(t.createdAt).getTime();
+
+            // 1. Strict recency & match window validation
+            if (!isNaN(tweetMs)) {
+              // Discard any tweet older than 6 hours
+              if (tweetMs < nowMs - 6 * 60 * 60 * 1000) {
+                continue;
+              }
+              // If kickoff time is known, strictly discard any tweet posted before kickoff (with 5 min grace)
+              if (!isNaN(kickoffMs) && tweetMs < kickoffMs - 5 * 60 * 1000) {
+                console.log(`[ClubPhoto] Discarded pre-kickoff tweet: "${t.text.slice(0, 40)}" (${t.createdAt})`);
+                continue;
+              }
+            } else {
+              // If date cannot be parsed, reject
+              continue;
+            }
+
             const candidates = this.scoreTweetPhotos(t.text, t.photos, {
               isHalftime: options.isHalftime,
               winningScorers: options.winningScorers,
