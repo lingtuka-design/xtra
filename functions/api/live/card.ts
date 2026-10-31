@@ -1,6 +1,6 @@
 import { Env } from '../../types';
 import { MATCH_CARD_BG_FB, MATCH_CARD_BG_WA } from './card-bg';
-import { INKHEL_LOGO_B64 } from './inkhel-logo-b64';
+import { INKHEL_LOGO_B64, INKHEL_XTRA_LIGHT_B64 } from './inkhel-logo-b64';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
@@ -152,7 +152,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     /* 5. Bottom Center Logo */
     .bottom-logo-box {
       position: absolute;
-      bottom: 40px;
+      bottom: 35px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -163,15 +163,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       height: 48px;
       object-fit: contain;
     }
-    .xtra-tag {
-      font-family: Impact, "Arial Black", sans-serif;
-      font-style: italic;
-      font-size: 32px;
-      font-weight: 900;
-      color: #111111;
-      margin-left: 10px;
-      margin-top: 10px;
-      letter-spacing: 1px;
+    .bottom-logo-xtra {
+      height: 58px;
+      object-fit: contain;
     }
     /* 6. Bottom Right Corner Black Triangle */
     .br-triangle {
@@ -208,8 +202,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     </div>
   </div>
   <div class="bottom-logo-box">
-    <img src="${INKHEL_LOGO_B64}" class="bottom-logo" />
-    ${isFb ? '<span class="xtra-tag">Xtra</span>' : ''}
+    <img src="${isFb ? INKHEL_XTRA_LIGHT_B64 : INKHEL_LOGO_B64}" class="${isFb ? 'bottom-logo-xtra' : 'bottom-logo'}" />
   </div>
   <div class="br-triangle"></div>
 </body>
