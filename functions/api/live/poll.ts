@@ -512,7 +512,11 @@ function buildCardImageUrl(options: {
   if (options.homeLogo) q.set('homeLogo', options.homeLogo);
   if (options.awayLogo) q.set('awayLogo', options.awayLogo);
   q.set('status', options.status);
-  q.set('league', options.leagueName);
+  const displayLeague =
+    /indian\s+super\s+league/i.test(options.leagueName) || options.leagueName.toUpperCase() === 'ISL'
+      ? 'ISL'
+      : options.leagueName;
+  q.set('league', displayLeague);
   if (options.homeScorers) q.set('homeScorers', options.homeScorers);
   if (options.awayScorers) q.set('awayScorers', options.awayScorers);
   if (options.homeRedCards) q.set('homeRedCardScorers', options.homeRedCards);

@@ -4,6 +4,9 @@
 
 ### 1. Match Scorecard Graphics (`status=HT` or `status=FT`)
 - **Background**: Diagonal dark-art base template (`MATCH_CARD_BG_FB` / `MATCH_CARD_BG_WA`). Central white polygon must remain 100% pure solid `#FFFFFF` with 0 ghost text, 0 crest remnants, and 0 smudges.
+- **League Title**:
+  - Always uppercase, italic bold.
+  - Important: For Indian Super League matches, **ALWAYS use `ISL`** on graphics (never write out the full 'Indian Super League' as it is too long).
 - **Header**: `FULL TIME` or `HALF TIME` in black Impact font, centered, with solid underline (`border-bottom: 5px solid #000000`).
 - **Score**: In maroon/crimson (`#9E0A24`), Impact font.
 - **Team Badges**:

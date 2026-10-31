@@ -12,7 +12,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const away = url.searchParams.get('away') || 'Away Team';
   const homeLogo = url.searchParams.get('homeLogo') || '';
   const awayLogo = url.searchParams.get('awayLogo') || '';
-  const league = url.searchParams.get('league') || 'PREMIER LEAGUE';
+  let league = (url.searchParams.get('league') || 'PREMIER LEAGUE').trim();
+  if (/indian\s+super\s+league/i.test(league) || league.toUpperCase() === 'ISL') {
+    league = 'ISL';
+  }
   const bgImage = url.searchParams.get('bgImage') || '';
   const channel = (url.searchParams.get('channel') || 'fb').toLowerCase();
   const isFb = channel === 'fb' || channel === 'facebook' || channel === 'xtra';
