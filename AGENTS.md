@@ -3,7 +3,7 @@
 ## Match Graphics & Card Generator Specifications (`functions/api/live/card.ts`)
 
 ### 1. Match Scorecard Graphics (`status=HT` or `status=FT`)
-- **Background**: Diagonal dark-art base template (`MATCH_CARD_BG_FB` / `MATCH_CARD_BG_WA`).
+- **Background**: Diagonal dark-art base template (`MATCH_CARD_BG_FB` / `MATCH_CARD_BG_WA`). Central white polygon must remain 100% pure solid `#FFFFFF` with 0 ghost text, 0 crest remnants, and 0 smudges.
 - **Header**: `FULL TIME` or `HALF TIME` in black Impact font, centered, with solid underline (`border-bottom: 5px solid #000000`).
 - **Score**: In maroon/crimson (`#9E0A24`), Impact font.
 - **Team Badges**:
