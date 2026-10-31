@@ -1,4 +1,5 @@
 import { Env } from '../../types';
+import { MATCH_CARD_BG } from './card-bg';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
@@ -8,42 +9,28 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const awayScore = url.searchParams.get('awayScore') || '0';
   const homeLogo = url.searchParams.get('homeLogo') || '';
   const awayLogo = url.searchParams.get('awayLogo') || '';
-  const status = (url.searchParams.get('status') || 'HT').toUpperCase();
-  const league = url.searchParams.get('league') || 'UEFA Champions League';
+  const rawStatus = (url.searchParams.get('status') || 'FT').toUpperCase();
+  const league = url.searchParams.get('league') || 'PREMIER LEAGUE';
   const homeScorersRaw = url.searchParams.get('homeScorers') || url.searchParams.get('scorers') || '';
   const awayScorersRaw = url.searchParams.get('awayScorers') || '';
-  const homeRedCardScorersRaw = url.searchParams.get('homeRedCardScorers') || url.searchParams.get('homeRedCardsList') || '';
-  const awayRedCardScorersRaw = url.searchParams.get('awayRedCardScorers') || url.searchParams.get('awayRedCardsList') || '';
-  const channel = (url.searchParams.get('channel') || 'fb').toLowerCase();
+  const homeRedCardScorersRaw =
+    url.searchParams.get('homeRedCardScorers') ||
+    url.searchParams.get('homeRedCards') ||
+    url.searchParams.get('homeRedCardsList') ||
+    '';
+  const awayRedCardScorersRaw =
+    url.searchParams.get('awayRedCardScorers') ||
+    url.searchParams.get('awayRedCards') ||
+    url.searchParams.get('awayRedCardsList') ||
+    '';
   const bgImage = url.searchParams.get('bgImage') || '';
 
-  // Stats query params
-  const homePossession = url.searchParams.get('homePossession') || '50%';
-  const awayPossession = url.searchParams.get('awayPossession') || '50%';
+  // Match status text
+  const isHT = rawStatus === 'HT' || rawStatus.includes('HALF');
+  const isFT = rawStatus === 'FT' || rawStatus.includes('FULL');
+  const statusText = isHT ? 'HALF TIME' : isFT ? 'FULL TIME' : rawStatus;
 
-  const homeShots = url.searchParams.get('homeShots') || '0';
-  const awayShots = url.searchParams.get('awayShots') || '0';
-
-  const homeShotsOnTarget = url.searchParams.get('homeShotsOnTarget') || '0';
-  const awayShotsOnTarget = url.searchParams.get('awayShotsOnTarget') || '0';
-
-  const homeCorners = url.searchParams.get('homeCorners') || '0';
-  const awayCorners = url.searchParams.get('awayCorners') || '0';
-
-  const homeFouls = url.searchParams.get('homeFouls') || '0';
-  const awayFouls = url.searchParams.get('awayFouls') || '0';
-
-  const homeYellowCards = url.searchParams.get('homeYellowCards') || '0';
-  const awayYellowCards = url.searchParams.get('awayYellowCards') || '0';
-
-  const homeRedCards = url.searchParams.get('homeRedCards') || '0';
-  const awayRedCards = url.searchParams.get('awayRedCards') || '0';
-
-  const isFT = status === 'FT' || status.includes('FULL');
-  const statusTop = isFT ? 'FULL' : 'HALF';
-  const statusBottom = 'TIME';
-
-  // Helper to parse scorers: keep multiple goals by one player on one line, and different players on separate lines
+  // Helper to parse scorers into list of lines
   const parseScorers = (raw: string): string[] => {
     if (!raw || !raw.trim()) return [];
     const lines = raw.includes('\n') ? raw.split('\n') : raw.includes(';') ? raw.split(';') : [raw];
@@ -74,32 +61,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const homeRedCardList = parseScorers(homeRedCardScorersRaw);
   const awayRedCardList = parseScorers(awayRedCardScorersRaw);
 
-  const statsList = [
-    { label: 'POSSESSION', home: homePossession, away: awayPossession, isPossession: true },
-    { label: 'SHOTS', home: homeShots, away: awayShots },
-    { label: 'SHOTS ON TARGET', home: homeShotsOnTarget, away: awayShotsOnTarget },
-    { label: 'CORNERS', home: homeCorners, away: awayCorners },
-    { label: 'FOULS', home: homeFouls, away: awayFouls },
-    { label: 'YELLOW CARDS', home: homeYellowCards, away: awayYellowCards },
-    { label: 'RED CARDS', home: homeRedCards, away: awayRedCards },
-  ];
+  // Background style
+  const cardBgUrl = bgImage && bgImage.startsWith('http') ? bgImage : MATCH_CARD_BG;
 
-  // Dot matrix SVG generator
-  const dotMatrix = `
-    <svg width="60" height="90" viewBox="0 0 60 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      ${Array.from({ length: 6 })
-        .map((_, r) =>
-          Array.from({ length: 4 })
-            .map((_, c) => `<circle cx="${c * 17 + 5}" cy="${r * 16 + 5}" r="2.8" fill="white" fill-opacity="0.65"/>`)
-            .join('')
-        )
-        .join('')}
-    </svg>
-  `;
-
-  // Official Inkhel Vector SVG
+  // Official Inkhel Vector SVG (renders cleanly on light backgrounds)
   const inkhelSvg = `
-    <svg width="170" height="46" viewBox="0 0 6683 1858" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <svg width="220" height="60" viewBox="0 0 6683 1858" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
       <g transform="matrix(1,0,0,1,-8972.54,-259.853)">
         <g transform="matrix(1,0,0,1,8414.76,104.994)">
           <g transform="matrix(4.16667,0,0,4.16667,3652.43,948.396)">
@@ -122,15 +89,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     </svg>
   `;
 
-  const bgStyle = bgImage
-    ? `background-image: linear-gradient(180deg, rgba(8, 12, 18, 0.85) 0%, rgba(4, 6, 10, 0.94) 100%), url('${bgImage}'); background-size: cover; background-position: center;`
-    : `background: radial-gradient(circle at 50% 18%, rgba(20, 28, 48, 0.4) 0%, rgba(5, 7, 12, 0.95) 80%), linear-gradient(180deg, #121824 0%, #06080e 100%);`;
-
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${home} vs ${away} - ${statusTop} ${statusBottom}</title>
+  <title>${home} vs ${away} - ${statusText}</title>
   <style>
     * {
       box-sizing: border-box;
@@ -139,340 +102,229 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     body {
-      width: 819px;
+      width: 1024px;
       height: 1024px;
       overflow: hidden;
-      background: #090c13;
       position: relative;
-      color: #ffffff;
+      background: #FFFFFF url('${cardBgUrl}') no-repeat center center;
+      background-size: cover;
+      color: #111827;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding-top: 46px;
     }
-    .bg-layer {
-      position: absolute;
-      inset: 0;
-      ${bgStyle}
-      z-index: 1;
-    }
-    .vignette-overlay {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 50% 30%, transparent 35%, rgba(0,0,0,0.8) 100%);
-      z-index: 2;
-    }
-    .dot-accent-tr {
-      position: absolute;
-      top: 75px;
-      right: 30px;
-      z-index: 4;
-    }
-    .dot-accent-bl {
-      position: absolute;
-      bottom: 125px;
-      left: 30px;
-      z-index: 4;
-    }
-    .content-wrap {
-      position: relative;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-    }
+
+    /* 1. League Title (Top-Right) */
     .league-title {
-      font-size: 21px;
-      font-weight: 800;
-      letter-spacing: 2px;
+      position: absolute;
+      top: 38px;
+      right: 52px;
+      font-size: 34px;
+      font-weight: 900;
+      font-style: italic;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      color: #ffffff;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
-      margin-bottom: 16px;
+      color: #374151;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+      z-index: 10;
     }
-    .status-badge {
-      background: #ffffff;
-      width: 126px;
-      height: 98px;
-      border-radius: 4px 4px 0 0;
+
+    /* 2. Match Status Header (Center) */
+    .status-container {
+      margin-top: 148px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      margin-bottom: -1px;
-      z-index: 12;
-      box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.4);
+      z-index: 10;
     }
     .status-text {
       font-family: Impact, "Arial Black", -apple-system, sans-serif;
-      font-size: 38px;
-      line-height: 0.92;
+      font-size: 72px;
       font-weight: 900;
-      color: #7E0A0A;
-      letter-spacing: 0.5px;
+      letter-spacing: 5px;
       text-transform: uppercase;
+      color: #000000;
+      line-height: 0.95;
+      border-bottom: 6px solid #000000;
+      padding-bottom: 4px;
+      display: inline-block;
     }
-    .score-card {
-      width: 655px;
-      height: 158px;
-      display: flex;
-      align-items: stretch;
-      border-radius: 0;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
-    }
-    .crest-box {
-      background: #ffffff;
-      width: 164px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
-    }
-    .team-logo {
-      max-width: 100px;
-      max-height: 100px;
-      object-fit: contain;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
-    }
-    .score-center {
-      background: #8A0A0A;
-      width: 327px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .score-digits {
-      font-family: Impact, "Arial Black", -apple-system, sans-serif;
-      font-size: 114px;
-      line-height: 1;
-      font-weight: 900;
-      color: #ffffff;
-      letter-spacing: 8px;
-      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-      transform: translateY(-2px);
-    }
-    .scorers-wrap {
-      width: 655px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-top: 14px;
-      margin-bottom: 16px;
-      min-height: 52px;
-      padding: 0 16px;
-    }
-    .home-scorers {
-      text-align: right;
-      font-size: 19px;
-      font-weight: 800;
-      color: #ffffff;
-      line-height: 1.35;
-      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
-      flex: 1;
-      padding-right: 14px;
-    }
-    .away-scorers {
-      text-align: left;
-      font-size: 19px;
-      font-weight: 800;
-      color: #ffffff;
-      line-height: 1.35;
-      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
-      flex: 1;
-      padding-left: 14px;
-    }
-    .stats-table {
-      width: 630px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .stat-pill {
-      background: #ffffff;
-      border-radius: 16px;
-      height: 52px;
-      padding: 0 24px;
+
+    /* 3. Logos & Score Row */
+    .scoreboard-row {
+      margin-top: 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
-    }
-    .stat-num {
-      font-size: 29px;
-      font-weight: 900;
-      color: #0B1B3D;
-      width: 72px;
-    }
-    .stat-num.left {
-      text-align: left;
-    }
-    .stat-num.right {
-      text-align: right;
-    }
-    .stat-mid {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 320px;
-    }
-    .stat-label {
-      font-size: 14.5px;
-      font-weight: 900;
-      color: #0B1B3D;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .stat-bar-track {
-      width: 300px;
-      height: 8px;
-      background: #D1D5DB;
-      border-radius: 999px;
-      position: relative;
-      overflow: hidden;
-      display: flex;
-    }
-    .bar-fill-home {
-      background: #B91C1C;
-      height: 100%;
-      border-radius: 999px 0 0 999px;
-    }
-    .bar-fill-away {
-      background: #D1D5DB;
-      height: 100%;
-      border-radius: 0 999px 999px 0;
-    }
-    .footer-brand {
-      position: relative;
+      width: 920px;
       z-index: 10;
+    }
+    .crest-box {
+      width: 230px;
+      height: 230px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .team-logo {
+      max-width: 220px;
+      max-height: 220px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12));
+    }
+    .score-center {
+      width: 360px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .score-digits {
+      font-family: Impact, "Arial Black", -apple-system, sans-serif;
+      font-size: 144px;
+      line-height: 0.95;
+      font-weight: 900;
+      color: #9E0A24;
+      letter-spacing: 2px;
+    }
+
+    /* 4. Events Section (Goals & Cards) */
+    .events-container {
+      margin-top: 24px;
+      width: 900px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      margin-top: 22px;
+      gap: 22px;
+      z-index: 10;
     }
-    .brand-svg-box {
+    .event-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      width: 100%;
+    }
+    .event-side-left {
+      flex: 1;
+      text-align: right;
+      padding-right: 32px;
+      font-size: 26px;
+      font-weight: 700;
+      color: #1F2937;
+      line-height: 1.4;
+    }
+    .event-icon-box {
+      width: 50px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transform: scale(0.96);
+      flex-shrink: 0;
+      padding-top: 1px;
     }
-    .brand-xtra-text {
-      font-size: 17px;
-      font-weight: 800;
-      color: #ffffff;
-      letter-spacing: 0.6px;
-      margin-top: -4px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    .event-side-right {
+      flex: 1;
+      text-align: left;
+      padding-left: 32px;
+      font-size: 26px;
+      font-weight: 700;
+      color: #1F2937;
+      line-height: 1.4;
+    }
+
+    /* Red card tilted icon */
+    .red-card-icon {
+      width: 26px;
+      height: 38px;
+      background-color: #D91A2A;
+      border-radius: 3px;
+      transform: rotate(14deg);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+
+    /* 5. Inkhel Brand Logo at Bottom-Right */
+    .brand-logo-container {
+      position: absolute;
+      bottom: 64px;
+      right: 228px;
+      width: 225px;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .brand-logo-container svg {
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
 <body>
-  <div class="bg-layer"></div>
-  <div class="vignette-overlay"></div>
+  <!-- 1. League Title -->
+  <div class="league-title">${league}</div>
 
-  <div class="dot-accent-tr">${dotMatrix}</div>
-  <div class="dot-accent-bl">${dotMatrix}</div>
+  <!-- 2. Status Badge -->
+  <div class="status-container">
+    <div class="status-text">${statusText}</div>
+  </div>
 
-  <div class="content-wrap">
-    <div class="league-title">${league}</div>
-
-    <div class="status-badge">
-      <div class="status-text">${statusTop}</div>
-      <div class="status-text">${statusBottom}</div>
+  <!-- 3. Scoreboard Row -->
+  <div class="scoreboard-row">
+    <div class="crest-box">
+      ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="team-logo" />` : '<span style="font-size:80px;">⚽</span>'}
     </div>
-
-    <div class="score-card">
-      <div class="crest-box">
-        ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="team-logo" />` : '<span style="font-size:48px;">⚽</span>'}
-      </div>
-      <div class="score-center">
-        <div class="score-digits">${homeScore} : ${awayScore}</div>
-      </div>
-      <div class="crest-box">
-        ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="team-logo" />` : '<span style="font-size:48px;">⚽</span>'}
-      </div>
+    <div class="score-center">
+      <div class="score-digits">${homeScore}-${awayScore}</div>
     </div>
+    <div class="crest-box">
+      ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="team-logo" />` : '<span style="font-size:80px;">⚽</span>'}
+    </div>
+  </div>
 
-    <div class="scorers-wrap">
-      ${(homeScorersList.length > 0 || awayScorersList.length > 0) ? `
-        <div style="width: 100%; display: flex; align-items: flex-start; justify-content: space-between;">
-          <div class="home-scorers">
-            ${homeScorersList.map((s) => `<div>${s}</div>`).join('')}
-          </div>
-          <div style="width: 40px; display: flex; justify-content: center; align-items: center; padding-top: 2px;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
-              <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
-              <polygon points="12,7.5 15.5,10 14.2,14 9.8,14 8.5,10" fill="#111827"/>
-              <line x1="12" y1="7.5" x2="12" y2="2" stroke="#111827" stroke-width="1.2"/>
-              <line x1="15.5" y1="10" x2="20.5" y2="7.5" stroke="#111827" stroke-width="1.2"/>
-              <line x1="14.2" y1="14" x2="18" y2="19.5" stroke="#111827" stroke-width="1.2"/>
-              <line x1="9.8" y1="14" x2="6" y2="19.5" stroke="#111827" stroke-width="1.2"/>
-              <line x1="8.5" y1="10" x2="3.5" y2="7.5" stroke="#111827" stroke-width="1.2"/>
-            </svg>
-          </div>
-          <div class="away-scorers">
-            ${awayScorersList.map((s) => `<div>${s}</div>`).join('')}
-          </div>
+  <!-- 4. Goal Scorers & Red Cards -->
+  <div class="events-container">
+    <!-- Goals -->
+    ${(homeScorersList.length > 0 || awayScorersList.length > 0) ? `
+      <div class="event-row">
+        <div class="event-side-left">
+          ${homeScorersList.map((s) => `<div>${s}</div>`).join('')}
         </div>
-      ` : ''}
-
-      ${(homeRedCardList.length > 0 || awayRedCardList.length > 0) ? `
-        <div style="width: 100%; display: flex; align-items: flex-start; justify-content: space-between; margin-top: 8px;">
-          <div class="home-scorers" style="color: #fca5a5; font-size: 17.5px;">
-            ${homeRedCardList.map((s) => `<div>${s}</div>`).join('')}
-          </div>
-          <div style="width: 40px; display: flex; justify-content: center; align-items: center; padding-top: 2px;">
-            <div style="width: 14px; height: 19px; background-color: #DC2626; border-radius: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.8); transform: rotate(8deg);"></div>
-          </div>
-          <div class="away-scorers" style="color: #fca5a5; font-size: 17.5px;">
-            ${awayRedCardList.map((s) => `<div>${s}</div>`).join('')}
-          </div>
+        <div class="event-icon-box">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">
+            <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" stroke-width="1.3"/>
+            <polygon points="12,7.5 15.5,10 14.2,14 9.8,14 8.5,10" fill="#111827"/>
+            <line x1="12" y1="7.5" x2="12" y2="2" stroke="#111827" stroke-width="1.3"/>
+            <line x1="15.5" y1="10" x2="20.5" y2="7.5" stroke="#111827" stroke-width="1.3"/>
+            <line x1="14.2" y1="14" x2="18" y2="19.5" stroke="#111827" stroke-width="1.3"/>
+            <line x1="9.8" y1="14" x2="6" y2="19.5" stroke="#111827" stroke-width="1.3"/>
+            <line x1="8.5" y1="10" x2="3.5" y2="7.5" stroke="#111827" stroke-width="1.3"/>
+          </svg>
         </div>
-      ` : ''}
-    </div>
-
-    <div class="stats-table">
-      ${statsList
-        .map((s) => {
-          let homePct = 50;
-          let awayPct = 50;
-          const hVal = parseFloat(String(s.home).replace('%', '')) || 0;
-          const aVal = parseFloat(String(s.away).replace('%', '')) || 0;
-          const total = hVal + aVal;
-
-          if (s.isPossession) {
-            homePct = hVal || 50;
-            awayPct = 100 - homePct;
-          } else if (total > 0) {
-            homePct = Math.round((hVal / total) * 100);
-            awayPct = 100 - homePct;
-          }
-
-          return `
-            <div class="stat-pill">
-              <div class="stat-num left">${s.home}</div>
-              <div class="stat-mid">
-                <div class="stat-label">${s.label}</div>
-                <div class="stat-bar-track">
-                  <div class="bar-fill-home" style="width: ${homePct}%;"></div>
-                  <div class="bar-fill-away" style="width: ${awayPct}%;"></div>
-                </div>
-              </div>
-              <div class="stat-num right">${s.away}</div>
-            </div>
-          `;
-        })
-        .join('')}
-    </div>
-
-    <div class="footer-brand">
-      <div class="brand-svg-box">
-        ${inkhelSvg}
+        <div class="event-side-right">
+          ${awayScorersList.map((s) => `<div>${s}</div>`).join('')}
+        </div>
       </div>
-      ${channel === 'fb' ? '<div class="brand-xtra-text">Xtra</div>' : ''}
-    </div>
+    ` : ''}
+
+    <!-- Red Cards -->
+    ${(homeRedCardList.length > 0 || awayRedCardList.length > 0) ? `
+      <div class="event-row">
+        <div class="event-side-left">
+          ${homeRedCardList.map((s) => `<div>${s}</div>`).join('')}
+        </div>
+        <div class="event-icon-box">
+          <div class="red-card-icon"></div>
+        </div>
+        <div class="event-side-right">
+          ${awayRedCardList.map((s) => `<div>${s}</div>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+  </div>
+
+  <!-- 5. Inkhel Brand Logo -->
+  <div class="brand-logo-container">
+    ${inkhelSvg}
   </div>
 </body>
 </html>`;

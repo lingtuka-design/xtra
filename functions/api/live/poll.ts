@@ -481,7 +481,7 @@ ${playerLine}🏆 *${leagueName}*
 👉 _Inkhel WhatsApp Channel_`;
 }
 
-// Helper to generate 4:5 Match Scorecard Graphic using user's custom design
+// Helper to generate Square 1:1 Match Scorecard Graphic using user's custom design
 function buildCardImageUrl(options: {
   home: string;
   away: string;
@@ -493,6 +493,8 @@ function buildCardImageUrl(options: {
   leagueName: string;
   homeScorers: string;
   awayScorers: string;
+  homeRedCards?: string;
+  awayRedCards?: string;
   stats?: any;
   channel: 'fb' | 'wa';
   bgImage?: string;
@@ -508,6 +510,8 @@ function buildCardImageUrl(options: {
   q.set('league', options.leagueName);
   if (options.homeScorers) q.set('homeScorers', options.homeScorers);
   if (options.awayScorers) q.set('awayScorers', options.awayScorers);
+  if (options.homeRedCards) q.set('homeRedCardScorers', options.homeRedCards);
+  if (options.awayRedCards) q.set('awayRedCardScorers', options.awayRedCards);
   q.set('channel', options.channel);
   if (options.bgImage) q.set('bgImage', options.bgImage);
 
@@ -529,7 +533,7 @@ function buildCardImageUrl(options: {
   }
 
   const cardEndpoint = `https://xtra-byd.pages.dev/api/live/card?${q.toString()}`;
-  return `https://api.microlink.io/?url=${encodeURIComponent(cardEndpoint)}&screenshot=true&embed=screenshot.url&viewport.width=820&viewport.height=1024`;
+  return `https://api.microlink.io/?url=${encodeURIComponent(cardEndpoint)}&screenshot=true&embed=screenshot.url&viewport.width=1024&viewport.height=1024`;
 }
 
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
@@ -1121,6 +1125,20 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             .map((ev: any) => `${formatScorerDisplay(ev)} (${ev.minute})`)
             .join(',');
 
+          const htRedEvents = (summary.events || []).filter((ev: any) => {
+            const typeLower = (ev.type || '').toLowerCase();
+            const textLower = (ev.text || '').toLowerCase();
+            return (typeLower.includes('red') && typeLower.includes('card')) || textLower.includes('red card') || typeLower.includes('second-yellow');
+          });
+          const homeRedCards = htRedEvents
+            .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : false))
+            .map((ev: any) => `${ev.player || ev.athlete?.displayName || 'Player'} ${ev.minute}`)
+            .join(',');
+          const awayRedCards = htRedEvents
+            .filter((ev: any) => (summary.awayTeamId && ev.teamId ? ev.teamId === summary.awayTeamId : false))
+            .map((ev: any) => `${ev.player || ev.athlete?.displayName || 'Player'} ${ev.minute}`)
+            .join(',');
+
           const fbHT = formatHalfTimePost(
             match.home_team,
             match.away_team,
@@ -1159,6 +1177,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               leagueName,
               homeScorers,
               awayScorers,
+              homeRedCards,
+              awayRedCards,
               stats: summary.stats,
               channel: 'fb',
               bgImage: htPhotoToUse,
@@ -1178,6 +1198,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               leagueName,
               homeScorers,
               awayScorers,
+              homeRedCards,
+              awayRedCards,
               stats: summary.stats,
               channel: 'wa',
               bgImage: htPhotoToUse,
@@ -1244,6 +1266,20 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           const awayScorers = goalEvents
             .filter((ev: any) => (summary.awayTeamId && ev.teamId ? ev.teamId === summary.awayTeamId : false))
             .map((ev: any) => `${formatScorerDisplay(ev)} (${ev.minute})`)
+            .join(',');
+
+          const ftRedEvents = (summary.events || []).filter((ev: any) => {
+            const typeLower = (ev.type || '').toLowerCase();
+            const textLower = (ev.text || '').toLowerCase();
+            return (typeLower.includes('red') && typeLower.includes('card')) || textLower.includes('red card') || typeLower.includes('second-yellow');
+          });
+          const homeRedCards = ftRedEvents
+            .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : false))
+            .map((ev: any) => `${ev.player || ev.athlete?.displayName || 'Player'} ${ev.minute}`)
+            .join(',');
+          const awayRedCards = ftRedEvents
+            .filter((ev: any) => (summary.awayTeamId && ev.teamId ? ev.teamId === summary.awayTeamId : false))
+            .map((ev: any) => `${ev.player || ev.athlete?.displayName || 'Player'} ${ev.minute}`)
             .join(',');
 
           const isShootoutConcluded = Boolean(summary.shootout?.hasShootout && summary.shootout.isFinal);
@@ -1368,6 +1404,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               leagueName,
               homeScorers,
               awayScorers,
+              homeRedCards,
+              awayRedCards,
               stats: summary.stats,
               channel: 'fb',
               bgImage: chosenPhoto,
@@ -1387,6 +1425,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               leagueName,
               homeScorers,
               awayScorers,
+              homeRedCards,
+              awayRedCards,
               stats: summary.stats,
               channel: 'wa',
               bgImage: chosenPhoto,
