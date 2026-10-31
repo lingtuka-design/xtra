@@ -28,7 +28,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // EXACT LINEUP MODE - 100% faithful to user's uploaded design
     const homeXI = parseList(url.searchParams.get('homeXI') || url.searchParams.get('homeStarters') || '');
     const awayXI = parseList(url.searchParams.get('awayXI') || url.searchParams.get('awayStarters') || '');
-    const matchTime = url.searchParams.get('matchTime') || url.searchParams.get('time') || '06:00 PM';
+    let matchTime = url.searchParams.get('matchTime') || url.searchParams.get('time') || '06:00 PM';
+    matchTime = matchTime.replace(/\s*IST\s*/gi, '').trim();
 
     const lineupHtml = `<!DOCTYPE html>
 <html lang="en">

@@ -640,17 +640,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               leagueName
             );
 
-            // Format Kickoff IST for Lineup Card
-            let matchTimeIST = 'KICKOFF IST';
+            // Format Kickoff Time for Lineup Card (NO IST)
+            let matchTime = '06:00 PM';
             if (match.match_time) {
               try {
-                matchTimeIST =
+                matchTime =
                   new Date(match.match_time).toLocaleTimeString('en-US', {
                     hour: 'numeric',
                     minute: '2-digit',
                     hour12: true,
                     timeZone: 'Asia/Kolkata',
-                  }) + ' IST';
+                  });
               } catch {}
             }
 
@@ -665,7 +665,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               leagueName,
               homeXI: summary.lineups.home.starters,
               awayXI: summary.lineups.away.starters,
-              matchTime: matchTimeIST,
+              matchTime,
               channel: 'fb',
             });
 
@@ -679,7 +679,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               leagueName,
               homeXI: summary.lineups.home.starters,
               awayXI: summary.lineups.away.starters,
-              matchTime: matchTimeIST,
+              matchTime,
               channel: 'wa',
             });
 
