@@ -125,6 +125,9 @@ export class ClubPhotoService {
       isHalftime?: boolean;
       winningScorers?: string[];
       avoidPhotoUrl?: string;
+      sourceAccount?: string;
+      homeTeam?: string;
+      awayTeam?: string;
     }
   ): ClubPhotoCandidate[] {
     if (!photos || photos.length === 0) return [];
@@ -264,6 +267,32 @@ export class ClubPhotoService {
       baseScore -= 60;
     }
 
+    // 8. Special handling for premier photography curation accounts like @HQpcrt
+    if (options.sourceAccount && options.sourceAccount.toLowerCase() === 'hqpcrt') {
+      const homeWords = (options.homeTeam || '')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length >= 4 && !['club', 'city', 'town', 'united'].includes(w));
+      const awayWords = (options.awayTeam || '')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length >= 4 && !['club', 'city', 'town', 'united'].includes(w));
+      const scorerWords = (options.winningScorers || [])
+        .map((s) => s.split(' ').pop()?.toLowerCase())
+        .filter((w) => Boolean(w) && (w?.length || 0) >= 4);
+
+      const matchesHome = homeWords.some((w) => lower.includes(w));
+      const matchesAway = awayWords.some((w) => lower.includes(w));
+      const matchesScorer = scorerWords.some((w) => w && lower.includes(w));
+
+      // Strictly skip if tweet is not about this match
+      if (!matchesHome && !matchesAway && !matchesScorer) {
+        return [];
+      }
+      // If confirmed for this match, add a quality bonus for 4K pristine unwatermarked photos
+      baseScore += 45;
+    }
+
     // Must have at least 30 points (genuine match action or celebration indicator)
     if (baseScore < 30) {
       return [];
@@ -331,6 +360,11 @@ export class ClubPhotoService {
         if (awayHandle) handlesToCheck.push(awayHandle);
       }
 
+      // Also check premier 4K football photography account @HQpcrt
+      if (!handlesToCheck.includes('HQpcrt')) {
+        handlesToCheck.push('HQpcrt');
+      }
+
       if (handlesToCheck.length === 0) {
         console.log(`[ClubPhoto] No Twitter handle found for ${options.homeTeam} or ${options.awayTeam}`);
         return null;
@@ -367,6 +401,9 @@ export class ClubPhotoService {
               isHalftime: options.isHalftime,
               winningScorers: options.winningScorers,
               avoidPhotoUrl: options.avoidPhotoUrl,
+              sourceAccount: handle,
+              homeTeam: options.homeTeam,
+              awayTeam: options.awayTeam,
             });
             allCandidates.push(...candidates);
           }
