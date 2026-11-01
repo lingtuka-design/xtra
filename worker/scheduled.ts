@@ -37,10 +37,11 @@ export default {
         })
     );
 
-    // 3. Keep-alive ping for WhatsApp Bot microservice
-    if (env.WHATSAPP_API_URL && minute % 5 === 0) {
+    // 3. Keep-alive ping for WhatsApp Bot microservice (runs every 5 mins to prevent cold-sleep)
+    const waUrl = env.WHATSAPP_API_URL || 'https://xtra-whatsapp-bot.onrender.com';
+    if (minute % 5 === 0) {
       ctx.waitUntil(
-        fetch(`${env.WHATSAPP_API_URL.replace(/\/$/, '')}/health`)
+        fetch(`${waUrl.replace(/\/$/, '')}/health`)
           .then((r) => console.log(`[Xtra Cron] WhatsApp bot keep-alive: ${r.status}`))
           .catch((e) => console.warn('[Xtra Cron] WhatsApp bot ping error:', e.message))
       );

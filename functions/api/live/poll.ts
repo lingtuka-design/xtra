@@ -1306,13 +1306,16 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
 
           try {
-            await whatsappPoster.postNews(
+            const waRes = await whatsappPoster.postNews(
               waHT,
               waImage,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
               env.WHATSAPP_API_URL
             );
+            if (!waRes.success) {
+              console.warn('[Poll HT] WhatsApp post warning:', waRes.error);
+            }
           } catch (waErr: any) {
             console.error('WA HT Stats error:', waErr.message);
           }
@@ -1556,13 +1559,16 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
 
           try {
-            await whatsappPoster.postNews(
+            const waRes = await whatsappPoster.postNews(
               waFT,
               waImage,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
               env.WHATSAPP_API_URL
             );
+            if (!waRes.success) {
+              console.warn('[Poll FT] WhatsApp post warning:', waRes.error);
+            }
           } catch (waErr: any) {
             console.error('WA FT Stats error:', waErr.message);
           }
