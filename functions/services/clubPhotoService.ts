@@ -144,6 +144,21 @@ export class ClubPhotoService {
       lower.includes('points shared at') ||
       lower.includes('full-time at') ||
       lower.includes('half-time at') ||
+      lower.includes('round of 16') ||
+      lower.includes('quarter-final') ||
+      lower.includes('quarter final') ||
+      lower.includes('semi-final') ||
+      lower.includes('semi final') ||
+      lower.includes('club world cup') ||
+      lower.includes('summer tour') ||
+      lower.includes('friendly') ||
+      lower.includes('tickets') ||
+      lower.includes('on sale') ||
+      lower.includes('presale') ||
+      lower.includes('miami') ||
+      lower.includes('florida') ||
+      lower.includes('wallpaper') ||
+      lower.includes('quote') ||
       (lower.includes('full-time') && lower.includes('-') && photos.length === 1) ||
       (lower.includes('half-time') && lower.includes('-') && photos.length === 1);
 
@@ -172,7 +187,7 @@ export class ClubPhotoService {
       return [];
     }
 
-    let baseScore = 10;
+    let baseScore = 0;
 
     // 2. High bonus for in-match tweets containing scorelines (e.g. "1-0", "2-0") or match hashtags (#BRENFO)
     const hasScorePattern = /\b\d+\s*[-–]\s*\d+\b/.test(text);
@@ -247,6 +262,11 @@ export class ClubPhotoService {
       lower.includes('shop')
     ) {
       baseScore -= 60;
+    }
+
+    // Must have at least 30 points (genuine match action or celebration indicator)
+    if (baseScore < 30) {
+      return [];
     }
 
     const results: ClubPhotoCandidate[] = [];

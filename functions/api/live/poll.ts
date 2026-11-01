@@ -1195,36 +1195,45 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       if (summary.status.isHalftime) {
         const htEventId = `ht_${match.event_id}`;
         let claimed = false;
-        // 1. Check verified Club Official Twitter for clean on-pitch celebration/action photo
+        // Photo Selection Hierarchy:
+        // Priority 1: User Manual HT Photo (uploaded / pasted by user)
         let htPhotoToUse = '';
-        try {
-          const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
-          const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
-          const leadingTeam = isHomeLeading ? match.home_team : isAwayLeading ? match.away_team : undefined;
-          const trailingTeam = isHomeLeading ? match.away_team : isAwayLeading ? match.home_team : undefined;
-          const isHtDraw = (match.home_score || 0) === (match.away_score || 0);
-
-          const clubPhoto = await clubPhotoService.getMatchActionPhoto({
-            homeTeam: match.home_team,
-            awayTeam: match.away_team,
-            winningTeam: leadingTeam,
-            losingTeam: trailingTeam,
-            isDraw: isHtDraw,
-            isHalftime: true,
-            matchTime: match.match_time,
-            env,
-          });
-
-          if (clubPhoto) {
-            htPhotoToUse = clubPhoto;
-            console.log(`[HT Photo] Selected clean Club Twitter photo: ${htPhotoToUse}`);
-          }
-        } catch (e: any) {
-          console.warn('[HT Photo] Club Twitter lookup error:', e.message);
+        if (match.manual_ht_photo && match.manual_ht_photo.trim().length > 0) {
+          htPhotoToUse = match.manual_ht_photo.trim();
+          console.log(`[HT Photo] Priority 1: Using User Manual HT Photo: ${htPhotoToUse}`);
         }
 
-        // 2. If no Club Twitter photo, fallback to FotMob
-        if (!htPhotoToUse && (match.league === 'PL' || match.league === 'UCL' || match.league === 'LL' || match.league === 'BL' || match.league === 'EFL')) {
+        // Priority 2: Check verified Club Official Twitter for clean on-pitch celebration/action photo
+        if (!htPhotoToUse) {
+          try {
+            const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
+            const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
+            const leadingTeam = isHomeLeading ? match.home_team : isAwayLeading ? match.away_team : undefined;
+            const trailingTeam = isHomeLeading ? match.away_team : isAwayLeading ? match.home_team : undefined;
+            const isHtDraw = (match.home_score || 0) === (match.away_score || 0);
+
+            const clubPhoto = await clubPhotoService.getMatchActionPhoto({
+              homeTeam: match.home_team,
+              awayTeam: match.away_team,
+              winningTeam: leadingTeam,
+              losingTeam: trailingTeam,
+              isDraw: isHtDraw,
+              isHalftime: true,
+              matchTime: match.match_time,
+              env,
+            });
+
+            if (clubPhoto) {
+              htPhotoToUse = clubPhoto;
+              console.log(`[HT Photo] Priority 2: Selected clean Club Twitter photo: ${htPhotoToUse}`);
+            }
+          } catch (e: any) {
+            console.warn('[HT Photo] Club Twitter lookup error:', e.message);
+          }
+        }
+
+        // Priority 3: Fallback to FotMob (all leagues including ISL)
+        if (!htPhotoToUse) {
           try {
             const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
             const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
@@ -1241,12 +1250,13 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             });
             if (fotmobRes.bestPhoto) {
               htPhotoToUse = fotmobRes.bestPhoto;
+              console.log(`[HT Photo] Priority 3: Selected FotMob photo: ${htPhotoToUse}`);
             }
           } catch (e: any) {
             console.warn('[HT Photo] FotMob lookup error:', e.message);
           }
         }
-        // Strict: NO ESPN archive photo fallback (avoids older match away jersey file photos). If no FotMob live photo, fallback directly to Scorecard Graphic!
+        // Priority 4: Generated Scorecard Graphic (fbImage/waImage via buildCardImageUrl)
 
         try {
           const insertLock = await env.DB.prepare(
@@ -1525,32 +1535,39 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           let chosenPhoto = '';
 
-          // 1. Check verified Club Official Twitter for clean on-pitch celebration/action photo
-          try {
-            const clubPhoto = await clubPhotoService.getMatchActionPhoto({
-              homeTeam: match.home_team,
-              awayTeam: match.away_team,
-              winningTeam: isDraw ? undefined : winningTeamName,
-              losingTeam: isDraw ? undefined : losingTeamName,
-              winningScorers,
-              isDraw,
-              isHalftime: false,
-              avoidPhotoUrl: htPhoto,
-              matchTime: match.match_time,
-              env,
-            });
-
-            if (clubPhoto) {
-              chosenPhoto = clubPhoto;
-              console.log(`[FT Photo] Selected clean Club Twitter photo: ${chosenPhoto}`);
-            }
-          } catch (clubErr: any) {
-            console.warn('[FT Photo] Club Twitter lookup error:', clubErr.message);
+          // Priority 1: User Manual FT Photo (uploaded / pasted by user)
+          if (match.manual_ft_photo && match.manual_ft_photo.trim().length > 0) {
+            chosenPhoto = match.manual_ft_photo.trim();
+            console.log(`[FT Photo] Priority 1: Using User Manual FT Photo: ${chosenPhoto}`);
           }
 
-          // 2. If no clean Club Twitter photo, fallback to FotMob
-          const isTier1 = match.league === 'PL' || match.league === 'UCL' || match.league === 'LL' || match.league === 'BL' || match.league === 'EFL';
-          if (!chosenPhoto && isTier1) {
+          // Priority 2: Check verified Club Official Twitter for clean on-pitch celebration/action photo
+          if (!chosenPhoto) {
+            try {
+              const clubPhoto = await clubPhotoService.getMatchActionPhoto({
+                homeTeam: match.home_team,
+                awayTeam: match.away_team,
+                winningTeam: isDraw ? undefined : winningTeamName,
+                losingTeam: isDraw ? undefined : losingTeamName,
+                winningScorers,
+                isDraw,
+                isHalftime: false,
+                avoidPhotoUrl: htPhoto,
+                matchTime: match.match_time,
+                env,
+              });
+
+              if (clubPhoto) {
+                chosenPhoto = clubPhoto;
+                console.log(`[FT Photo] Priority 2: Selected clean Club Twitter photo: ${chosenPhoto}`);
+              }
+            } catch (clubErr: any) {
+              console.warn('[FT Photo] Club Twitter lookup error:', clubErr.message);
+            }
+          }
+
+          // Priority 3: Fallback to FotMob (all leagues including ISL)
+          if (!chosenPhoto) {
             try {
               const fotmobRes = await fotmobService.getMatchPhotos({
                 homeTeam: match.home_team,
@@ -1563,12 +1580,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               // Pick best photo strictly avoiding Half Time photo!
               if (fotmobRes.bestPhoto && fotmobRes.bestPhoto !== htPhoto) {
                 chosenPhoto = fotmobRes.bestPhoto;
-                console.log(`[FT Photo] Selected FotMob best photo: ${chosenPhoto}`);
+                console.log(`[FT Photo] Priority 3: Selected FotMob best photo: ${chosenPhoto}`);
               } else if (fotmobRes.allPhotos && fotmobRes.allPhotos.length > 0) {
                 const runnerUp = fotmobRes.allPhotos.find((p) => p !== htPhoto);
                 if (runnerUp) {
                   chosenPhoto = runnerUp;
-                  console.log(`[FT Photo] Selected FotMob runner-up photo: ${chosenPhoto}`);
+                  console.log(`[FT Photo] Priority 3: Selected FotMob runner-up photo: ${chosenPhoto}`);
                 }
               }
             } catch (fotmobErr: any) {

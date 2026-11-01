@@ -10,17 +10,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const fixtures = await espnService.getFixtures();
 
-    // Query currently tracked matches in D1 with track_mode and track_ratings
+    // Query currently tracked matches in D1 with track_mode, track_ratings, and manual photos
     const { results: tracked } = await env.DB.prepare(
-      'SELECT event_id, is_active, track_mode, track_ratings FROM live_tracked_matches WHERE is_active = 1'
-    ).all<{ event_id: string; is_active: number; track_mode?: string; track_ratings?: number }>();
+      'SELECT event_id, is_active, track_mode, track_ratings, manual_ht_photo, manual_ft_photo FROM live_tracked_matches'
+    ).all<{
+      event_id: string;
+      is_active: number;
+      track_mode?: string;
+      track_ratings?: number;
+      manual_ht_photo?: string;
+      manual_ft_photo?: string;
+    }>();
 
     const trackedMap = new Map(
       (tracked || []).map((t) => [
         t.event_id,
         {
+          isActive: Boolean(t.is_active),
           mode: t.track_mode || 'full',
           trackRatings: Boolean(t.track_ratings),
+          manualHtPhoto: t.manual_ht_photo || '',
+          manualFtPhoto: t.manual_ft_photo || '',
         },
       ])
     );
@@ -29,9 +39,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       const trackInfo = trackedMap.get(f.id) || null;
       return {
         ...f,
-        isTracked: Boolean(trackInfo),
+        isTracked: trackInfo ? trackInfo.isActive : false,
         trackMode: trackInfo ? trackInfo.mode : null,
         trackRatings: trackInfo ? trackInfo.trackRatings : false,
+        manualHtPhoto: trackInfo ? trackInfo.manualHtPhoto : '',
+        manualFtPhoto: trackInfo ? trackInfo.manualFtPhoto : '',
       };
     });
 
@@ -41,28 +53,64 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 };
 
-// POST /api/live/matches -> Toggle tracking a match { eventId, league, homeTeam, awayTeam, isTracked, trackMode, trackRatings }
+// POST /api/live/matches -> Toggle tracking a match OR update manual HT/FT photos
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
   try {
     const body = (await request.json()) as {
       eventId: string;
-      league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL';
-      homeTeam: string;
-      awayTeam: string;
+      league?: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL';
+      homeTeam?: string;
+      awayTeam?: string;
       homeLogo?: string;
       awayLogo?: string;
       matchTime?: string;
-      isTracked: boolean;
+      isTracked?: boolean;
       trackMode?: 'full' | 'results_only';
       trackRatings?: boolean;
+      manualHtPhoto?: string;
+      manualFtPhoto?: string;
+      action?: 'toggle_track' | 'save_photos';
     };
 
     if (!body.eventId) {
       return Response.json({ success: false, error: 'eventId is required' }, { status: 400 });
     }
 
+    // 1. Photo-only update action
+    if (body.action === 'save_photos' || (body.manualHtPhoto !== undefined && body.manualFtPhoto !== undefined && body.isTracked === undefined)) {
+      await env.DB.prepare(
+        `INSERT INTO live_tracked_matches 
+        (event_id, league, home_team, away_team, home_logo, away_logo, match_time, is_active, track_mode, track_ratings, manual_ht_photo, manual_ft_photo, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'full', 0, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(event_id) DO UPDATE SET
+          manual_ht_photo = excluded.manual_ht_photo,
+          manual_ft_photo = excluded.manual_ft_photo,
+          home_team = COALESCE(excluded.home_team, live_tracked_matches.home_team),
+          away_team = COALESCE(excluded.away_team, live_tracked_matches.away_team),
+          updated_at = CURRENT_TIMESTAMP`
+      ).bind(
+        body.eventId,
+        body.league || 'PL',
+        body.homeTeam || '',
+        body.awayTeam || '',
+        body.homeLogo || null,
+        body.awayLogo || null,
+        body.matchTime || null,
+        body.manualHtPhoto || null,
+        body.manualFtPhoto || null
+      ).run();
+
+      return Response.json({
+        success: true,
+        eventId: body.eventId,
+        manualHtPhoto: body.manualHtPhoto || '',
+        manualFtPhoto: body.manualFtPhoto || '',
+      });
+    }
+
+    // 2. Tracking toggle action
     if (body.isTracked) {
       const mode = body.trackMode || 'full';
       const ratingsVal = body.trackRatings ? 1 : 0;
@@ -78,9 +126,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           updated_at = CURRENT_TIMESTAMP`
       ).bind(
         body.eventId,
-        body.league,
-        body.homeTeam,
-        body.awayTeam,
+        body.league || 'PL',
+        body.homeTeam || '',
+        body.awayTeam || '',
         body.homeLogo || null,
         body.awayLogo || null,
         body.matchTime || null,

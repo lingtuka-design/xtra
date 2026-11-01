@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star, Calendar, Camera, Upload, Link2, X, Trash2, Check } from 'lucide-react';
 
 interface EspnMatch {
   id: string;
@@ -30,6 +30,8 @@ interface EspnMatch {
   isTracked?: boolean;
   trackMode?: 'full' | 'results_only' | null;
   trackRatings?: boolean;
+  manualHtPhoto?: string;
+  manualFtPhoto?: string;
 }
 
 export const LiveMatchesPanel: React.FC = () => {
@@ -39,6 +41,14 @@ export const LiveMatchesPanel: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'EFL' | 'LL' | 'BL' | 'UCL' | 'ISL'>('ALL');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // Manual Photo Modal state
+  const [photoModalMatch, setPhotoModalMatch] = useState<EspnMatch | null>(null);
+  const [htPhotoInput, setHtPhotoInput] = useState<string>('');
+  const [ftPhotoInput, setFtPhotoInput] = useState<string>('');
+  const [savingPhotos, setSavingPhotos] = useState<boolean>(false);
+  const htFileInputRef = useRef<HTMLInputElement>(null);
+  const ftFileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMatches = async (silent = false) => {
     try {
@@ -212,6 +222,100 @@ export const LiveMatchesPanel: React.FC = () => {
       alert('Ratings thlak laiin buaina a awm: ' + err.message);
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const openPhotoModal = (match: EspnMatch) => {
+    setPhotoModalMatch(match);
+    setHtPhotoInput(match.manualHtPhoto || '');
+    setFtPhotoInput(match.manualFtPhoto || '');
+  };
+
+  const closePhotoModal = () => {
+    setPhotoModalMatch(null);
+    setHtPhotoInput('');
+    setFtPhotoInput('');
+  };
+
+  const handleFileUpload = (file: File | undefined, type: 'HT' | 'FT') => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          if (type === 'HT') setHtPhotoInput(dataUrl);
+          else setFtPhotoInput(dataUrl);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSavePhotos = async () => {
+    if (!photoModalMatch) return;
+    setSavingPhotos(true);
+    const trimmedHt = htPhotoInput.trim();
+    const trimmedFt = ftPhotoInput.trim();
+
+    try {
+      const res = await fetch('/api/live/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: photoModalMatch.id,
+          action: 'save_photos',
+          league: photoModalMatch.league,
+          homeTeam: photoModalMatch.homeTeam.name,
+          awayTeam: photoModalMatch.awayTeam.name,
+          homeLogo: photoModalMatch.homeTeam.logo,
+          awayLogo: photoModalMatch.awayTeam.logo,
+          matchTime: photoModalMatch.date,
+          manualHtPhoto: trimmedHt,
+          manualFtPhoto: trimmedFt,
+        }),
+      });
+
+      const data = (await res.json()) as any;
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save photos');
+      }
+
+      setMatches((prev) =>
+        prev.map((m) =>
+          m.id === photoModalMatch.id
+            ? { ...m, manualHtPhoto: trimmedHt, manualFtPhoto: trimmedFt }
+            : m
+        )
+      );
+
+      setStatusMessage(
+        `📷 ${photoModalMatch.shortName || photoModalMatch.name}: HT & FT photo dah fel a ni ta! (Priority 1-ah a hmang nghal ang).`
+      );
+      closePhotoModal();
+    } catch (err: any) {
+      alert('Thlalak save laiin buaina a awm: ' + err.message);
+    } finally {
+      setSavingPhotos(false);
     }
   };
 
@@ -446,30 +550,55 @@ export const LiveMatchesPanel: React.FC = () => {
             </button>
           </div>
 
-          {/* Mode 3 / Addon: Player Ratings Checkbox */}
-          <button
-            type="button"
-            disabled={updatingId === match.id}
-            onClick={() => handleToggleRatings(match)}
-            className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
-              match.trackRatings
-                ? 'bg-amber-500 text-white border-amber-600 shadow-2xs font-extrabold ring-1 ring-amber-400'
-                : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
-            }`}
-            title={
-              match.trackRatings
-                ? '⭐ Player Ratings enabled (Click to turn off)'
-                : '⭐ Click to enable Player Ratings (Posts 1m after Full Time with fresh photo)'
-            }
-          >
-            <Star
-              className={`w-2.5 h-2.5 ${
-                match.trackRatings ? 'text-amber-100 fill-amber-100' : 'text-amber-500'
+          <div className="flex items-center gap-1.5">
+            {/* Mode 3 / Addon: Player Ratings Checkbox */}
+            <button
+              type="button"
+              disabled={updatingId === match.id}
+              onClick={() => handleToggleRatings(match)}
+              className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
+                match.trackRatings
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-2xs font-extrabold ring-1 ring-amber-400'
+                  : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
               }`}
-            />
-            <span>Ratings</span>
-            {match.trackRatings && <CheckCircle2 className="w-2.5 h-2.5 text-white ml-0.5" />}
-          </button>
+              title={
+                match.trackRatings
+                  ? '⭐ Player Ratings enabled (Click to turn off)'
+                  : '⭐ Click to enable Player Ratings (Posts 1m after Full Time with fresh photo)'
+              }
+            >
+              <Star
+                className={`w-2.5 h-2.5 ${
+                  match.trackRatings ? 'text-amber-100 fill-amber-100' : 'text-amber-500'
+                }`}
+              />
+              <span>Ratings</span>
+              {match.trackRatings && <CheckCircle2 className="w-2.5 h-2.5 text-white ml-0.5" />}
+            </button>
+
+            {/* Custom Manual HT & FT Photos Button */}
+            <button
+              type="button"
+              onClick={() => openPhotoModal(match)}
+              className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
+                match.manualHtPhoto || match.manualFtPhoto
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-2xs font-extrabold ring-1 ring-blue-400'
+                  : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
+              }`}
+              title="📷 Dah chawp HT & FT Thlalak (Priority 1)"
+            >
+              <Camera className="w-2.5 h-2.5" />
+              <span>
+                {match.manualHtPhoto && match.manualFtPhoto
+                  ? 'HT+FT 📷'
+                  : match.manualHtPhoto
+                  ? 'HT 📷'
+                  : match.manualFtPhoto
+                  ? 'FT 📷'
+                  : 'Photos'}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -690,6 +819,195 @@ export const LiveMatchesPanel: React.FC = () => {
           Auto-posts to <strong>Inkhel Xtra FB</strong> + <strong>WhatsApp</strong> + <strong>Telegram</strong>
         </span>
       </div>
+
+      {/* Manual HT & FT Photos Modal */}
+      {photoModalMatch && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-lg shadow-2xl p-5 space-y-4 my-8">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-stone-200">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-extrabold text-stone-900 truncate">
+                    {photoModalMatch.homeTeam.name} vs {photoModalMatch.awayTeam.name}
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Half Time (HT) &amp; Full Time (FT) Thlalak Dahna
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closePhotoModal}
+                className="w-7 h-7 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-600 flex items-center justify-center shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Instruction Notice */}
+            <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-3 text-xs text-blue-900 space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <span>1st Priority Manual Photos</span>
+              </div>
+              <p className="text-[11px] text-blue-800 leading-relaxed">
+                Hetah hian thlalak i dah chuan, automated Twitter leh FotMob scraper zawng zawng aiin <strong>1st Priority</strong>-ah a hmang nghal ang. Photo file upload emaw web link paste theih a ni ve ve.
+              </p>
+            </div>
+
+            {/* 1. Half Time (HT) Photo */}
+            <div className="bg-stone-50 border border-stone-200 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  Half Time (HT) Picture
+                </span>
+                {htPhotoInput && (
+                  <button
+                    type="button"
+                    onClick={() => setHtPhotoInput('')}
+                    className="text-[11px] text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Paih rawh
+                  </button>
+                )}
+              </div>
+
+              {/* URL Input */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Link2 className="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="url"
+                    value={htPhotoInput.startsWith('data:') ? '(Uploaded Image File)' : htPhotoInput}
+                    onChange={(e) => setHtPhotoInput(e.target.value)}
+                    disabled={htPhotoInput.startsWith('data:')}
+                    placeholder="https://... thlalak link paste rawh"
+                    className="w-full h-8 pl-8 pr-2.5 text-xs bg-white border border-stone-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-stone-800 disabled:bg-stone-100 disabled:text-stone-500"
+                  />
+                </div>
+                <input
+                  type="file"
+                  ref={htFileInputRef}
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e.target.files?.[0], 'HT')}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => htFileInputRef.current?.click()}
+                  className="h-8 px-2.5 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg text-xs font-bold text-stone-700 flex items-center gap-1.5 shrink-0 shadow-2xs"
+                >
+                  <Upload className="w-3 h-3 text-stone-500" />
+                  Upload
+                </button>
+              </div>
+
+              {/* Preview Thumbnail */}
+              {htPhotoInput && (
+                <div className="relative mt-2 rounded-lg overflow-hidden border border-stone-300 max-h-36 bg-black/5 flex items-center justify-center">
+                  <img
+                    src={htPhotoInput}
+                    alt="HT Preview"
+                    className="max-h-36 w-full object-contain"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* 2. Full Time (FT) Photo */}
+            <div className="bg-stone-50 border border-stone-200 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Full Time (FT) Picture
+                </span>
+                {ftPhotoInput && (
+                  <button
+                    type="button"
+                    onClick={() => setFtPhotoInput('')}
+                    className="text-[11px] text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Paih rawh
+                  </button>
+                )}
+              </div>
+
+              {/* URL Input */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Link2 className="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="url"
+                    value={ftPhotoInput.startsWith('data:') ? '(Uploaded Image File)' : ftPhotoInput}
+                    onChange={(e) => setFtPhotoInput(e.target.value)}
+                    disabled={ftPhotoInput.startsWith('data:')}
+                    placeholder="https://... thlalak link paste rawh"
+                    className="w-full h-8 pl-8 pr-2.5 text-xs bg-white border border-stone-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-stone-800 disabled:bg-stone-100 disabled:text-stone-500"
+                  />
+                </div>
+                <input
+                  type="file"
+                  ref={ftFileInputRef}
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e.target.files?.[0], 'FT')}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => ftFileInputRef.current?.click()}
+                  className="h-8 px-2.5 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg text-xs font-bold text-stone-700 flex items-center gap-1.5 shrink-0 shadow-2xs"
+                >
+                  <Upload className="w-3 h-3 text-stone-500" />
+                  Upload
+                </button>
+              </div>
+
+              {/* Preview Thumbnail */}
+              {ftPhotoInput && (
+                <div className="relative mt-2 rounded-lg overflow-hidden border border-stone-300 max-h-36 bg-black/5 flex items-center justify-center">
+                  <img
+                    src={ftPhotoInput}
+                    alt="FT Preview"
+                    className="max-h-36 w-full object-contain"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-200">
+              <button
+                type="button"
+                onClick={closePhotoModal}
+                disabled={savingPhotos}
+                className="h-9 px-4 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 text-xs font-bold transition-colors"
+              >
+                Kharkhawpna
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePhotos}
+                disabled={savingPhotos}
+                className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
+              >
+                {savingPhotos ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+                <span>Save Photos</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
