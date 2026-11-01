@@ -267,8 +267,12 @@ export class ClubPhotoService {
       baseScore -= 60;
     }
 
-    // 8. Special handling for premier photography curation accounts like @HQpcrt
-    if (options.sourceAccount && options.sourceAccount.toLowerCase() === 'hqpcrt') {
+    // 8. Special handling for premier photography curation accounts like @brfootball and @HQpcrt
+    const isCurationAccount =
+      options.sourceAccount &&
+      (options.sourceAccount.toLowerCase() === 'hqpcrt' || options.sourceAccount.toLowerCase() === 'brfootball');
+
+    if (isCurationAccount) {
       const homeWords = (options.homeTeam || '')
         .toLowerCase()
         .split(/\s+/)
@@ -289,8 +293,8 @@ export class ClubPhotoService {
       if (!matchesHome && !matchesAway && !matchesScorer) {
         return [];
       }
-      // If confirmed for this match, add a quality bonus for 4K pristine unwatermarked photos
-      baseScore += 45;
+      // If confirmed for this match, add a quality bonus for live multi-photo pitch celebrations
+      baseScore += 40;
     }
 
     // Must have at least 30 points (genuine match action or celebration indicator)
@@ -360,7 +364,10 @@ export class ClubPhotoService {
         if (awayHandle) handlesToCheck.push(awayHandle);
       }
 
-      // Also check premier 4K football photography account @HQpcrt
+      // Also check premier football photography accounts: @brfootball and @HQpcrt
+      if (!handlesToCheck.includes('brfootball')) {
+        handlesToCheck.push('brfootball');
+      }
       if (!handlesToCheck.includes('HQpcrt')) {
         handlesToCheck.push('HQpcrt');
       }
