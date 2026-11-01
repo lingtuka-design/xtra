@@ -1206,17 +1206,26 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         // Priority 2: Check verified Club Official Twitter for clean on-pitch celebration/action photo
         if (!htPhotoToUse) {
           try {
-            const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
-            const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
+            const curHomeScore = parseInt(summary.score?.home ?? String(match.home_score ?? 0), 10) || 0;
+            const curAwayScore = parseInt(summary.score?.away ?? String(match.away_score ?? 0), 10) || 0;
+            const isHomeLeading = curHomeScore > curAwayScore;
+            const isAwayLeading = curAwayScore > curHomeScore;
             const leadingTeam = isHomeLeading ? match.home_team : isAwayLeading ? match.away_team : undefined;
             const trailingTeam = isHomeLeading ? match.away_team : isAwayLeading ? match.home_team : undefined;
-            const isHtDraw = (match.home_score || 0) === (match.away_score || 0);
+            const isHtDraw = curHomeScore === curAwayScore;
+            const htGoalEvents = (summary.events || []).filter((ev: any) => ev.type?.toLowerCase().includes('goal') || ev.scoringPlay);
+            const htWinningScorers = isHomeLeading
+              ? htGoalEvents.filter((g: any) => g.teamId === summary.homeTeamId).map((g: any) => g.athleteName).filter(Boolean)
+              : isAwayLeading
+              ? htGoalEvents.filter((g: any) => g.teamId === summary.awayTeamId).map((g: any) => g.athleteName).filter(Boolean)
+              : [];
 
             const clubPhoto = await clubPhotoService.getMatchActionPhoto({
               homeTeam: match.home_team,
               awayTeam: match.away_team,
               winningTeam: leadingTeam,
               losingTeam: trailingTeam,
+              winningScorers: htWinningScorers,
               isDraw: isHtDraw,
               isHalftime: true,
               matchTime: match.match_time,
@@ -1235,11 +1244,13 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         // Priority 3: Fallback to FotMob (all leagues including ISL)
         if (!htPhotoToUse) {
           try {
-            const isHomeLeading = (match.home_score || 0) > (match.away_score || 0);
-            const isAwayLeading = (match.away_score || 0) > (match.home_score || 0);
+            const curHomeScore = parseInt(summary.score?.home ?? String(match.home_score ?? 0), 10) || 0;
+            const curAwayScore = parseInt(summary.score?.away ?? String(match.away_score ?? 0), 10) || 0;
+            const isHomeLeading = curHomeScore > curAwayScore;
+            const isAwayLeading = curAwayScore > curHomeScore;
             const leadingTeam = isHomeLeading ? match.home_team : isAwayLeading ? match.away_team : undefined;
             const trailingTeam = isHomeLeading ? match.away_team : isAwayLeading ? match.home_team : undefined;
-            const isHtDraw = (match.home_score || 0) === (match.away_score || 0);
+            const isHtDraw = curHomeScore === curAwayScore;
 
             const fotmobRes = await fotmobService.getMatchPhotos({
               homeTeam: match.home_team,

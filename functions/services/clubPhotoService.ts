@@ -163,7 +163,18 @@ export class ClubPhotoService {
       lower.includes('wallpaper') ||
       lower.includes('quote') ||
       (lower.includes('full-time') && lower.includes('-') && photos.length === 1) ||
-      (lower.includes('half-time') && lower.includes('-') && photos.length === 1);
+      (lower.includes('half-time') && lower.includes('-') && photos.length === 1) ||
+      (photos.length === 1 && (
+        lower.includes('at the break') ||
+        lower.includes('at the interval') ||
+        lower.includes('level at the break') ||
+        lower.includes('lead at the break') ||
+        lower.includes('leads at the break') ||
+        lower.includes('behind at the break') ||
+        lower.includes('trails at the break') ||
+        lower.includes('behind at the interval') ||
+        lower.includes('ahead at the break')
+      ));
 
     if (isGraphicPoster) {
       console.log(`[ClubPhoto] Rejected graphic poster tweet: "${text.slice(0, 60)}"`);
