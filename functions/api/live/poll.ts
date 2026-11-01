@@ -147,7 +147,6 @@ function formatScorerDisplay(ev: any): string {
   return name;
 }
 
-// Helper to format Half Time post for Facebook
 // Helper to format grouped match scorers: e.g. "(Nicolas Jackson 6', 60')  (Erling Haaland 52')"
 function formatMatchScorersDisplay(goalEvents: any[], homeTeamId?: string, awayTeamId?: string): string {
   if (!goalEvents || goalEvents.length === 0) return '';
@@ -195,6 +194,42 @@ function formatMatchScorersDisplay(goalEvents: any[], homeTeamId?: string, awayT
   return '';
 }
 
+// Helper to format grouped match red cards: e.g. "(Lisandro Martínez 63')"
+function formatMatchRedCardsDisplay(redEvents: any[], homeTeamId?: string, awayTeamId?: string): string {
+  if (!redEvents || redEvents.length === 0) return '';
+
+  const formatTeam = (teamId?: string) => {
+    const teamCards = redEvents.filter((ev: any) => (teamId && ev.teamId ? String(ev.teamId) === String(teamId) : true));
+    if (teamCards.length === 0) return '';
+    const parts: string[] = [];
+    for (const ev of teamCards) {
+      let name = (ev.athleteName || ev.player || ev.athlete?.displayName || '').trim();
+      if (!name && ev.text) {
+        const m1 = ev.text.match(/(?:card to|card:)\s*([^(,]+)/i);
+        const m2 = ev.text.match(/^([^,(]+)\s+(?:red card|sent off)/i);
+        if (m1) name = m1[1].trim();
+        else if (m2) name = m2[1].trim();
+      }
+      if (!name) name = 'Player';
+      const m = ev.minute ? `${String(ev.minute).replace(/'/g, '').trim()}'` : '';
+      parts.push(m ? `${name} ${m}` : name);
+    }
+    return parts.length > 0 ? `(${parts.join(', ')})` : '';
+  };
+
+  const homeGrouped = homeTeamId ? formatTeam(homeTeamId) : '';
+  const awayGrouped = awayTeamId ? formatTeam(awayTeamId) : '';
+
+  if (homeGrouped && awayGrouped) {
+    return `${homeGrouped}  ${awayGrouped}`;
+  } else if (homeGrouped) {
+    return homeGrouped;
+  } else if (awayGrouped) {
+    return awayGrouped;
+  }
+  return formatTeam();
+}
+
 function formatHalfTimePost(
   homeTeam: string,
   awayTeam: string,
@@ -202,10 +237,13 @@ function formatHalfTimePost(
   awayScore: string,
   scorersText: string,
   stats: any,
-  leagueName: string
+  leagueName: string,
+  redCardsText?: string
 ): string {
   const header = `⏰${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (HT)`;
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '\n';
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
+  const redCardsSection = redCardsText ? `🟥 ${redCardsText}\n` : '';
+  const eventsBlock = (scorersSection || redCardsSection) ? `${scorersSection}${redCardsSection}\n` : '\n';
   const statsSection = stats
     ? `📊 Match Stats (HT):
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -216,7 +254,7 @@ Fouls: ${stats.home.fouls} - ${stats.away.fouls}
     : '';
 
   return `${header}
-${scorersSection}${statsSection}🏆 ${leagueName}
+${eventsBlock}${statsSection}🏆 ${leagueName}
 #InkhelxtraLive ${getLeagueHashtag(leagueName)} #HalfTime`;
 }
 
@@ -228,10 +266,13 @@ function formatWhatsAppHalfTime(
   awayScore: string,
   scorersText: string,
   stats: any,
-  leagueName: string
+  leagueName: string,
+  redCardsText?: string
 ): string {
   const header = `⏰ *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (HT)*`;
-  const scorersSection = scorersText ? `⚽ ${scorersText}\n\n` : '\n';
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
+  const redCardsSection = redCardsText ? `🟥 ${redCardsText}\n` : '';
+  const eventsBlock = (scorersSection || redCardsSection) ? `${scorersSection}${redCardsSection}\n` : '\n';
   const statsSection = stats
     ? `📊 *Match Stats (HT):*
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -242,7 +283,7 @@ Fouls: ${stats.home.fouls} - ${stats.away.fouls}
     : '';
 
   return `${header}
-${scorersSection}${statsSection}🏆 *${leagueName}*
+${eventsBlock}${statsSection}🏆 *${leagueName}*
 
 👉 _Inkhel WhatsApp Channel_`;
 }
@@ -256,7 +297,8 @@ function formatFullTimePost(
   scorersText: string,
   stats: any,
   leagueName: string,
-  shootout?: { home: string; away: string; homeWinner: boolean; awayWinner: boolean }
+  shootout?: { home: string; away: string; homeWinner: boolean; awayWinner: boolean },
+  redCardsText?: string
 ): string {
   let header = `🚨 ${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (FT)`;
   if (shootout) {
@@ -272,7 +314,9 @@ function formatFullTimePost(
       header += `\n🎯 ${winnerTeam}-te chuan penalty shootout-ah hnehna an chang!`;
     }
   }
-  const scorersSection = scorersText ? `\n⚽ ${scorersText}\n\n` : '\n';
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
+  const redCardsSection = redCardsText ? `🟥 ${redCardsText}\n` : '';
+  const eventsBlock = (scorersSection || redCardsSection) ? `\n${scorersSection}${redCardsSection}\n` : '\n';
   const statsSection = stats
     ? `📊 Final Match Stats:
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -283,7 +327,7 @@ Fouls: ${stats.home.fouls} - ${stats.away.fouls}
     : '';
 
   return `${header}
-${scorersSection}${statsSection}🏆 ${leagueName}
+${eventsBlock}${statsSection}🏆 ${leagueName}
 #InkhelxtraLive ${getLeagueHashtag(leagueName)} #FullTime`;
 }
 
@@ -296,7 +340,8 @@ function formatWhatsAppFullTime(
   scorersText: string,
   stats: any,
   leagueName: string,
-  shootout?: { home: string; away: string; homeWinner: boolean; awayWinner: boolean }
+  shootout?: { home: string; away: string; homeWinner: boolean; awayWinner: boolean },
+  redCardsText?: string
 ): string {
   let header = `🚨 *${homeTeam} ${homeScore} - ${awayScore} ${awayTeam} (FT)*`;
   if (shootout) {
@@ -312,7 +357,9 @@ function formatWhatsAppFullTime(
       header += `\n🎯 *${winnerTeam}-te chuan penalty shootout-ah hnehna an chang!*`;
     }
   }
-  const scorersSection = scorersText ? `\n⚽ ${scorersText}\n\n` : '\n';
+  const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
+  const redCardsSection = redCardsText ? `🟥 ${redCardsText}\n` : '';
+  const eventsBlock = (scorersSection || redCardsSection) ? `\n${scorersSection}${redCardsSection}\n` : '\n';
   const statsSection = stats
     ? `📊 *Final Match Stats:*
 Possession: ${stats.home.possession} - ${stats.away.possession}
@@ -323,7 +370,7 @@ Fouls: ${stats.home.fouls} - ${stats.away.fouls}
     : '';
 
   return `${header}
-${scorersSection}${statsSection}🏆 *${leagueName}*
+${eventsBlock}${statsSection}🏆 *${leagueName}*
 
 👉 _Inkhel WhatsApp Channel_`;
 }
@@ -1227,8 +1274,14 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           const htRedEvents = (summary.events || []).filter((ev: any) => {
             const typeLower = (ev.type || '').toLowerCase();
             const textLower = (ev.text || '').toLowerCase();
-            return (typeLower.includes('red') && typeLower.includes('card')) || textLower.includes('red card') || typeLower.includes('second-yellow');
+            return (
+              (typeLower.includes('red') && typeLower.includes('card')) ||
+              textLower.includes('red card') ||
+              typeLower.includes('second-yellow') ||
+              textLower.includes('second yellow')
+            );
           });
+          const redCardsText = formatMatchRedCardsDisplay(htRedEvents, summary.homeTeamId, summary.awayTeamId);
           const homeRedCards = htRedEvents
             .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : false))
             .map((ev: any) => `${ev.player || ev.athlete?.displayName || 'Player'} ${ev.minute}`)
@@ -1245,7 +1298,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             summary.score.away,
             scorersText,
             summary.stats,
-            leagueName
+            leagueName,
+            redCardsText
           );
 
           const waHT = formatWhatsAppHalfTime(
@@ -1255,7 +1309,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             summary.score.away,
             scorersText,
             summary.stats,
-            leagueName
+            leagueName,
+            redCardsText
           );
 
           const statsSummary = summary.stats
@@ -1373,8 +1428,14 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           const ftRedEvents = (summary.events || []).filter((ev: any) => {
             const typeLower = (ev.type || '').toLowerCase();
             const textLower = (ev.text || '').toLowerCase();
-            return (typeLower.includes('red') && typeLower.includes('card')) || textLower.includes('red card') || typeLower.includes('second-yellow');
+            return (
+              (typeLower.includes('red') && typeLower.includes('card')) ||
+              textLower.includes('red card') ||
+              typeLower.includes('second-yellow') ||
+              textLower.includes('second yellow')
+            );
           });
+          const redCardsText = formatMatchRedCardsDisplay(ftRedEvents, summary.homeTeamId, summary.awayTeamId);
           const homeRedCards = ftRedEvents
             .filter((ev: any) => (summary.homeTeamId && ev.teamId ? ev.teamId === summary.homeTeamId : false))
             .map((ev: any) => `${ev.player || ev.athlete?.displayName || 'Player'} ${ev.minute}`)
@@ -1394,7 +1455,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             scorersText,
             summary.stats,
             leagueName,
-            isShootoutConcluded ? summary.shootout : undefined
+            isShootoutConcluded ? summary.shootout : undefined,
+            redCardsText
           );
 
           const waFT = formatWhatsAppFullTime(
@@ -1405,7 +1467,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             scorersText,
             summary.stats,
             leagueName,
-            isShootoutConcluded ? summary.shootout : undefined
+            isShootoutConcluded ? summary.shootout : undefined,
+            redCardsText
           );
 
           // If shootout was already included with FT, mark pen event as posted
