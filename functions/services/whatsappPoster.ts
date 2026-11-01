@@ -64,7 +64,38 @@ export class WhatsAppPoster {
       }
     }
 
-    console.error('WhatsApp Poster all attempts failed:', lastError?.message);
+    console.error('WhatsApp Poster with image attempts failed:', lastError?.message);
+
+    // CRITICAL FALLBACK: If sending with imageUrl failed, fallback to sending text-only so the WhatsApp Channel NEVER drops posts!
+    if (imageUrl) {
+      console.warn('[WhatsApp Poster] Falling back to text-only send for WhatsApp Channel...');
+      try {
+        const textRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            to,
+            caption,
+          }),
+        });
+
+        const textData = (await textRes.json()) as any;
+        if (textRes.ok && textData.success !== false) {
+          console.log('[WhatsApp Poster] Text-only fallback delivered successfully!');
+          return {
+            success: true,
+            messageId: textData.messageId || textData.message?.id || textData.id,
+          };
+        }
+      } catch (textErr: any) {
+        console.error('[WhatsApp Poster] Text-only fallback error:', textErr.message);
+      }
+    }
+
     return {
       success: false,
       error: lastError?.message || 'Unknown error',

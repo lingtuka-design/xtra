@@ -383,10 +383,17 @@ async function handleSend(req, res) {
 
     if (imagePayload) {
       console.log(`[WhatsApp Bot] Sending image with caption to ${formattedJid}...`);
-      resultMsg = await sock.sendMessage(formattedJid, {
-        image: imagePayload,
-        caption: textContent,
-      });
+      try {
+        resultMsg = await sock.sendMessage(formattedJid, {
+          image: imagePayload,
+          caption: textContent,
+        });
+      } catch (imgSendErr) {
+        console.warn(`[WhatsApp Bot] Failed sending with image (${imgSendErr.message}). Falling back to text-only send...`);
+        resultMsg = await sock.sendMessage(formattedJid, {
+          text: textContent,
+        });
+      }
     } else {
       console.log(`[WhatsApp Bot] Sending text to ${formattedJid}...`);
       resultMsg = await sock.sendMessage(formattedJid, {

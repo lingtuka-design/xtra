@@ -1,3 +1,5 @@
+import { resolveTeamLogo } from './clubCrests';
+
 export interface EspnMatch {
   id: string;
   league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL';
@@ -160,7 +162,7 @@ export const espnService = {
                 name: home.team?.displayName || 'Home Team',
                 shortName: home.team?.shortDisplayName || home.team?.name || 'Home',
                 abbreviation: home.team?.abbreviation || 'HOM',
-                logo: home.team?.logo || '',
+                logo: resolveTeamLogo(home.team?.displayName || '', home.team?.logo),
                 score: home.score || '0',
               },
               awayTeam: {
@@ -168,7 +170,7 @@ export const espnService = {
                 name: away.team?.displayName || 'Away Team',
                 shortName: away.team?.shortDisplayName || away.team?.name || 'Away',
                 abbreviation: away.team?.abbreviation || 'AWY',
-                logo: away.team?.logo || '',
+                logo: resolveTeamLogo(away.team?.displayName || '', away.team?.logo),
                 score: away.score || '0',
               },
             });

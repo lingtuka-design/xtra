@@ -1,6 +1,7 @@
 import { Env } from '../../types';
 import { MATCH_CARD_BG_FB, MATCH_CARD_BG_WA } from './card-bg';
 import { INKHEL_LOGO_B64, INKHEL_XTRA_LIGHT_B64 } from './inkhel-logo-b64';
+import { resolveTeamLogo } from '../../services/clubCrests';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
@@ -10,8 +11,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const home = url.searchParams.get('home') || 'Home Team';
   const away = url.searchParams.get('away') || 'Away Team';
-  const homeLogo = url.searchParams.get('homeLogo') || '';
-  const awayLogo = url.searchParams.get('awayLogo') || '';
+  const homeLogo = resolveTeamLogo(home, url.searchParams.get('homeLogo') || '');
+  const awayLogo = resolveTeamLogo(away, url.searchParams.get('awayLogo') || '');
   let league = (url.searchParams.get('league') || 'PREMIER LEAGUE').trim();
   if (/indian\s+super\s+league/i.test(league) || league.toUpperCase() === 'ISL') {
     league = 'ISL';
@@ -259,13 +260,24 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const homeScorersList = parseScorers(url.searchParams.get('homeScorers') || url.searchParams.get('scorers') || '');
     const awayScorersList = parseScorers(url.searchParams.get('awayScorers') || '');
-    const homeRedCardList = parseScorers(
+    const cleanRedCards = (raw: string): string[] => {
+      const parsed = parseScorers(raw);
+      return parsed.filter((item) => {
+        const trimmed = item.trim();
+        if (!trimmed || trimmed === '0') return false;
+        const num = parseInt(trimmed, 10);
+        if (!isNaN(num) && num === 0 && !/[a-zA-Z]/.test(trimmed)) return false;
+        return true;
+      });
+    };
+
+    const homeRedCardList = cleanRedCards(
       url.searchParams.get('homeRedCardScorers') ||
       url.searchParams.get('homeRedCards') ||
       url.searchParams.get('homeRedCardsList') ||
       ''
     );
-    const awayRedCardList = parseScorers(
+    const awayRedCardList = cleanRedCards(
       url.searchParams.get('awayRedCardScorers') ||
       url.searchParams.get('awayRedCards') ||
       url.searchParams.get('awayRedCardsList') ||

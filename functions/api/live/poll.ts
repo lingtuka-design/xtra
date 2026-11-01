@@ -5,6 +5,7 @@ import { clubPhotoService } from '../../services/clubPhotoService';
 import { facebookPoster } from '../../services/facebookPoster';
 import { whatsappPoster } from '../../services/whatsappPoster';
 import { telegramPoster } from '../../services/telegramPoster';
+import { resolveTeamLogo } from '../../services/clubCrests';
 
 // Helper to convert WhatsApp formatted footer to Telegram
 function toTelegramCaption(text: string): string {
@@ -513,8 +514,10 @@ function buildCardImageUrl(options: {
   q.set('away', options.away);
   if (options.homeScore !== undefined) q.set('homeScore', options.homeScore);
   if (options.awayScore !== undefined) q.set('awayScore', options.awayScore);
-  if (options.homeLogo) q.set('homeLogo', options.homeLogo);
-  if (options.awayLogo) q.set('awayLogo', options.awayLogo);
+  const homeLogo = resolveTeamLogo(options.home, options.homeLogo);
+  const awayLogo = resolveTeamLogo(options.away, options.awayLogo);
+  if (homeLogo) q.set('homeLogo', homeLogo);
+  if (awayLogo) q.set('awayLogo', awayLogo);
   q.set('status', options.status);
   const displayLeague =
     /indian\s+super\s+league/i.test(options.leagueName) || options.leagueName.toUpperCase() === 'ISL'
@@ -523,8 +526,8 @@ function buildCardImageUrl(options: {
   q.set('league', displayLeague);
   if (options.homeScorers) q.set('homeScorers', options.homeScorers);
   if (options.awayScorers) q.set('awayScorers', options.awayScorers);
-  if (options.homeRedCards) q.set('homeRedCardScorers', options.homeRedCards);
-  if (options.awayRedCards) q.set('awayRedCardScorers', options.awayRedCards);
+  if (options.homeRedCards && options.homeRedCards.trim() !== '0') q.set('homeRedCardScorers', options.homeRedCards);
+  if (options.awayRedCards && options.awayRedCards.trim() !== '0') q.set('awayRedCardScorers', options.awayRedCards);
   if (options.homeXI && options.homeXI.length > 0) q.set('homeXI', options.homeXI.join(';'));
   if (options.awayXI && options.awayXI.length > 0) q.set('awayXI', options.awayXI.join(';'));
   if (options.matchTime) q.set('matchTime', options.matchTime);
@@ -544,8 +547,12 @@ function buildCardImageUrl(options: {
     q.set('awayFouls', options.stats.away.fouls || '0');
     if (options.stats.home.yellowCards) q.set('homeYellowCards', options.stats.home.yellowCards);
     if (options.stats.away.yellowCards) q.set('awayYellowCards', options.stats.away.yellowCards);
-    if (options.stats.home.redCards) q.set('homeRedCards', options.stats.home.redCards);
-    if (options.stats.away.redCards) q.set('awayRedCards', options.stats.away.redCards);
+    if (options.stats.home.redCards && options.stats.home.redCards.trim() !== '0' && parseInt(options.stats.home.redCards, 10) > 0) {
+      q.set('homeRedCards', options.stats.home.redCards);
+    }
+    if (options.stats.away.redCards && options.stats.away.redCards.trim() !== '0' && parseInt(options.stats.away.redCards, 10) > 0) {
+      q.set('awayRedCards', options.stats.away.redCards);
+    }
   }
 
   const cardEndpoint = `https://xtra-byd.pages.dev/api/live/card?${q.toString()}`;
