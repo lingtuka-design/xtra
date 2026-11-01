@@ -93,10 +93,31 @@ export class FacebookPoster {
           const data = (await res.json()) as any;
           if (!res.ok || data.error) {
             const errDetail = data.error?.message || `HTTP ${res.status}`;
-            console.error('Facebook photo post error:', data.error);
+            console.warn(`[Facebook Poster] Photo upload failed (${errDetail}). Falling back to text feed post...`);
+
+            // Fallback: post caption as a standard feed post so the post is never lost
+            const feedUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/feed`;
+            const feedBody = new URLSearchParams();
+            feedBody.append('message', caption);
+            feedBody.append('access_token', cleanToken);
+
+            const feedRes = await fetch(feedUrl, {
+              method: 'POST',
+              body: feedBody,
+            });
+
+            const feedData = (await feedRes.json()) as any;
+            if (feedRes.ok && !feedData.error) {
+              console.log('[Facebook Poster] Fallback feed post published successfully!');
+              return {
+                success: true,
+                postId: feedData.id,
+              };
+            }
+
             return {
               success: false,
-              error: `Facebook API photo error: ${errDetail}`,
+              error: `Facebook API photo error: ${errDetail}; Feed fallback: ${feedData.error?.message || feedRes.statusText}`,
             };
           }
 
