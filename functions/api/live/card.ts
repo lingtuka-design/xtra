@@ -114,11 +114,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       object-fit: contain;
     }
     .match-time {
-      font-family: Impact, "Arial Black", sans-serif;
-      font-size: 40px;
-      font-weight: 900;
-      letter-spacing: 1.5px;
-      color: #b51a36;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #AF0725;
       text-align: center;
       white-space: nowrap;
     }
