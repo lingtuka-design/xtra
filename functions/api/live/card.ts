@@ -95,21 +95,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       top: 190px;
       left: 50%;
       transform: translateX(-50%);
-      width: 890px;
+      width: 920px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
     }
     /* Left / Home Column */
     .team-column.home {
-      width: 355px;
+      width: 350px;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
     }
     /* Right / Away Column */
     .team-column.away {
-      width: 355px;
+      width: 350px;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -124,20 +124,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
     .team-column.home .crest-box {
       justify-content: flex-end;
-      padding-right: 20px;
+      padding-right: 25px;
     }
     .team-column.away .crest-box {
       justify-content: flex-start;
-      padding-left: 20px;
+      padding-left: 25px;
     }
     .crest-img {
-      max-width: 165px;
-      max-height: 160px;
+      max-width: 160px;
+      max-height: 155px;
       object-fit: contain;
     }
     /* Center Column: Match Kickoff Time */
     .center-column {
-      width: 160px;
+      width: 220px;
       height: 165px;
       display: flex;
       align-items: center;
@@ -145,7 +145,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
     .match-time {
       font-family: Impact, "Arial Black", sans-serif;
-      font-size: 50px;
+      font-size: 44px;
       font-weight: 900;
       letter-spacing: 1px;
       color: #b51a36;
@@ -162,10 +162,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .team-column.home .players-list {
       align-items: flex-end;
       text-align: right;
+      padding-right: 10px;
     }
     .team-column.away .players-list {
       align-items: flex-start;
       text-align: left;
+      padding-left: 10px;
     }
     .player-row {
       font-size: 26px;
