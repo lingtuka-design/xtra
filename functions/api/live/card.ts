@@ -130,10 +130,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       width: 1024px;
       display: flex;
       justify-content: center;
-      gap: 135px;
+      gap: 190px;
     }
     .xi-column {
-      width: 330px;
+      width: 335px;
       display: flex;
       flex-direction: column;
       gap: 9px;
