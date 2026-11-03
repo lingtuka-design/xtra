@@ -172,16 +172,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       height: 56px;
       object-fit: contain;
     }
-    /* 6. Bottom Right Corner Black Triangle */
-    .br-triangle {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-      width: 124px;
-      height: 139px;
-      background-color: #000000;
-      clip-path: polygon(100% 0, 100% 100%, 0 100%);
-    }
   </style>
 </head>
 <body>
@@ -209,7 +199,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   <div class="bottom-logo-box">
     <img src="${isFb ? INKHEL_XTRA_LIGHT_B64 : INKHEL_LOGO_B64}" class="${isFb ? 'bottom-logo-xtra' : 'bottom-logo'}" />
   </div>
-  <div class="br-triangle"></div>
 </body>
 </html>`;
 
