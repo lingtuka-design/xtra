@@ -58,11 +58,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     /* 1. League Title: Top Left */
     .league-title {
       position: absolute;
-      top: 50px;
-      left: 55px;
+      top: 60px;
+      left: 62px;
       font-family: Impact, "Arial Black", sans-serif;
       font-style: italic;
-      font-size: 30px;
+      font-size: 32px;
       font-weight: 900;
       letter-spacing: 1px;
       color: #51565A;
@@ -71,7 +71,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     /* 2. Header: LINEUP Centered with Underline */
     .header-box {
       position: absolute;
-      top: 115px;
+      top: 145px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -80,97 +80,74 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
     .header-text {
       font-family: Impact, "Arial Black", sans-serif;
-      font-size: 54px;
+      font-size: 58px;
       font-weight: 900;
       letter-spacing: 2px;
       color: #111111;
       text-transform: uppercase;
       line-height: 1;
       border-bottom: 5px solid #111111;
-      padding-bottom: 3px;
+      padding-bottom: 2px;
     }
-    /* 3. Main Lineup Container: 3 Columns perfectly aligned (Home Team, Center Time, Away Team) */
-    .lineup-container {
+    /* 3. Crests and Match Time Row */
+    .crests-row {
       position: absolute;
-      top: 190px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 920px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-    /* Left / Home Column */
-    .team-column.home {
-      width: 350px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-    }
-    /* Right / Away Column */
-    .team-column.away {
-      width: 350px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    /* Crest Container: sized in optical balance and aligned with player column */
-    .crest-box {
-      width: 100%;
-      height: 165px;
+      top: 185px;
+      left: 0;
+      width: 1024px;
+      height: 235px;
       display: flex;
       align-items: center;
-      margin-bottom: 22px;
+      justify-content: space-between;
+      padding: 0 85px;
     }
-    .team-column.home .crest-box {
-      justify-content: flex-end;
-      padding-right: 25px;
-    }
-    .team-column.away .crest-box {
-      justify-content: flex-start;
-      padding-left: 25px;
-    }
-    .crest-img {
-      max-width: 160px;
-      max-height: 155px;
-      object-fit: contain;
-    }
-    /* Center Column: Match Kickoff Time */
-    .center-column {
-      width: 220px;
-      height: 165px;
+    .crest-container {
+      width: 230px;
+      height: 230px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+    .crest-img {
+      max-width: 215px;
+      max-height: 215px;
+      object-fit: contain;
+    }
     .match-time {
       font-family: Impact, "Arial Black", sans-serif;
-      font-size: 44px;
+      font-size: 40px;
       font-weight: 900;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       color: #b51a36;
       text-align: center;
       white-space: nowrap;
     }
-    /* Players List */
-    .players-list {
+    /* 4. Lineup Player Columns */
+    .lineup-columns {
+      position: absolute;
+      top: 410px;
+      left: 0;
+      width: 1024px;
+      display: flex;
+      justify-content: center;
+      gap: 135px;
+    }
+    .xi-column {
+      width: 330px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      width: 100%;
+      gap: 9px;
     }
-    .team-column.home .players-list {
-      align-items: flex-end;
+    .xi-column.left {
       text-align: right;
-      padding-right: 10px;
+      align-items: flex-end;
     }
-    .team-column.away .players-list {
-      align-items: flex-start;
+    .xi-column.right {
       text-align: left;
-      padding-left: 10px;
+      align-items: flex-start;
     }
     .player-row {
-      font-size: 26px;
+      font-size: 28px;
       font-weight: 650;
       color: #374151;
       line-height: 1.25;
@@ -180,7 +157,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     /* 5. Bottom Center Logo */
     .bottom-logo-box {
       position: absolute;
-      bottom: 40px;
+      bottom: 35px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -188,11 +165,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       justify-content: center;
     }
     .bottom-logo {
-      height: 46px;
+      height: 48px;
       object-fit: contain;
     }
     .bottom-logo-xtra {
-      height: 54px;
+      height: 56px;
       object-fit: contain;
     }
     /* 6. Bottom Right Corner Black Triangle */
@@ -200,8 +177,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       position: absolute;
       bottom: 0;
       right: 0;
-      width: 110px;
-      height: 120px;
+      width: 124px;
+      height: 139px;
       background-color: #000000;
       clip-path: polygon(100% 0, 100% 100%, 0 100%);
     }
@@ -212,25 +189,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   <div class="header-box">
     <div class="header-text">LINEUP</div>
   </div>
-  <div class="lineup-container">
-    <div class="team-column home">
-      <div class="crest-box">
-        ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="crest-img" />` : ''}
-      </div>
-      <div class="players-list">
-        ${homeXI.map((p) => `<div class="player-row">${p}</div>`).join('')}
-      </div>
+  <div class="crests-row">
+    <div class="crest-container">
+      ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="crest-img" />` : ''}
     </div>
-    <div class="center-column">
-      <div class="match-time">${matchTime}</div>
+    <div class="match-time">${matchTime}</div>
+    <div class="crest-container">
+      ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="crest-img" />` : ''}
     </div>
-    <div class="team-column away">
-      <div class="crest-box">
-        ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="crest-img" />` : ''}
-      </div>
-      <div class="players-list">
-        ${awayXI.map((p) => `<div class="player-row">${p}</div>`).join('')}
-      </div>
+  </div>
+  <div class="lineup-columns">
+    <div class="xi-column left">
+      ${homeXI.map((p) => `<div class="player-row">${p}</div>`).join('')}
+    </div>
+    <div class="xi-column right">
+      ${awayXI.map((p) => `<div class="player-row">${p}</div>`).join('')}
     </div>
   </div>
   <div class="bottom-logo-box">
