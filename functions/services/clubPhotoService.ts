@@ -81,6 +81,12 @@ const CLUB_TWITTER_HANDLES: Record<string, string> = {
   mohammedan: 'MohammedanSC',
 };
 
+function hasWordBoundary(text: string, word: string): boolean {
+  if (!text || !word) return false;
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
+}
+
 // Find the Twitter handle for a given team name
 export function getClubTwitterHandle(teamName: string): string | null {
   if (!teamName) return null;
@@ -278,12 +284,16 @@ export class ClubPhotoService {
       baseScore -= 60;
     }
 
-    // 8. Special handling for premier photography curation accounts like @brfootball and @HQpcrt
+    // 8. Priority bonus for Official Club Twitter accounts vs Curation accounts
     const isCurationAccount =
       options.sourceAccount &&
       (options.sourceAccount.toLowerCase() === 'hqpcrt' || options.sourceAccount.toLowerCase() === 'brfootball');
 
-    if (isCurationAccount) {
+    if (!isCurationAccount) {
+      // Official Club account tweet gets a large authenticity bonus (+50)
+      baseScore += 50;
+    } else {
+      // Curation accounts (@brfootball, @HQpcrt) must pass strict whole-word and conflict checks
       const homeWords = (options.homeTeam || '')
         .toLowerCase()
         .split(/\s+/)
@@ -294,16 +304,30 @@ export class ClubPhotoService {
         .filter((w) => w.length >= 4 && !['club', 'city', 'town', 'united'].includes(w));
       const scorerWords = (options.winningScorers || [])
         .map((s) => s.split(' ').pop()?.toLowerCase())
-        .filter((w) => Boolean(w) && (w?.length || 0) >= 4);
+        .filter((w) => Boolean(w) && (w?.length || 0) >= 3);
 
-      const matchesHome = homeWords.some((w) => lower.includes(w));
-      const matchesAway = awayWords.some((w) => lower.includes(w));
-      const matchesScorer = scorerWords.some((w) => w && lower.includes(w));
+      const matchesHome = homeWords.some((w) => hasWordBoundary(lower, w)) || lower.includes((options.homeTeam || '').toLowerCase());
+      const matchesAway = awayWords.some((w) => hasWordBoundary(lower, w)) || lower.includes((options.awayTeam || '').toLowerCase());
+      const matchesScorer = scorerWords.some((w) => w && hasWordBoundary(lower, w));
 
       // Strictly skip if tweet is not about this match
       if (!matchesHome && !matchesAway && !matchesScorer) {
         return [];
       }
+
+      // Conflict check: if the tweet mentions an opponent using "vs." or "against", verify it belongs to this match!
+      const vsMatch = lower.match(/\b(vs\.?|against)\s+([a-z0-9\s]+)/i);
+      if (vsMatch && vsMatch[2]) {
+        const opponentMentioned = vsMatch[2].trim();
+        const isRelevant =
+          homeWords.some((w) => hasWordBoundary(opponentMentioned, w)) ||
+          awayWords.some((w) => hasWordBoundary(opponentMentioned, w));
+        if (!isRelevant) {
+          console.log(`[ClubPhoto] Rejected curation tweet with conflicting opponent: "${text.slice(0, 60)}"`);
+          return [];
+        }
+      }
+
       // If confirmed for this match, add a quality bonus for live multi-photo pitch celebrations
       baseScore += 40;
     }
