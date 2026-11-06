@@ -22,6 +22,9 @@ function getLeagueHashtag(leagueName: string): string {
   if (l.includes('champions') || l.includes('ucl')) {
     return '#ChampionsLeague #UCL';
   }
+  if (l.includes('i-league') || l.includes('ifl') || l.includes('chanmari')) {
+    return '#ILeague #IndianFootball #ChanmariFC';
+  }
   if (l.includes('indian') || l.includes('isl')) {
     return '#IndianSuperLeague #ISL';
   }
@@ -637,6 +640,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           ? 'uefa.champions'
           : match.league === 'ISL'
           ? 'ind.1'
+          : match.league === 'IL'
+          ? 'ind.2'
           : match.league === 'LL'
           ? 'esp.1'
           : match.league === 'BL'
@@ -649,6 +654,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           ? 'UEFA Champions League'
           : match.league === 'ISL'
           ? 'Indian Super League'
+          : match.league === 'IL'
+          ? 'I-League'
           : match.league === 'LL'
           ? 'La Liga'
           : match.league === 'BL'

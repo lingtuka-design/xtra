@@ -3,7 +3,7 @@ import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Spar
 
 interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL';
+  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -38,7 +38,7 @@ export const LiveMatchesPanel: React.FC = () => {
   const [matches, setMatches] = useState<EspnMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'EFL' | 'LL' | 'BL' | 'UCL' | 'ISL'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'EFL' | 'LL' | 'BL' | 'UCL' | 'ISL' | 'IL'>('ALL');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -404,6 +404,8 @@ export const LiveMatchesPanel: React.FC = () => {
                   ? 'bg-blue-100 text-blue-800'
                   : match.league === 'ISL'
                   ? 'bg-emerald-100 text-emerald-800'
+                  : match.league === 'IL'
+                  ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
                   : match.league === 'LL'
                   ? 'bg-amber-100 text-amber-900 border border-amber-200'
                   : match.league === 'BL'
@@ -413,7 +415,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   : 'bg-purple-100 text-purple-800'
               }`}
             >
-              {match.league === 'LL' ? 'La Liga' : match.league === 'BL' ? 'Bundesliga' : match.league === 'EFL' ? 'League Cup' : match.league}
+              {match.league === 'LL' ? 'La Liga' : match.league === 'BL' ? 'Bundesliga' : match.league === 'EFL' ? 'League Cup' : match.league === 'IL' ? 'I-League' : match.league}
             </span>
             {isLive && (
               <span className="flex items-center gap-1 text-rose-600 bg-rose-100/90 px-1.5 py-0.2 rounded animate-pulse font-extrabold">
@@ -696,6 +698,16 @@ export const LiveMatchesPanel: React.FC = () => {
               }`}
             >
               ISL
+            </button>
+            <button
+              onClick={() => setActiveFilter('IL')}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                activeFilter === 'IL'
+                  ? 'bg-white text-stone-950 shadow-2xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              I-League
             </button>
           </div>
 
