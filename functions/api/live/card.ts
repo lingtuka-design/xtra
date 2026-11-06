@@ -487,6 +487,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       height: 1024px;
       overflow: hidden;
       background-color: #5F779B;
+      background: 
+        radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.07) 0%, rgba(0, 0, 0, 0.18) 100%),
+        repeating-linear-gradient(
+          -45deg,
+          rgba(255, 255, 255, 0.035) 0px,
+          rgba(255, 255, 255, 0.035) 1.5px,
+          transparent 1.5px,
+          transparent 28px
+        ),
+        #5F779B;
       position: relative;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
@@ -507,7 +517,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .league-logo {
       height: 132px;
       object-fit: contain;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
     }
 
     /* Top Center Status */
@@ -524,6 +534,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       text-transform: uppercase;
       text-align: center;
       line-height: 1;
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
     }
 
     /* Center Match Row */
@@ -551,7 +562,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       max-width: 195px;
       max-height: 195px;
       object-fit: contain;
-      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.16));
+      filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.22));
     }
 
     .score-container {
@@ -569,6 +580,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       color: #FFFFFF;
       line-height: 1;
       letter-spacing: -2px;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.16));
     }
 
     .score-hyphen {
@@ -577,6 +589,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       background-color: #FFFFFF;
       border-radius: 11px;
       margin: 0 10px;
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.16));
     }
 
     /* Scorers & Cards Area */
@@ -606,6 +619,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       font-weight: 600;
       color: #FFFFFF;
       line-height: 1.5;
+      filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.15));
     }
 
     .event-icon-box {
@@ -621,6 +635,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       width: 48px;
       height: 48px;
       object-fit: contain;
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.2));
     }
 
     .event-side-right {
@@ -631,6 +646,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       font-weight: 600;
       color: #FFFFFF;
       line-height: 1.5;
+      filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.15));
     }
 
     .red-card-icon {
@@ -649,7 +665,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       left: 76px;
       ${isFb ? 'width: 155px;' : 'width: 165px;'}
       object-fit: contain;
-      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
     }
   </style>
 </head>
