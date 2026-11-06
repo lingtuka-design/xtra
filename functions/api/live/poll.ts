@@ -564,7 +564,7 @@ function buildCardImageUrl(options: {
   awayScore?: string;
   homeLogo?: string;
   awayLogo?: string;
-  status: 'HT' | 'FT' | 'LINEUP';
+  status: 'HT' | 'FT' | 'LINEUP' | 'GOAL' | string;
   leagueName: string;
   homeScorers?: string;
   awayScorers?: string;
@@ -894,6 +894,73 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
               const scorerName = formatScorerDisplay(ev);
 
+              // Build dynamic 1:1 Goal Scorecard Graphic (same automated system as HT / FT)
+              const goalEvents = summary.events.filter(
+                (e: any) => (e.type || '').toLowerCase().includes('goal') || e.scoringPlay
+              );
+              const hasCurrentEv = goalEvents.some((e: any) => e.id === ev.id);
+              const allGoalEvents = hasCurrentEv ? goalEvents : [...goalEvents, ev];
+
+              const homeScorers = allGoalEvents
+                .filter((e: any) => (summary.homeTeamId && e.teamId ? e.teamId === summary.homeTeamId : true))
+                .map((e: any) => `${formatScorerDisplay(e)} (${e.minute})`)
+                .join(',');
+              const awayScorers = allGoalEvents
+                .filter((e: any) => (summary.awayTeamId && e.teamId ? e.teamId === summary.awayTeamId : true))
+                .map((e: any) => `${formatScorerDisplay(e)} (${e.minute})`)
+                .join(',');
+
+              const redEvents = summary.events.filter((e: any) => {
+                const typeLower = (e.type || '').toLowerCase();
+                const textLower = (e.text || '').toLowerCase();
+                return (
+                  (typeLower.includes('red') && typeLower.includes('card')) ||
+                  textLower.includes('red card') ||
+                  textLower.includes('sent off') ||
+                  textLower.includes('second yellow')
+                );
+              });
+              const homeRedCards = redEvents
+                .filter((e: any) => (summary.homeTeamId && e.teamId ? e.teamId === summary.homeTeamId : false))
+                .map((e: any) => `${e.player || e.athlete?.displayName || 'Player'} ${e.minute}`)
+                .join(',');
+              const awayRedCards = redEvents
+                .filter((e: any) => (summary.awayTeamId && e.teamId ? e.teamId === summary.awayTeamId : false))
+                .map((e: any) => `${e.player || e.athlete?.displayName || 'Player'} ${e.minute}`)
+                .join(',');
+
+              const goalCardFb = buildCardImageUrl({
+                home: match.home_team,
+                away: match.away_team,
+                homeScore: String(finalHomeScore),
+                awayScore: String(finalAwayScore),
+                homeLogo: match.home_logo,
+                awayLogo: match.away_logo,
+                status: 'GOAL',
+                leagueName,
+                homeScorers,
+                awayScorers,
+                homeRedCards,
+                awayRedCards,
+                channel: 'fb',
+              });
+
+              const goalCardWa = buildCardImageUrl({
+                home: match.home_team,
+                away: match.away_team,
+                homeScore: String(finalHomeScore),
+                awayScore: String(finalAwayScore),
+                homeLogo: match.home_logo,
+                awayLogo: match.away_logo,
+                status: 'GOAL',
+                leagueName,
+                homeScorers,
+                awayScorers,
+                homeRedCards,
+                awayRedCards,
+                channel: 'wa',
+              });
+
               // New Goal! Auto-Post to Inkhel Xtra Facebook + WhatsApp Channel!
               const fbCaption = formatGoalPost(
                 match.home_team,
@@ -915,12 +982,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 leagueName
               );
 
-              // 1. Post to Inkhel Xtra Facebook Page
+              // 1. Post to Inkhel Xtra Facebook Page with HD Goal Graphic!
               if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
                 try {
                   await facebookPoster.postNews(
                     fbCaption,
-                    undefined,
+                    goalCardFb,
                     env.FB_PAGE_ID,
                     env.FB_PAGE_ACCESS_TOKEN
                   );
@@ -929,11 +996,11 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 }
               }
 
-              // 2. Post to WhatsApp Channel
+              // 2. Post to WhatsApp Channel with HD Goal Graphic!
               try {
                 await whatsappPoster.postNews(
                   waCaption,
-                  undefined,
+                  goalCardWa,
                   env.WHATSAPP_API_TOKEN,
                   env.WHATSAPP_CHANNEL_ID,
                   env.WHATSAPP_API_URL
@@ -942,11 +1009,11 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 console.error('WhatsApp Live Goal Post error:', waErr.message);
               }
 
-              // 3. Post to Telegram Channel
+              // 3. Post to Telegram Channel with HD Goal Graphic!
               try {
                 await telegramPoster.postNews(
                   toTelegramCaption(waCaption),
-                  undefined,
+                  goalCardWa,
                   env.TELEGRAM_BOT_TOKEN,
                   env.TELEGRAM_CHANNEL_ID
                 );

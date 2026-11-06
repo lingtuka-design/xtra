@@ -216,12 +216,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const defaultBg = isFb ? MATCH_CARD_BG_FB : MATCH_CARD_BG_WA;
   const cardBgUrl = bgImage && bgImage.startsWith('http') ? bgImage : defaultBg;
 
-  // SCORECARD MODE (HT / FT)
+  // SCORECARD MODE (GOAL / HT / FT)
     const homeScore = url.searchParams.get('homeScore') || '0';
     const awayScore = url.searchParams.get('awayScore') || '0';
     const isHT = rawStatus === 'HT' || rawStatus.includes('HALF');
     const isFT = rawStatus === 'FT' || rawStatus.includes('FULL');
-    const statusText = isHT ? 'HALF TIME' : isFT ? 'FULL TIME' : rawStatus;
+    const isGoal = rawStatus === 'GOAL' || rawStatus.startsWith('GOAL');
+    const statusText = isHT
+      ? 'HALF TIME'
+      : isFT
+      ? 'FULL TIME'
+      : isGoal
+      ? (rawStatus === 'GOAL' ? 'GOAL!' : rawStatus)
+      : rawStatus;
 
     // Helper to parse scorers into list of lines
     const parseScorers = (raw: string): string[] => {
