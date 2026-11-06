@@ -30,6 +30,7 @@ interface EspnMatch {
   isTracked?: boolean;
   trackMode?: 'full' | 'results_only' | 'lineup_only' | null;
   trackRatings?: boolean;
+  trackLineup?: boolean;
   useGraphic?: boolean;
   manualHtPhoto?: string;
   manualFtPhoto?: string;
@@ -109,16 +110,20 @@ export const LiveMatchesPanel: React.FC = () => {
     };
   }, [matches]);
 
-  const handleSetTrackMode = async (match: EspnMatch, mode: 'full' | 'results_only' | 'lineup_only' | 'off') => {
-    const isNowTracked = mode !== 'off';
-    const nextMode = isNowTracked ? mode : null;
+  const handleSetTrackMode = async (match: EspnMatch, mode: 'full' | 'results_only' | 'off') => {
+    const isModeActive = mode !== 'off';
+    const nextLineup = mode === 'full' ? true : match.trackLineup;
+    const isNowTracked = isModeActive || Boolean(nextLineup);
+    const nextMode = isModeActive ? mode : null;
     setUpdatingId(match.id);
     setStatusMessage(null);
 
     // Optimistic UI update
     setMatches((prev) =>
       prev.map((m) =>
-        m.id === match.id ? { ...m, isTracked: isNowTracked, trackMode: nextMode } : m
+        m.id === match.id
+          ? { ...m, isTracked: isNowTracked, trackMode: nextMode, trackLineup: nextLineup }
+          : m
       )
     );
 
@@ -138,6 +143,7 @@ export const LiveMatchesPanel: React.FC = () => {
           trackMode: nextMode || undefined,
           trackRatings: match.trackRatings,
           useGraphic: match.useGraphic,
+          trackLineup: nextLineup,
         }),
       });
 
@@ -154,10 +160,6 @@ export const LiveMatchesPanel: React.FC = () => {
         setStatusMessage(
           `📊 ${match.shortName || match.name}: RESULTS ONLY! Goal tin post lovin, Half Time & Full Time result chauh a auto-post ang.`
         );
-      } else if (mode === 'lineup_only') {
-        setStatusMessage(
-          `📋 ${match.shortName || match.name}: LINEUP ONLY! Official Starting XI a chhuah veleh 1:1 graphic nen a auto-post ang a, inkhelh chhung erawh a post zui lo ang.`
-        );
       } else {
         setStatusMessage(`⚪ ${match.shortName || match.name} tracking titawp a ni e.`);
       }
@@ -169,6 +171,70 @@ export const LiveMatchesPanel: React.FC = () => {
         )
       );
       alert('Tracking thlak laiin buaina a awm: ' + err.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleToggleLineup = async (match: EspnMatch) => {
+    const nextLineup = !match.trackLineup;
+    setUpdatingId(match.id);
+    setStatusMessage(null);
+
+    const isNowTracked = match.isTracked || nextLineup;
+
+    // Optimistic UI update
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.id === match.id
+          ? { ...m, trackLineup: nextLineup, isTracked: isNowTracked }
+          : m
+      )
+    );
+
+    try {
+      const res = await fetch('/api/live/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: match.id,
+          league: match.league,
+          homeTeam: match.homeTeam.name,
+          awayTeam: match.awayTeam.name,
+          homeLogo: match.homeTeam.logo,
+          awayLogo: match.awayTeam.logo,
+          matchTime: match.date,
+          isTracked: isNowTracked,
+          trackMode: match.trackMode || undefined,
+          trackRatings: match.trackRatings,
+          useGraphic: match.useGraphic,
+          trackLineup: nextLineup,
+        }),
+      });
+
+      const data = (await res.json()) as any;
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update lineup toggle');
+      }
+
+      if (nextLineup) {
+        setStatusMessage(
+          `👥 ${match.shortName || match.name}: Lineup tracking enabled! Match tan hma darkar 1-ah 1:1 graphic nen Starting XI a auto-post ang.`
+        );
+      } else {
+        setStatusMessage(
+          `⚪ ${match.shortName || match.name}: Lineup tracking titawp a ni e.`
+        );
+      }
+    } catch (err: any) {
+      setMatches((prev) =>
+        prev.map((m) =>
+          m.id === match.id
+            ? { ...m, trackLineup: match.trackLineup, isTracked: match.isTracked }
+            : m
+        )
+      );
+      alert('Lineup thlak laiin buaina a awm: ' + err.message);
     } finally {
       setUpdatingId(null);
     }
@@ -671,25 +737,20 @@ export const LiveMatchesPanel: React.FC = () => {
 
           {/* Row 3: Lineup (under Ratings) & Graphic (under Photos) */}
           <div className="flex items-center gap-1.5">
-            {/* Lineup Only */}
+            {/* Lineup Toggle */}
             <button
               type="button"
               disabled={updatingId === match.id}
-              onClick={() =>
-                handleSetTrackMode(
-                  match,
-                  match.isTracked && match.trackMode === 'lineup_only' ? 'off' : 'lineup_only'
-                )
-              }
+              onClick={() => handleToggleLineup(match)}
               className={`h-6 w-20 px-2 rounded-lg flex items-center justify-center gap-1 text-[10px] font-bold border transition-all ${
-                match.isTracked && match.trackMode === 'lineup_only'
+                match.trackLineup
                   ? 'bg-blue-600 text-white border-blue-700 shadow-2xs font-extrabold ring-1 ring-blue-400'
                   : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
               }`}
               title={
-                match.isTracked && match.trackMode === 'lineup_only'
+                match.trackLineup
                   ? 'Click to turn off Lineup tracking'
-                  : '📋 Lineup Only: Starting XI chiah auto-post (match tan hnuah goal/result post lovin)'
+                  : '👥 Click to enable Lineup: Match tan hma darkar 1-ah Starting XI auto-post-na'
               }
             >
               {updatingId === match.id ? (
@@ -697,7 +758,7 @@ export const LiveMatchesPanel: React.FC = () => {
               ) : (
                 <Users
                   className={`w-2.5 h-2.5 ${
-                    match.isTracked && match.trackMode === 'lineup_only'
+                    match.trackLineup
                       ? 'text-blue-100'
                       : 'text-blue-600'
                   }`}

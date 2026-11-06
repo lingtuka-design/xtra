@@ -693,11 +693,13 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         continue;
       }
 
-      const isResultsOnly = match.track_mode === 'results_only';
-      const isLineupOnly = match.track_mode === 'lineup_only';
+      const shouldTrackLineup = Number(match.track_lineup) === 1 || match.track_mode === 'lineup_only' || match.track_mode === 'full';
+      const shouldTrackGoals = match.track_mode === 'full';
+      const shouldTrackResults = match.track_mode === 'full' || match.track_mode === 'results_only';
+      const isOnlyLineup = shouldTrackLineup && !shouldTrackGoals && !shouldTrackResults;
 
       // 1. Check Confirmed Lineups: Auto-Post if announced before kickoff (or at match start)
-      if (!isResultsOnly && summary.lineups && (summary.status.state === 'pre' || match.status !== 'FT')) {
+      if (shouldTrackLineup && summary.lineups && (summary.status.state === 'pre' || match.status !== 'FT')) {
         const lineupEventId = `lineup_${match.event_id}`;
         
         if (summary.status.state === 'pre') {
@@ -820,8 +822,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             totalPosted++;
             logDetails.push(`Lineup posted: ${match.home_team} vs ${match.away_team}`);
 
-            // If match was set to lineup_only, deactivate now that lineup is posted
-            if (isLineupOnly) {
+            // If match was ONLY tracking lineup (neither goals nor results), deactivate it now
+            if (isOnlyLineup) {
               try {
                 await env.DB.prepare(
                   'UPDATE live_tracked_matches SET is_active = 0, status = "LINEUP_DONE", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
@@ -835,8 +837,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         }
       }
 
-      // 2. Check all events in this match (Goals) - Skipped if results_only or lineup_only
-      if (!isResultsOnly && !isLineupOnly) {
+      // 2. Check all events in this match (Goals) - Only if full live tracking
+      if (shouldTrackGoals) {
         for (let i = 0; i < summary.events.length; i++) {
           const ev = summary.events[i];
           if (!ev.isShootout && (ev.type.toLowerCase().includes('goal') || ev.scoringPlay)) {
@@ -1350,7 +1352,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       ).bind(`${summary.score.home}-${summary.score.away}`, match.event_id).run();
 
       // 3. Check Half Time Stats
-      if (summary.status.isHalftime && !isLineupOnly) {
+      if (summary.status.isHalftime && shouldTrackResults) {
         const htEventId = `ht_${match.event_id}`;
         let claimed = false;
         // Photo Selection Hierarchy:
@@ -1581,7 +1583,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       }
 
       // 4. Check Full Time Stats & Final Result
-      if (summary.status.isFullTime && !isLineupOnly) {
+      if (summary.status.isFullTime && shouldTrackResults) {
         const ftEventId = `ft_${match.event_id}`;
         let claimed = false;
         try {
@@ -1885,8 +1887,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         }
       }
 
-      // If match is finished and was lineup_only, clean it up
-      if (isLineupOnly && (summary.status.isFullTime || summary.status.state === 'post')) {
+      // If match is finished and was isOnlyLineup, clean it up
+      if (isOnlyLineup && (summary.status.isFullTime || summary.status.state === 'post')) {
         await env.DB.prepare(
           'UPDATE live_tracked_matches SET is_active = 0, status = "LINEUP_DONE", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
         ).bind(match.event_id).run();

@@ -12,13 +12,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     // Query currently tracked matches in D1 with track_mode, track_ratings, and manual photos
     const { results: tracked } = await env.DB.prepare(
-      'SELECT event_id, is_active, track_mode, track_ratings, use_graphic, manual_ht_photo, manual_ft_photo FROM live_tracked_matches'
+      'SELECT event_id, is_active, track_mode, track_ratings, use_graphic, track_lineup, manual_ht_photo, manual_ft_photo FROM live_tracked_matches'
     ).all<{
       event_id: string;
       is_active: number;
       track_mode?: string;
       track_ratings?: number;
       use_graphic?: number;
+      track_lineup?: number;
       manual_ht_photo?: string;
       manual_ft_photo?: string;
     }>();
@@ -71,6 +72,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       trackMode?: 'full' | 'results_only' | 'lineup_only';
       trackRatings?: boolean;
       useGraphic?: boolean;
+      trackLineup?: boolean;
       manualHtPhoto?: string;
       manualFtPhoto?: string;
       action?: 'toggle_track' | 'save_photos';
@@ -113,20 +115,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     // 2. Tracking toggle action
-    if (body.isTracked) {
-      const mode = body.trackMode || 'full';
-      const ratingsVal = body.trackRatings ? 1 : 0;
+    const isNowTracked = Boolean(
+      body.isTracked ||
+      body.trackLineup ||
+      body.trackMode
+    );
 
+    if (isNowTracked) {
+      const mode = body.trackMode || (body.trackLineup ? 'lineup_only' : 'full');
+      const ratingsVal = body.trackRatings ? 1 : 0;
       const graphicVal = body.useGraphic ? 1 : 0;
+      const lineupVal = body.trackLineup ? 1 : 0;
+
       await env.DB.prepare(
         `INSERT INTO live_tracked_matches 
-        (event_id, league, home_team, away_team, home_logo, away_logo, match_time, is_active, track_mode, track_ratings, use_graphic, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, CURRENT_TIMESTAMP)
+        (event_id, league, home_team, away_team, home_logo, away_logo, match_time, is_active, track_mode, track_ratings, use_graphic, track_lineup, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(event_id) DO UPDATE SET
           is_active = 1,
           track_mode = excluded.track_mode,
           track_ratings = excluded.track_ratings,
           use_graphic = excluded.use_graphic,
+          track_lineup = excluded.track_lineup,
           updated_at = CURRENT_TIMESTAMP`
       ).bind(
         body.eventId,
@@ -138,11 +148,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         body.matchTime || null,
         mode,
         ratingsVal,
-        graphicVal
+        graphicVal,
+        lineupVal
       ).run();
     } else {
       await env.DB.prepare(
-        'UPDATE live_tracked_matches SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+        'UPDATE live_tracked_matches SET is_active = 0, track_lineup = 0, updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
       ).bind(body.eventId).run();
     }
 
@@ -153,6 +164,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       trackMode: body.trackMode || null,
       trackRatings: Boolean(body.trackRatings),
       useGraphic: Boolean(body.useGraphic),
+      trackLineup: Boolean(body.trackLineup),
     });
   } catch (err: any) {
     return Response.json({ success: false, error: err.message }, { status: 500 });
