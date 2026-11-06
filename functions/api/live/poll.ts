@@ -557,7 +557,7 @@ ${playerLine}🏆 *${leagueName}*
 
 // Helper to generate Square 1:1 Match Scorecard Graphic using user's custom design
 function buildCardImageUrl(options: {
-  type?: 'lineup' | 'score';
+  type?: 'lineup' | 'score' | 'goal';
   home: string;
   away: string;
   homeScore?: string;
@@ -930,6 +930,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 .join(',');
 
               const goalCardFb = buildCardImageUrl({
+                type: 'goal',
                 home: match.home_team,
                 away: match.away_team,
                 homeScore: String(finalHomeScore),
@@ -946,6 +947,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               });
 
               const goalCardWa = buildCardImageUrl({
+                type: 'goal',
                 home: match.home_team,
                 away: match.away_team,
                 homeScore: String(finalHomeScore),

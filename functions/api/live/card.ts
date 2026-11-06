@@ -8,6 +8,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const type = (url.searchParams.get('type') || '').toLowerCase();
   const rawStatus = (url.searchParams.get('status') || 'FT').toUpperCase();
   const isLineup = type === 'lineup' || rawStatus === 'LINEUP' || rawStatus === 'XI' || rawStatus.includes('STARTING');
+  const isGoal = type === 'goal' || rawStatus === 'GOAL';
 
   const home = url.searchParams.get('home') || 'Home Team';
   const away = url.searchParams.get('away') || 'Away Team';
@@ -22,6 +23,98 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const bgImage = url.searchParams.get('bgImage') || '';
   const channel = (url.searchParams.get('channel') || 'fb').toLowerCase();
   const isFb = channel === 'fb' || channel === 'facebook' || channel === 'xtra';
+
+  // EXACT MINIMAL GOAL CARD (100% faithful to user's design)
+  if (isGoal) {
+    const goalHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${home} vs ${away} - GOAL</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 1000px;
+      height: 1000px;
+      overflow: hidden;
+      background-color: #1481A4;
+      position: relative;
+      font-family: Impact, "Arial Black", -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .crests-top-right {
+      position: absolute;
+      top: 44px;
+      right: 88px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .crest-circle {
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    }
+    .crest-img {
+      max-width: 82px;
+      max-height: 82px;
+      object-fit: contain;
+    }
+    .goal-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .goal-text {
+      font-family: Impact, "Arial Black", "Montserrat", sans-serif;
+      font-weight: 900;
+      font-size: 215px;
+      letter-spacing: 2px;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      line-height: 1;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="crests-top-right">
+    <div class="crest-circle">
+      ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="crest-img" />` : '<span style="font-size:48px;">⚽</span>'}
+    </div>
+    <div class="crest-circle">
+      ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="crest-img" />` : '<span style="font-size:48px;">⚽</span>'}
+    </div>
+  </div>
+
+  <div class="goal-center">
+    <div class="goal-text">GOAL</div>
+  </div>
+</body>
+</html>`;
+
+    return new Response(goalHtml, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+      },
+    });
+  }
 
   // Helper to parse lists
   const parseList = (raw: string): string[] => {
@@ -221,12 +314,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const awayScore = url.searchParams.get('awayScore') || '0';
     const isHT = rawStatus === 'HT' || rawStatus.includes('HALF');
     const isFT = rawStatus === 'FT' || rawStatus.includes('FULL');
-    const isGoal = rawStatus === 'GOAL' || rawStatus.startsWith('GOAL');
+    const isStatusGoal = rawStatus === 'GOAL' || rawStatus.startsWith('GOAL');
     const statusText = isHT
       ? 'HALF TIME'
       : isFT
       ? 'FULL TIME'
-      : isGoal
+      : isStatusGoal
       ? (rawStatus === 'GOAL' ? 'GOAL!' : rawStatus)
       : rawStatus;
 
