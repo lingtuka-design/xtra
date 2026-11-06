@@ -112,7 +112,7 @@ export const LiveMatchesPanel: React.FC = () => {
 
   const handleSetTrackMode = async (match: EspnMatch, mode: 'full' | 'results_only' | 'off') => {
     const isModeActive = mode !== 'off';
-    const nextLineup = mode === 'full' ? true : match.trackLineup;
+    const nextLineup = mode === 'full' ? true : Boolean(match.trackLineup);
     const isNowTracked = isModeActive || Boolean(nextLineup);
     const nextMode = isModeActive ? mode : null;
     setUpdatingId(match.id);
@@ -141,8 +141,8 @@ export const LiveMatchesPanel: React.FC = () => {
           matchTime: match.date,
           isTracked: isNowTracked,
           trackMode: nextMode || undefined,
-          trackRatings: match.trackRatings,
-          useGraphic: match.useGraphic,
+          trackRatings: Boolean(match.trackRatings),
+          useGraphic: Boolean(match.useGraphic),
           trackLineup: nextLineup,
         }),
       });
@@ -181,7 +181,7 @@ export const LiveMatchesPanel: React.FC = () => {
     setUpdatingId(match.id);
     setStatusMessage(null);
 
-    const isNowTracked = match.isTracked || nextLineup;
+    const isNowTracked = Boolean(match.trackMode) || nextLineup;
 
     // Optimistic UI update
     setMatches((prev) =>
@@ -206,8 +206,8 @@ export const LiveMatchesPanel: React.FC = () => {
           matchTime: match.date,
           isTracked: isNowTracked,
           trackMode: match.trackMode || undefined,
-          trackRatings: match.trackRatings,
-          useGraphic: match.useGraphic,
+          trackRatings: Boolean(match.trackRatings),
+          useGraphic: Boolean(match.useGraphic),
           trackLineup: nextLineup,
         }),
       });
@@ -264,10 +264,11 @@ export const LiveMatchesPanel: React.FC = () => {
           homeLogo: match.homeTeam.logo,
           awayLogo: match.awayTeam.logo,
           matchTime: match.date,
-          isTracked: match.isTracked,
+          isTracked: Boolean(match.isTracked),
           trackMode: match.trackMode || undefined,
-          trackRatings: match.trackRatings,
+          trackRatings: Boolean(match.trackRatings),
           useGraphic: nextGraphic,
+          trackLineup: Boolean(match.trackLineup),
         }),
       });
 
@@ -303,14 +304,13 @@ export const LiveMatchesPanel: React.FC = () => {
     setStatusMessage(null);
 
     // If enabling ratings and match was not tracked, default to full tracking
-    const isNowTracked = nextRatings ? true : match.isTracked;
+    const isNowTracked = nextRatings ? true : Boolean(match.isTracked);
     const nextMode = match.trackMode || 'full';
 
     setMatches((prev) =>
       prev.map((m) =>
         m.id === match.id
-          ? { ...m, trackRatings: nextRatings,
-          useGraphic: match.useGraphic, isTracked: isNowTracked, trackMode: nextMode }
+          ? { ...m, trackRatings: nextRatings, isTracked: isNowTracked, trackMode: nextMode }
           : m
       )
     );
@@ -330,6 +330,8 @@ export const LiveMatchesPanel: React.FC = () => {
           isTracked: isNowTracked,
           trackMode: nextMode,
           trackRatings: nextRatings,
+          useGraphic: Boolean(match.useGraphic),
+          trackLineup: Boolean(match.trackLineup),
         }),
       });
 

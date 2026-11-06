@@ -31,6 +31,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           isActive: Boolean(t.is_active),
           mode: t.track_mode || 'full',
           trackRatings: Boolean(t.track_ratings),
+          useGraphic: Boolean(t.use_graphic),
+          trackLineup: Boolean(t.track_lineup) || t.track_mode === 'lineup_only',
           manualHtPhoto: t.manual_ht_photo || '',
           manualFtPhoto: t.manual_ft_photo || '',
         },
@@ -44,6 +46,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         isTracked: trackInfo ? trackInfo.isActive : false,
         trackMode: trackInfo ? trackInfo.mode : null,
         trackRatings: trackInfo ? trackInfo.trackRatings : false,
+        useGraphic: trackInfo ? trackInfo.useGraphic : false,
+        trackLineup: trackInfo ? trackInfo.trackLineup : false,
         manualHtPhoto: trackInfo ? trackInfo.manualHtPhoto : '',
         manualFtPhoto: trackInfo ? trackInfo.manualFtPhoto : '',
       };
@@ -160,7 +164,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return Response.json({
       success: true,
       eventId: body.eventId,
-      isTracked: body.isTracked,
+      isTracked: isNowTracked,
       trackMode: body.trackMode || null,
       trackRatings: Boolean(body.trackRatings),
       useGraphic: Boolean(body.useGraphic),
