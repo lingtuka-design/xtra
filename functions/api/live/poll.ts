@@ -941,94 +941,98 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
         }
 
-        // 2b. Check VAR Disallowed Goal Events
-        for (const ev of summary.events) {
-          const textLower = (ev.text || '').toLowerCase();
-          const typeLower = (ev.type || '').toLowerCase();
-          const isVarDisallowed =
-            (typeLower.includes('var') && (textLower.includes('no goal') || textLower.includes('disallowed') || textLower.includes('overturned'))) ||
-            textLower.includes('goal disallowed') ||
-            textLower.includes('disallowed goal') ||
-            textLower.includes('var decision: no goal') ||
-            textLower.includes('decision: no goal');
+        const hasVar = ['PL', 'UCL', 'LL', 'BL'].includes(match.league);
 
-          if (isVarDisallowed) {
-            const varEventId = `var_${match.event_id}_${ev.id}`;
-            let claimed = false;
-            try {
-              const insertLock = await env.DB.prepare(
-                'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
-              ).bind(match.event_id, varEventId, 'var_disallowed', ev.minute, ev.text).run();
-              claimed = Boolean(insertLock.success);
-            } catch {
-              claimed = false; // Duplicate blocked!
-            }
+        // 2b. Check VAR Disallowed Goal Events (Only for competitions with VAR)
+        if (hasVar) {
+          for (const ev of summary.events) {
+            const textLower = (ev.text || '').toLowerCase();
+            const typeLower = (ev.type || '').toLowerCase();
+            const isVarDisallowed =
+              (typeLower.includes('var') && (textLower.includes('no goal') || textLower.includes('disallowed') || textLower.includes('overturned'))) ||
+              textLower.includes('goal disallowed') ||
+              textLower.includes('disallowed goal') ||
+              textLower.includes('var decision: no goal') ||
+              textLower.includes('decision: no goal');
 
-            if (claimed) {
-              let reason = 'Offside/Foul';
-              if (textLower.includes('offside')) reason = 'Offside';
-              else if (textLower.includes('handball')) reason = 'Handball';
-              else if (textLower.includes('foul')) reason = 'Foul';
+            if (isVarDisallowed) {
+              const varEventId = `var_${match.event_id}_${ev.id}`;
+              let claimed = false;
+              try {
+                const insertLock = await env.DB.prepare(
+                  'INSERT INTO posted_match_events (event_id, match_event_id, event_type, minute, text) VALUES (?, ?, ?, ?, ?)'
+                ).bind(match.event_id, varEventId, 'var_disallowed', ev.minute, ev.text).run();
+                claimed = Boolean(insertLock.success);
+              } catch {
+                claimed = false; // Duplicate blocked!
+              }
 
-              const fbVar = formatVarDisallowedPost(
-                match.home_team,
-                match.away_team,
-                summary.score.home,
-                summary.score.away,
-                ev.minute || 'VAR',
-                reason,
-                leagueName
-              );
+              if (claimed) {
+                let reason = 'Offside/Foul';
+                if (textLower.includes('offside')) reason = 'Offside';
+                else if (textLower.includes('handball')) reason = 'Handball';
+                else if (textLower.includes('foul')) reason = 'Foul';
 
-              const waVar = formatWhatsAppVarDisallowed(
-                match.home_team,
-                match.away_team,
-                summary.score.home,
-                summary.score.away,
-                ev.minute || 'VAR',
-                reason,
-                leagueName
-              );
+                const fbVar = formatVarDisallowedPost(
+                  match.home_team,
+                  match.away_team,
+                  summary.score.home,
+                  summary.score.away,
+                  ev.minute || 'VAR',
+                  reason,
+                  leagueName
+                );
 
-              if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
-                try {
-                  await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
-                } catch (fbErr: any) {
-                  console.error('FB VAR Alert error:', fbErr.message);
+                const waVar = formatWhatsAppVarDisallowed(
+                  match.home_team,
+                  match.away_team,
+                  summary.score.home,
+                  summary.score.away,
+                  ev.minute || 'VAR',
+                  reason,
+                  leagueName
+                );
+
+                if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
+                  try {
+                    await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+                  } catch (fbErr: any) {
+                    console.error('FB VAR Alert error:', fbErr.message);
+                  }
                 }
-              }
 
-              try {
-                await whatsappPoster.postNews(
-                  waVar,
-                  undefined,
-                  env.WHATSAPP_API_TOKEN,
-                  env.WHATSAPP_CHANNEL_ID,
-                  env.WHATSAPP_API_URL
-                );
-              } catch (waErr: any) {
-                console.error('WhatsApp VAR Alert error:', waErr.message);
-              }
+                try {
+                  await whatsappPoster.postNews(
+                    waVar,
+                    undefined,
+                    env.WHATSAPP_API_TOKEN,
+                    env.WHATSAPP_CHANNEL_ID,
+                    env.WHATSAPP_API_URL
+                  );
+                } catch (waErr: any) {
+                  console.error('WhatsApp VAR Alert error:', waErr.message);
+                }
 
-              try {
-                await telegramPoster.postNews(
-                  toTelegramCaption(waVar),
-                  undefined,
-                  env.TELEGRAM_BOT_TOKEN,
-                  env.TELEGRAM_CHANNEL_ID
-                );
-              } catch (tgErr: any) {
-                console.error('Telegram VAR Alert error:', tgErr.message);
-              }
+                try {
+                  await telegramPoster.postNews(
+                    toTelegramCaption(waVar),
+                    undefined,
+                    env.TELEGRAM_BOT_TOKEN,
+                    env.TELEGRAM_CHANNEL_ID
+                  );
+                } catch (tgErr: any) {
+                  console.error('Telegram VAR Alert error:', tgErr.message);
+                }
 
-              totalPosted++;
-              logDetails.push(`VAR Disallowed Goal posted: ${match.home_team} vs ${match.away_team} (${ev.minute})`);
+                totalPosted++;
+                logDetails.push(`VAR Disallowed Goal posted: ${match.home_team} vs ${match.away_team} (${ev.minute})`);
+              }
             }
           }
         }
 
-        // 2c. Check Score Decrement (Score dropped after a previously posted goal was overturned)
-        if (match.last_score && match.last_score.includes('-')) {
+        // 2c. Check Score Decrement (Score dropped after a previously posted goal was overturned by VAR)
+        if (hasVar && match.last_score && match.last_score.includes('-')) {
           const [prevHStr, prevAStr] = match.last_score.split('-');
           const prevH = parseInt(prevHStr, 10) || 0;
           const prevA = parseInt(prevAStr, 10) || 0;
