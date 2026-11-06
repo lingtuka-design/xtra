@@ -694,6 +694,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       }
 
       const isResultsOnly = match.track_mode === 'results_only';
+      const isLineupOnly = match.track_mode === 'lineup_only';
 
       // 1. Check Confirmed Lineups: Auto-Post if announced before kickoff (or at match start)
       if (!isResultsOnly && summary.lineups && (summary.status.state === 'pre' || match.status !== 'FT')) {
@@ -818,12 +819,24 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
             totalPosted++;
             logDetails.push(`Lineup posted: ${match.home_team} vs ${match.away_team}`);
+
+            // If match was set to lineup_only, deactivate now that lineup is posted
+            if (isLineupOnly) {
+              try {
+                await env.DB.prepare(
+                  'UPDATE live_tracked_matches SET is_active = 0, status = "LINEUP_DONE", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+                ).bind(match.event_id).run();
+                console.log(`[Poll Lineup] Deactivated lineup_only match ${match.event_id} after posting lineup.`);
+              } catch (deactErr: any) {
+                console.warn(`[Poll Lineup] Error deactivating lineup_only match:`, deactErr.message);
+              }
+            }
           }
         }
       }
 
-      // 2. Check all events in this match (Goals) - Skipped if results_only
-      if (!isResultsOnly) {
+      // 2. Check all events in this match (Goals) - Skipped if results_only or lineup_only
+      if (!isResultsOnly && !isLineupOnly) {
         for (let i = 0; i < summary.events.length; i++) {
           const ev = summary.events[i];
           if (!ev.isShootout && (ev.type.toLowerCase().includes('goal') || ev.scoringPlay)) {
@@ -1337,7 +1350,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       ).bind(`${summary.score.home}-${summary.score.away}`, match.event_id).run();
 
       // 3. Check Half Time Stats
-      if (summary.status.isHalftime) {
+      if (summary.status.isHalftime && !isLineupOnly) {
         const htEventId = `ht_${match.event_id}`;
         let claimed = false;
         // Photo Selection Hierarchy:
@@ -1565,7 +1578,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       }
 
       // 4. Check Full Time Stats & Final Result
-      if (summary.status.isFullTime) {
+      if (summary.status.isFullTime && !isLineupOnly) {
         const ftEventId = `ft_${match.event_id}`;
         let claimed = false;
         try {
@@ -1867,6 +1880,13 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             'UPDATE live_tracked_matches SET is_active = 0, status = "FT", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
           ).bind(match.event_id).run();
         }
+      }
+
+      // If match is finished and was lineup_only, clean it up
+      if (isLineupOnly && (summary.status.isFullTime || summary.status.state === 'post')) {
+        await env.DB.prepare(
+          'UPDATE live_tracked_matches SET is_active = 0, status = "LINEUP_DONE", updated_at = CURRENT_TIMESTAMP WHERE event_id = ?'
+        ).bind(match.event_id).run();
       }
 
       // 4b. Check Dedicated Penalty Shootout Result (for matches that went to penalties after 90m FT)

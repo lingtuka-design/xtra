@@ -67,7 +67,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       awayLogo?: string;
       matchTime?: string;
       isTracked?: boolean;
-      trackMode?: 'full' | 'results_only';
+      trackMode?: 'full' | 'results_only' | 'lineup_only';
       trackRatings?: boolean;
       manualHtPhoto?: string;
       manualFtPhoto?: string;

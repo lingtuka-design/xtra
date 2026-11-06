@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star, Calendar, Camera, Upload, Link2, X, Trash2, Check } from 'lucide-react';
+import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star, Calendar, Camera, Upload, Link2, X, Trash2, Check, Users } from 'lucide-react';
 
 interface EspnMatch {
   id: string;
@@ -28,7 +28,7 @@ interface EspnMatch {
     score: string;
   };
   isTracked?: boolean;
-  trackMode?: 'full' | 'results_only' | null;
+  trackMode?: 'full' | 'results_only' | 'lineup_only' | null;
   trackRatings?: boolean;
   manualHtPhoto?: string;
   manualFtPhoto?: string;
@@ -108,7 +108,7 @@ export const LiveMatchesPanel: React.FC = () => {
     };
   }, [matches]);
 
-  const handleSetTrackMode = async (match: EspnMatch, mode: 'full' | 'results_only' | 'off') => {
+  const handleSetTrackMode = async (match: EspnMatch, mode: 'full' | 'results_only' | 'lineup_only' | 'off') => {
     const isNowTracked = mode !== 'off';
     const nextMode = isNowTracked ? mode : null;
     setUpdatingId(match.id);
@@ -151,6 +151,10 @@ export const LiveMatchesPanel: React.FC = () => {
       } else if (mode === 'results_only') {
         setStatusMessage(
           `📊 ${match.shortName || match.name}: RESULTS ONLY! Goal tin post lovin, Half Time & Full Time result chauh a auto-post ang.`
+        );
+      } else if (mode === 'lineup_only') {
+        setStatusMessage(
+          `📋 ${match.shortName || match.name}: LINEUP ONLY! Official Starting XI a chhuah veleh 1:1 graphic nen a auto-post ang a, inkhelh chhung erawh a post zui lo ang.`
         );
       } else {
         setStatusMessage(`⚪ ${match.shortName || match.name} tracking titawp a ni e.`);
@@ -554,6 +558,41 @@ export const LiveMatchesPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Mode 3: Lineup Only */}
+            <button
+              type="button"
+              disabled={updatingId === match.id}
+              onClick={() =>
+                handleSetTrackMode(
+                  match,
+                  match.isTracked && match.trackMode === 'lineup_only' ? 'off' : 'lineup_only'
+                )
+              }
+              className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
+                match.isTracked && match.trackMode === 'lineup_only'
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-2xs font-extrabold ring-1 ring-blue-400'
+                  : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
+              }`}
+              title={
+                match.isTracked && match.trackMode === 'lineup_only'
+                  ? 'Click to turn off Lineup tracking'
+                  : '📋 Lineup Only: Starting XI chiah auto-post (match tan hnuah goal/result post lovin)'
+              }
+            >
+              {updatingId === match.id ? (
+                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+              ) : (
+                <Users
+                  className={`w-2.5 h-2.5 ${
+                    match.isTracked && match.trackMode === 'lineup_only'
+                      ? 'text-blue-100'
+                      : 'text-blue-600'
+                  }`}
+                />
+              )}
+              <span>Lineup</span>
+            </button>
+
             {/* Mode 3 / Addon: Player Ratings Checkbox */}
             <button
               type="button"
