@@ -481,7 +481,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   : 'bg-purple-100 text-purple-800'
               }`}
             >
-              {match.league === 'LL' ? 'La Liga' : match.league === 'BL' ? 'Bundesliga' : match.league === 'EFL' ? 'League Cup' : (match.league === 'IFL' || match.league === 'IL') ? 'Indian Football League' : match.league}
+              {match.league === 'LL' ? 'Liga' : match.league === 'BL' ? 'BL' : match.league === 'EFL' ? 'EFL' : (match.league === 'IFL' || match.league === 'IL') ? 'IFL' : match.league}
             </span>
             {isLive && (
               <span className="flex items-center gap-1 text-rose-600 bg-rose-100/90 px-1.5 py-0.2 rounded animate-pulse font-extrabold">
@@ -784,7 +784,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              League Cup
+              EFL
             </button>
             <button
               onClick={() => setActiveFilter('LL')}
@@ -794,7 +794,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              La Liga
+              Liga
             </button>
             <button
               onClick={() => setActiveFilter('BL')}
@@ -804,7 +804,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              Bundesliga
+              BL
             </button>
             <button
               onClick={() => setActiveFilter('UCL')}
