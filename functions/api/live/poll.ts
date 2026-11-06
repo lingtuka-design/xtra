@@ -557,7 +557,7 @@ ${playerLine}🏆 *${leagueName}*
 
 // Helper to generate Square 1:1 Match Scorecard Graphic using user's custom design
 function buildCardImageUrl(options: {
-  type?: 'lineup' | 'score' | 'goal';
+  type?: 'lineup' | 'score' | 'goal' | 'no_goal';
   home: string;
   away: string;
   homeScore?: string;
@@ -1081,9 +1081,31 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                   leagueName
                 );
 
+                const noGoalCardFb = buildCardImageUrl({
+                  type: 'no_goal',
+                  status: 'NO_GOAL',
+                  home: match.home_team,
+                  away: match.away_team,
+                  homeLogo: match.home_logo,
+                  awayLogo: match.away_logo,
+                  leagueName,
+                  channel: 'fb',
+                });
+
+                const noGoalCardWa = buildCardImageUrl({
+                  type: 'no_goal',
+                  status: 'NO_GOAL',
+                  home: match.home_team,
+                  away: match.away_team,
+                  homeLogo: match.home_logo,
+                  awayLogo: match.away_logo,
+                  leagueName,
+                  channel: 'wa',
+                });
+
                 if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
                   try {
-                    await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+                    await facebookPoster.postNews(fbVar, noGoalCardFb, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
                   } catch (fbErr: any) {
                     console.error('FB VAR Alert error:', fbErr.message);
                   }
@@ -1092,7 +1114,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 try {
                   await whatsappPoster.postNews(
                     waVar,
-                    undefined,
+                    noGoalCardWa,
                     env.WHATSAPP_API_TOKEN,
                     env.WHATSAPP_CHANNEL_ID,
                     env.WHATSAPP_API_URL
@@ -1104,7 +1126,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 try {
                   await telegramPoster.postNews(
                     toTelegramCaption(waVar),
-                    undefined,
+                    noGoalCardWa,
                     env.TELEGRAM_BOT_TOKEN,
                     env.TELEGRAM_CHANNEL_ID
                   );
@@ -1160,9 +1182,31 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 leagueName
               );
 
+              const noGoalCardFb = buildCardImageUrl({
+                type: 'no_goal',
+                status: 'NO_GOAL',
+                home: match.home_team,
+                away: match.away_team,
+                homeLogo: match.home_logo,
+                awayLogo: match.away_logo,
+                leagueName,
+                channel: 'fb',
+              });
+
+              const noGoalCardWa = buildCardImageUrl({
+                type: 'no_goal',
+                status: 'NO_GOAL',
+                home: match.home_team,
+                away: match.away_team,
+                homeLogo: match.home_logo,
+                awayLogo: match.away_logo,
+                leagueName,
+                channel: 'wa',
+              });
+
               if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
                 try {
-                  await facebookPoster.postNews(fbVar, undefined, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
+                  await facebookPoster.postNews(fbVar, noGoalCardFb, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
                 } catch (fbErr: any) {
                   console.error('FB Score Drop VAR Alert error:', fbErr.message);
                 }
@@ -1171,7 +1215,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               try {
                 await whatsappPoster.postNews(
                   waVar,
-                  undefined,
+                  noGoalCardWa,
                   env.WHATSAPP_API_TOKEN,
                   env.WHATSAPP_CHANNEL_ID,
                   env.WHATSAPP_API_URL
@@ -1183,7 +1227,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               try {
                 await telegramPoster.postNews(
                   toTelegramCaption(waVar),
-                  undefined,
+                  noGoalCardWa,
                   env.TELEGRAM_BOT_TOKEN,
                   env.TELEGRAM_CHANNEL_ID
                 );

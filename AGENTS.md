@@ -49,6 +49,14 @@
 
 ---
 
+### 4. VAR Disallowed / No Goal Graphic (`type=no_goal` or `status=NO_GOAL`)
+- **Background**: Solid Crimson Red (`#A80A24`), 1000x1000 / 1024x1024.
+- **Top-Right**: Two circular white badge containers (diameter 112px, border-radius 50%, white background with soft drop-shadow) displaying the two opposing club crests side-by-side.
+- **Center**: Massive, chunky, solid white **`NO GOAL`** text in Impact / Arial Black (`font-size: 185px`, `font-weight: 900`, `letter-spacing: 2px`).
+- **Automation**: Attached automatically as the HD photo for every real-time VAR disallowed / overturned goal alert post on Facebook, WhatsApp, and Telegram.
+
+---
+
 ### 4. Indian Football League (IFL) & Chanmari FC Guidelines
 - **Competition Name**: Always use **`Indian Football League`** (or **`IFL`** on tabs/badges). Never use "I-League".
 - **Team Filter**: Strictly only matches involving **Chanmari FC** are tracked and displayed.
