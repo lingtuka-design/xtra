@@ -16,6 +16,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   let league = (url.searchParams.get('league') || 'PREMIER LEAGUE').trim();
   if (/indian\s+super\s+league/i.test(league) || league.toUpperCase() === 'ISL') {
     league = 'ISL';
+  } else if (/i-league|indian\s+football\s+league/i.test(league) || league.toUpperCase() === 'IL' || league.toUpperCase() === 'IFL') {
+    league = 'INDIAN FOOTBALL LEAGUE';
   }
   const bgImage = url.searchParams.get('bgImage') || '';
   const channel = (url.searchParams.get('channel') || 'fb').toLowerCase();

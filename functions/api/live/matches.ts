@@ -60,7 +60,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const body = (await request.json()) as {
       eventId: string;
-      league?: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IL';
+      league?: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL' | 'IL';
       homeTeam?: string;
       awayTeam?: string;
       homeLogo?: string;

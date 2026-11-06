@@ -2,7 +2,7 @@ import { resolveTeamLogo } from './clubCrests';
 
 export interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IL';
+  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL' | 'IL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -50,16 +50,16 @@ function formatEspnDate(d: Date): string {
 }
 
 export const espnService = {
-  // Fetch upcoming 24h schedule & active live matches for PL, Carabao Cup, La Liga (Barca & Real Madrid only), UCL, ISL, and I-League (Chanmari FC only) (excluding finished FT matches)
+  // Fetch upcoming 24h schedule & active live matches for PL, Carabao Cup, La Liga (Barca & Real Madrid only), UCL, ISL, and Indian Football League (Chanmari FC only) (excluding finished FT matches)
   async getFixtures(): Promise<EspnMatch[]> {
-    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IL'; slug: string; name: string }[] = [
+    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL'; slug: string; name: string }[] = [
       { key: 'PL', slug: 'eng.1', name: 'PL' },
       { key: 'EFL', slug: 'eng.league_cup', name: 'League Cup' },
       { key: 'LL', slug: 'esp.1', name: 'La Liga' },
       { key: 'BL', slug: 'ger.1', name: 'Bundesliga' },
       { key: 'UCL', slug: 'uefa.champions', name: 'UCL' },
       { key: 'ISL', slug: 'ind.1', name: 'ISL' },
-      { key: 'IL', slug: 'ind.2', name: 'I-League' },
+      { key: 'IFL', slug: 'ind.2', name: 'Indian Football League' },
     ];
 
     const now = new Date();
@@ -147,8 +147,8 @@ export const espnService = {
               if (!hasTargetTeam) continue;
             }
 
-            // For Indian Football League (I-League): Strictly only include Chanmari FC matches
-            if (l.key === 'IL') {
+            // For Indian Football League (IFL): Strictly only include Chanmari FC matches
+            if (l.key === 'IFL' || (l.key as string) === 'IL') {
               const isChanmari = (team: any) => {
                 const name = `${team?.displayName || ''} ${team?.name || ''} ${team?.shortDisplayName || ''}`.toLowerCase();
                 return name.includes('chanmari');

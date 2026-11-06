@@ -22,10 +22,10 @@ function getLeagueHashtag(leagueName: string): string {
   if (l.includes('champions') || l.includes('ucl')) {
     return '#ChampionsLeague #UCL';
   }
-  if (l.includes('i-league') || l.includes('ifl') || l.includes('chanmari')) {
-    return '#ILeague #IndianFootball #ChanmariFC';
+  if (l.includes('indian football league') || l.includes('ifl') || l.includes('chanmari') || l.includes('i-league')) {
+    return '#IndianFootballLeague #IFL #ChanmariFC #IndianFootball';
   }
-  if (l.includes('indian') || l.includes('isl')) {
+  if (l.includes('indian super league') || l.includes('isl')) {
     return '#IndianSuperLeague #ISL';
   }
   if (l.includes('liga') || l.includes('la liga')) {
@@ -572,6 +572,8 @@ function buildCardImageUrl(options: {
   const displayLeague =
     /indian\s+super\s+league/i.test(options.leagueName) || options.leagueName.toUpperCase() === 'ISL'
       ? 'ISL'
+      : /i-league|indian\s+football\s+league/i.test(options.leagueName) || options.leagueName.toUpperCase() === 'IL' || options.leagueName.toUpperCase() === 'IFL'
+      ? 'Indian Football League'
       : options.leagueName;
   q.set('league', displayLeague);
   if (options.homeScorers) q.set('homeScorers', options.homeScorers);
@@ -640,7 +642,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           ? 'uefa.champions'
           : match.league === 'ISL'
           ? 'ind.1'
-          : match.league === 'IL'
+          : match.league === 'IFL' || match.league === 'IL'
           ? 'ind.2'
           : match.league === 'LL'
           ? 'esp.1'
@@ -654,8 +656,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           ? 'UEFA Champions League'
           : match.league === 'ISL'
           ? 'Indian Super League'
-          : match.league === 'IL'
-          ? 'I-League'
+          : match.league === 'IFL' || match.league === 'IL'
+          ? 'Indian Football League'
           : match.league === 'LL'
           ? 'La Liga'
           : match.league === 'BL'
