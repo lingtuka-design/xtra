@@ -41,16 +41,37 @@
 
 ---
 
-### 3. Competitions & Fixture Tracking (`functions/services/espnService.ts`)
-- Supported competitions: Premier League (`PL`), League Cup (`EFL`), La Liga (`LL`), Bundesliga (`BL`), Champions League (`UCL`), Indian Super League (`ISL`).
-- **Club Filtering Rules**:
-  - **La Liga (`LL`)**: Strictly only Barcelona and Real Madrid matches with their opponents.
-  - **Bundesliga (`BL`)**: Strictly only **Bayern Munich** matches with their opponents (ID: `132`).
-- **Hashtags**: Bundesliga fixtures auto-post with `#Bundesliga #FCBayern`.
+### 3. Live Goal Graphic (`type=goal` or `status=GOAL`)
+- **Background**: Solid teal / petrol blue (`#1481A4`), 1000x1000 / 1024x1024.
+- **Top-Right**: Two circular white badge containers (diameter 112px, border-radius 50%, white background with soft drop-shadow) displaying the two opposing club crests side-by-side.
+- **Center**: Massive, chunky, solid white **`GOAL`** text in Impact / Arial Black (`font-size: 215px`, `font-weight: 900`, `letter-spacing: 2px`).
+- **Automation**: Attached automatically as the HD photo for every real-time goal alert post on Facebook, WhatsApp, and Telegram, while keeping the full standard Mizo text caption intact.
 
 ---
 
-### 4. Official Club Twitter Match Photography Pipeline (`functions/services/clubPhotoService.ts`)
+### 4. Indian Football League (IFL) & Chanmari FC Guidelines
+- **Competition Name**: Always use **`Indian Football League`** (or **`IFL`** on tabs/badges). Never use "I-League".
+- **Team Filter**: Strictly only matches involving **Chanmari FC** are tracked and displayed.
+- **Official Logos**: Always use high-definition vector SVGs (`public/logos/chanmari-fc.svg` and `public/logos/shillong-lajong.svg`).
+- **No Dummy Stats**: For IFL (and any match without tracked statistics), the match stats block (`Possession: 50%-50%`, `Shots: 0-0`) is completely hidden from Half Time (HT) and Full Time (FT) posts.
+- **No Fake VAR Alerts**: Competitions without VAR (IFL, ISL) strictly block any "VAR Disallowed" or score drop alerts. VAR alerts are exclusive to PL, UCL, LL, and BL.
+
+---
+
+### 5. Competitions & Fixture Tracking (`functions/services/espnService.ts`)
+- Supported competitions: Premier League (`PL`), League Cup (`EFL`), La Liga (`LL`), Bundesliga (`BL`), Champions League (`UCL`), Indian Super League (`ISL`), Indian Football League (`IFL` - Chanmari FC only).
+- **Club Filtering Rules**:
+  - **La Liga (`LL`)**: Strictly only Barcelona and Real Madrid matches with their opponents.
+  - **Bundesliga (`BL`)**: Strictly only **Bayern Munich** matches with their opponents (ID: `132`).
+  - **Indian Football League (`IFL`)**: Strictly only **Chanmari FC** matches.
+- **Hashtags**: 
+  - IFL: `#IndianFootballLeague #IFL #ChanmariFC #IndianFootball`
+  - Bundesliga: `#Bundesliga #FCBayern`
+  - Champions League: `#ChampionsLeague #UCL`
+
+---
+
+### 6. Official Club Twitter Match Photography Pipeline (`functions/services/clubPhotoService.ts`)
 - **Primary Source**: At Half Time (HT) and Full Time (FT), clean pitch-side photography is fetched directly from the verified official Club Twitter account(s) (`@BrentfordFC`, `@NFFC`, `@FCBayern`, `@Arsenal`, etc.).
 - **Strict Clean Photo Rules**:
   - Automatically filters out graphic posters, score templates, matchday cards, and announcement graphics (`FULL-TIME`, `HALF-TIME`, `FT:`, `Lineup`, etc.).
