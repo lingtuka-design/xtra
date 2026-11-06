@@ -658,12 +658,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
 
-    /* Bottom Left Logo */
+    /* Bottom Center Brand Logo */
     .brand-logo {
       position: absolute;
-      bottom: 50px;
-      left: 76px;
-      ${isFb ? 'width: 155px;' : 'width: 165px;'}
+      bottom: 45px;
+      left: 50%;
+      transform: translateX(-50%);
+      ${isFb ? 'height: 48px;' : 'height: 42px;'}
       object-fit: contain;
       filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
     }

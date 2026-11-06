@@ -377,7 +377,31 @@ async function handleSend(req, res) {
         const base64Data = photoUrl.slice(commaIdx + 1);
         imagePayload = Buffer.from(base64Data, 'base64');
       } else if (photoUrl.startsWith('http')) {
-        imagePayload = { url: photoUrl };
+        // Download image directly into Buffer with 45s timeout to support dynamic screenshot generation (e.g. thum.io)
+        try {
+          console.log(`[WhatsApp Bot] Pre-fetching image buffer from URL: ${photoUrl.substring(0, 100)}...`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 45000);
+          const imgRes = await fetch(photoUrl, {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)',
+              'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            },
+          });
+          clearTimeout(timeoutId);
+          if (imgRes.ok) {
+            const arrBuffer = await imgRes.arrayBuffer();
+            imagePayload = Buffer.from(arrBuffer);
+            console.log(`[WhatsApp Bot] ✅ Successfully buffered image (${imagePayload.length} bytes).`);
+          } else {
+            console.warn(`[WhatsApp Bot] HTTP ${imgRes.status} fetching image, falling back to { url }`);
+            imagePayload = { url: photoUrl };
+          }
+        } catch (fetchErr) {
+          console.warn(`[WhatsApp Bot] Could not buffer image (${fetchErr.message}), falling back to { url }`);
+          imagePayload = { url: photoUrl };
+        }
       }
     }
 

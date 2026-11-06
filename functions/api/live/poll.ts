@@ -780,6 +780,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               channel: 'wa',
             });
 
+            // Pre-warm card images so thum.io renders and caches them immediately before posters download
+            await Promise.allSettled([
+              fbLineupImg ? fetch(fbLineupImg).catch(() => {}) : Promise.resolve(),
+              waLineupImg ? fetch(waLineupImg).catch(() => {}) : Promise.resolve(),
+            ]);
+
             // 1. Post to Facebook Page
             if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
               try {
@@ -1543,6 +1549,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               bgImage: htPhotoToUse,
             });
 
+          // Pre-warm card images so thum.io renders and caches them immediately before posters download
+          await Promise.allSettled([
+            fbImage ? fetch(fbImage).catch(() => {}) : Promise.resolve(),
+            waImage ? fetch(waImage).catch(() => {}) : Promise.resolve(),
+          ]);
+
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {
               await facebookPoster.postNews(fbHT, fbImage, env.FB_PAGE_ID, env.FB_PAGE_ACCESS_TOKEN);
@@ -1810,6 +1822,12 @@ async function handlePoll(context: EventContext<Env, any, any>) {
               channel: 'wa',
               bgImage: chosenPhoto,
             });
+
+          // Pre-warm card images so thum.io renders and caches them immediately before posters download
+          await Promise.allSettled([
+            fbImage ? fetch(fbImage).catch(() => {}) : Promise.resolve(),
+            waImage ? fetch(waImage).catch(() => {}) : Promise.resolve(),
+          ]);
 
           if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
             try {
