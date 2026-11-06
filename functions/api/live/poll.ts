@@ -1356,13 +1356,16 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         // Photo Selection Hierarchy:
         // Priority 1: User Manual HT Photo (uploaded / pasted by user)
         let htPhotoToUse = '';
-        if (match.manual_ht_photo && match.manual_ht_photo.trim().length > 0) {
+        const isGraphicMode = Number(match.use_graphic) === 1;
+        if (isGraphicMode) {
+          console.log(`[HT Photo] Graphic mode enabled for ${match.home_team} vs ${match.away_team}: Skipping external photo search.`);
+        } else if (match.manual_ht_photo && match.manual_ht_photo.trim().length > 0) {
           htPhotoToUse = match.manual_ht_photo.trim();
           console.log(`[HT Photo] Priority 1: Using User Manual HT Photo: ${htPhotoToUse}`);
         }
 
         // Priority 2: Check verified Club Official Twitter for clean on-pitch celebration/action photo
-        if (!htPhotoToUse) {
+        if (!isGraphicMode && !htPhotoToUse) {
           try {
             const curHomeScore = parseInt(summary.score?.home ?? String(match.home_score ?? 0), 10) || 0;
             const curAwayScore = parseInt(summary.score?.away ?? String(match.away_score ?? 0), 10) || 0;
@@ -1400,7 +1403,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         }
 
         // Priority 3: Fallback to FotMob (all leagues including ISL)
-        if (!htPhotoToUse) {
+        if (!isGraphicMode && !htPhotoToUse) {
           try {
             const curHomeScore = parseInt(summary.score?.home ?? String(match.home_score ?? 0), 10) || 0;
             const curAwayScore = parseInt(summary.score?.away ?? String(match.away_score ?? 0), 10) || 0;

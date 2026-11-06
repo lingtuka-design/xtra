@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star, Calendar, Camera, Upload, Link2, X, Trash2, Check, Users } from 'lucide-react';
+import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Sparkles, Star, Calendar, Camera, Upload, Link2, X, Trash2, Check, Users, Palette } from 'lucide-react';
 
 interface EspnMatch {
   id: string;
@@ -30,6 +30,7 @@ interface EspnMatch {
   isTracked?: boolean;
   trackMode?: 'full' | 'results_only' | 'lineup_only' | null;
   trackRatings?: boolean;
+  useGraphic?: boolean;
   manualHtPhoto?: string;
   manualFtPhoto?: string;
 }
@@ -136,6 +137,7 @@ export const LiveMatchesPanel: React.FC = () => {
           isTracked: isNowTracked,
           trackMode: nextMode || undefined,
           trackRatings: match.trackRatings,
+          useGraphic: match.useGraphic,
         }),
       });
 
@@ -172,6 +174,63 @@ export const LiveMatchesPanel: React.FC = () => {
     }
   };
 
+  const handleToggleGraphic = async (match: EspnMatch) => {
+    const nextGraphic = !match.useGraphic;
+    setUpdatingId(match.id);
+    setStatusMessage(null);
+
+    // Optimistic UI update
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.id === match.id ? { ...m, useGraphic: nextGraphic } : m
+      )
+    );
+
+    try {
+      const res = await fetch('/api/live/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: match.id,
+          league: match.league,
+          homeTeam: match.homeTeam.name,
+          awayTeam: match.awayTeam.name,
+          homeLogo: match.homeTeam.logo,
+          awayLogo: match.awayTeam.logo,
+          matchTime: match.date,
+          isTracked: match.isTracked,
+          trackMode: match.trackMode || undefined,
+          trackRatings: match.trackRatings,
+          useGraphic: nextGraphic,
+        }),
+      });
+
+      const data = (await res.json()) as any;
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update graphic toggle');
+      }
+
+      if (nextGraphic) {
+        setStatusMessage(
+          `🎨 ${match.shortName || match.name}: Graphic mode enabled! Half Time leh Full Time-ah photo zawn lovin kan Graphic siamchawp a in-post ang.`
+        );
+      } else {
+        setStatusMessage(
+          `📷 ${match.shortName || match.name}: Photo rules pangngai (Club Twitter / FotMob) zawm leh a ni e.`
+        );
+      }
+    } catch (err: any) {
+      setMatches((prev) =>
+        prev.map((m) =>
+          m.id === match.id ? { ...m, useGraphic: match.useGraphic } : m
+        )
+      );
+      alert('Graphic mode thlak laiin buaina a awm: ' + err.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleToggleRatings = async (match: EspnMatch) => {
     const nextRatings = !match.trackRatings;
     setUpdatingId(match.id);
@@ -184,7 +243,8 @@ export const LiveMatchesPanel: React.FC = () => {
     setMatches((prev) =>
       prev.map((m) =>
         m.id === match.id
-          ? { ...m, trackRatings: nextRatings, isTracked: isNowTracked, trackMode: nextMode }
+          ? { ...m, trackRatings: nextRatings,
+          useGraphic: match.useGraphic, isTracked: isNowTracked, trackMode: nextMode }
           : m
       )
     );
@@ -370,18 +430,19 @@ export const LiveMatchesPanel: React.FC = () => {
 
   const trackedCount = matches.filter((m) => m.isTracked).length;
 
+  const formatDateHeading = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    } catch {
+      return '';
+    }
+  };
+
   const formatMatchTime = (isoString: string) => {
     try {
       const d = new Date(isoString);
-      const now = new Date();
-      const isToday = d.toDateString() === now.toDateString();
-      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const isTomorrow = tomorrow.toDateString() === d.toDateString();
-      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-
-      if (isToday) return `Vawiin ${timeStr}`;
-      if (isTomorrow) return `Naktuk ${timeStr}`;
-      return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${timeStr}`;
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
     } catch {
       return '';
     }
@@ -483,8 +544,9 @@ export const LiveMatchesPanel: React.FC = () => {
           </div>
         </div>
 
-        {/* Track Mode Action Buttons */}
+        {/* Track Mode Action Buttons (2-col grid) */}
         <div className="shrink-0 flex flex-col items-end gap-1.5 self-center">
+          {/* Row 1: Live & HT/FT */}
           <div className="flex items-center gap-1.5">
             {/* Mode 1: Full Live */}
             <button
@@ -496,7 +558,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   match.isTracked && match.trackMode === 'full' ? 'off' : 'full'
                 )
               }
-              className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
+              className={`h-8 w-20 px-2.5 rounded-xl flex items-center justify-center gap-1 text-[11px] font-extrabold transition-all ${
                 match.isTracked && match.trackMode === 'full'
                   ? 'bg-rose-600 text-white shadow-xs scale-102 ring-2 ring-rose-400'
                   : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
@@ -531,7 +593,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   match.isTracked && match.trackMode === 'results_only' ? 'off' : 'results_only'
                 )
               }
-              className={`h-8 px-2.5 rounded-xl flex items-center gap-1 text-[11px] font-extrabold transition-all ${
+              className={`h-8 w-20 px-2.5 rounded-xl flex items-center justify-center gap-1 text-[11px] font-extrabold transition-all ${
                 match.isTracked && match.trackMode === 'results_only'
                   ? 'bg-amber-600 text-white shadow-xs scale-102 ring-2 ring-amber-400'
                   : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200/80'
@@ -557,8 +619,59 @@ export const LiveMatchesPanel: React.FC = () => {
             </button>
           </div>
 
+          {/* Row 2: Ratings (left) & Photos (right) */}
           <div className="flex items-center gap-1.5">
-            {/* Mode 3: Lineup Only */}
+            {/* Player Ratings */}
+            <button
+              type="button"
+              disabled={updatingId === match.id}
+              onClick={() => handleToggleRatings(match)}
+              className={`h-6 w-20 px-2 rounded-lg flex items-center justify-center gap-1 text-[10px] font-bold border transition-all ${
+                match.trackRatings
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-2xs font-extrabold ring-1 ring-amber-400'
+                  : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
+              }`}
+              title={
+                match.trackRatings
+                  ? '⭐ Player Ratings enabled (Click to turn off)'
+                  : '⭐ Click to enable Player Ratings (Posts 1m after Full Time with fresh photo)'
+              }
+            >
+              <Star
+                className={`w-2.5 h-2.5 ${
+                  match.trackRatings ? 'text-amber-100 fill-amber-100' : 'text-amber-500'
+                }`}
+              />
+              <span>Ratings</span>
+            </button>
+
+            {/* Custom Photos */}
+            <button
+              type="button"
+              onClick={() => openPhotoModal(match)}
+              className={`h-6 w-20 px-2 rounded-lg flex items-center justify-center gap-1 text-[10px] font-bold border transition-all ${
+                match.manualHtPhoto || match.manualFtPhoto
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-2xs font-extrabold ring-1 ring-blue-400'
+                  : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
+              }`}
+              title="📷 Dah chawp HT & FT Thlalak (Priority 1)"
+            >
+              <Camera className="w-2.5 h-2.5" />
+              <span>
+                {match.manualHtPhoto && match.manualFtPhoto
+                  ? 'HT+FT 📷'
+                  : match.manualHtPhoto
+                  ? 'HT 📷'
+                  : match.manualFtPhoto
+                  ? 'FT 📷'
+                  : 'Photos'}
+              </span>
+            </button>
+          </div>
+
+          {/* Row 3: Lineup (under Ratings) & Graphic (under Photos) */}
+          <div className="flex items-center gap-1.5">
+            {/* Lineup Only */}
             <button
               type="button"
               disabled={updatingId === match.id}
@@ -568,7 +681,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   match.isTracked && match.trackMode === 'lineup_only' ? 'off' : 'lineup_only'
                 )
               }
-              className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
+              className={`h-6 w-20 px-2 rounded-lg flex items-center justify-center gap-1 text-[10px] font-bold border transition-all ${
                 match.isTracked && match.trackMode === 'lineup_only'
                   ? 'bg-blue-600 text-white border-blue-700 shadow-2xs font-extrabold ring-1 ring-blue-400'
                   : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
@@ -593,52 +706,28 @@ export const LiveMatchesPanel: React.FC = () => {
               <span>Lineup</span>
             </button>
 
-            {/* Mode 3 / Addon: Player Ratings Checkbox */}
+            {/* Custom Graphic Toggle */}
             <button
               type="button"
               disabled={updatingId === match.id}
-              onClick={() => handleToggleRatings(match)}
-              className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
-                match.trackRatings
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-2xs font-extrabold ring-1 ring-amber-400'
+              onClick={() => handleToggleGraphic(match)}
+              className={`h-6 w-20 px-2 rounded-lg flex items-center justify-center gap-1 text-[10px] font-bold border transition-all ${
+                match.useGraphic
+                  ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs font-extrabold ring-1 ring-indigo-400'
                   : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
               }`}
               title={
-                match.trackRatings
-                  ? '⭐ Player Ratings enabled (Click to turn off)'
-                  : '⭐ Click to enable Player Ratings (Posts 1m after Full Time with fresh photo)'
+                match.useGraphic
+                  ? '🎨 Graphic enabled: HT & FT ah kan Graphic siamchawp a post ang (Click to turn off)'
+                  : '🎨 Click to enable Graphic: HT & FT ah photo zawn lovin kan Graphic siamchawp a post ang'
               }
             >
-              <Star
+              <Palette
                 className={`w-2.5 h-2.5 ${
-                  match.trackRatings ? 'text-amber-100 fill-amber-100' : 'text-amber-500'
+                  match.useGraphic ? 'text-indigo-100' : 'text-indigo-600'
                 }`}
               />
-              <span>Ratings</span>
-              {match.trackRatings && <CheckCircle2 className="w-2.5 h-2.5 text-white ml-0.5" />}
-            </button>
-
-            {/* Custom Manual HT & FT Photos Button */}
-            <button
-              type="button"
-              onClick={() => openPhotoModal(match)}
-              className={`h-6 px-2 rounded-lg flex items-center gap-1 text-[10px] font-bold border transition-all ${
-                match.manualHtPhoto || match.manualFtPhoto
-                  ? 'bg-blue-600 text-white border-blue-700 shadow-2xs font-extrabold ring-1 ring-blue-400'
-                  : 'bg-stone-50 hover:bg-stone-100 text-stone-600 border-stone-200/80'
-              }`}
-              title="📷 Dah chawp HT & FT Thlalak (Priority 1)"
-            >
-              <Camera className="w-2.5 h-2.5" />
-              <span>
-                {match.manualHtPhoto && match.manualFtPhoto
-                  ? 'HT+FT 📷'
-                  : match.manualHtPhoto
-                  ? 'HT 📷'
-                  : match.manualFtPhoto
-                  ? 'FT 📷'
-                  : 'Photos'}
-              </span>
+              <span>Graphic</span>
             </button>
           </div>
         </div>
@@ -658,9 +747,7 @@ export const LiveMatchesPanel: React.FC = () => {
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-black tracking-tight text-stone-900 flex items-center gap-1.5">
                 Live Goal Tracker
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full border border-rose-200">
-                  PL • Carabao Cup • La Liga • UCL • ISL
-                </span>
+                
               </h2>
             </div>
           </div>
@@ -809,10 +896,7 @@ export const LiveMatchesPanel: React.FC = () => {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-800 px-2.5 py-1 rounded-lg border border-stone-200 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-stone-500" />
-                  Vawiin Match-te ({todayMatches.length})
-                </span>
-                <span className="text-xs text-stone-500 font-medium">
-                  {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', weekday: 'short' })}
+                  {formatDateHeading(new Date().toISOString())} ({todayMatches.length})
                 </span>
                 <div className="h-px bg-stone-200 flex-1" />
               </div>
@@ -828,10 +912,7 @@ export const LiveMatchesPanel: React.FC = () => {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider bg-amber-50 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                  Naktuk Match-te ({tomorrowMatches.length})
-                </span>
-                <span className="text-xs text-stone-500 font-medium">
-                  {new Date(Date.now() + 24 * 3600 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', weekday: 'short' })}
+                  {formatDateHeading(new Date(Date.now() + 24 * 3600 * 1000).toISOString())} ({tomorrowMatches.length})
                 </span>
                 <div className="h-px bg-stone-200 flex-1" />
               </div>
@@ -847,7 +928,7 @@ export const LiveMatchesPanel: React.FC = () => {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-700 px-2.5 py-1 rounded-lg border border-stone-200 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-stone-500" />
-                  Naktuk lehpek ({otherUpcomingMatches.length})
+                  {otherUpcomingMatches.length > 0 ? formatDateHeading(otherUpcomingMatches[0].date) : 'Upcoming'} ({otherUpcomingMatches.length})
                 </span>
                 <div className="h-px bg-stone-200 flex-1" />
               </div>

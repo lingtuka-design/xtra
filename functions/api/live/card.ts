@@ -2,6 +2,7 @@ import { Env } from '../../types';
 import { MATCH_CARD_BG_FB, MATCH_CARD_BG_WA } from './card-bg';
 import { INKHEL_LOGO_B64, INKHEL_XTRA_LIGHT_B64 } from './inkhel-logo-b64';
 import { resolveTeamLogo } from '../../services/clubCrests';
+import { resolveLeagueLogo } from '../../services/leagueLogos';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
@@ -398,11 +399,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     });
   }
 
-  // Background style: uses exact base template containing user's official background and channel-specific logo
-  const defaultBg = isFb ? MATCH_CARD_BG_FB : MATCH_CARD_BG_WA;
-  const cardBgUrl = bgImage && bgImage.startsWith('http') ? bgImage : defaultBg;
-
-  // SCORECARD MODE (GOAL / HT / FT)
+  // SCORECARD MODE (GOAL / HT / FT) - 1:1 Square Modern Template
     const homeScore = url.searchParams.get('homeScore') || '0';
     const awayScore = url.searchParams.get('awayScore') || '0';
     const isHT = rawStatus === 'HT' || rawStatus.includes('HALF');
@@ -468,46 +465,229 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       ''
     );
 
-    const bodyHtml = `
-  <!-- 1. League Title -->
-  <div class="league-title">${league}</div>
+    const leagueLogoUrl = resolveLeagueLogo(league);
+    const brandLogoB64 = isFb ? INKHEL_XTRA_LIGHT_B64 : INKHEL_LOGO_B64;
 
-  <!-- 2. Status Badge -->
-  <div class="status-container">
-    <div class="status-text">${statusText}</div>
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${home} vs ${away} - ${statusText}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 1024px;
+      height: 1024px;
+      overflow: hidden;
+      background-color: #5F779B;
+      position: relative;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    /* Top Center League Logo */
+    .league-logo-box {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .league-logo {
+      height: 132px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+    }
+
+    /* Top Center Status */
+    .status-text {
+      position: absolute;
+      top: 196px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Fredoka', 'Arial Rounded MT Bold', -apple-system, sans-serif;
+      font-weight: 800;
+      font-size: 64px;
+      letter-spacing: 2.5px;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1;
+    }
+
+    /* Center Match Row */
+    .match-center-row {
+      position: absolute;
+      top: 288px;
+      left: 0;
+      width: 1024px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 95px;
+    }
+
+    .crest-container {
+      width: 200px;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .crest-img {
+      max-width: 195px;
+      max-height: 195px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.16));
+    }
+
+    .score-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .score-num {
+      font-family: 'Fredoka', 'Arial Rounded MT Bold', -apple-system, sans-serif;
+      font-weight: 900;
+      font-size: 162px;
+      color: #FFFFFF;
+      line-height: 1;
+      letter-spacing: -2px;
+    }
+
+    .score-hyphen {
+      width: 48px;
+      height: 22px;
+      background-color: #FFFFFF;
+      border-radius: 11px;
+      margin: 0 10px;
+    }
+
+    /* Scorers & Cards Area */
+    .events-section {
+      position: absolute;
+      top: 498px;
+      left: 0;
+      width: 1024px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .event-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .event-side-left {
+      width: 380px;
+      text-align: right;
+      padding-right: 32px;
+      font-size: 27px;
+      font-weight: 600;
+      color: #FFFFFF;
+      line-height: 1.5;
+    }
+
+    .event-icon-box {
+      width: 56px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .ball-icon {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
+
+    .event-side-right {
+      width: 380px;
+      text-align: left;
+      padding-left: 32px;
+      font-size: 27px;
+      font-weight: 600;
+      color: #FFFFFF;
+      line-height: 1.5;
+    }
+
+    .red-card-icon {
+      width: 26px;
+      height: 38px;
+      background-color: #E21B2A;
+      border-radius: 3px;
+      transform: rotate(14deg);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Bottom Left Logo */
+    .brand-logo {
+      position: absolute;
+      bottom: 50px;
+      left: 76px;
+      ${isFb ? 'width: 155px;' : 'width: 165px;'}
+      object-fit: contain;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+    }
+  </style>
+</head>
+<body>
+  <!-- League Logo at Top Center -->
+  <div class="league-logo-box">
+    <img src="${leagueLogoUrl}" alt="${league}" class="league-logo" />
   </div>
 
-  <!-- 3. Scoreboard Row -->
-  <div class="scoreboard-row">
-    <div class="crest-box">
-      ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="team-logo" />` : '<span style="font-size:80px;">⚽</span>'}
+  <!-- Status -->
+  <div class="status-text">${statusText}</div>
+
+  <!-- Main Center Row -->
+  <div class="match-center-row">
+    <div class="crest-container">
+      ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="crest-img" />` : ''}
     </div>
-    <div class="score-center">
-      <div class="score-digits">${homeScore}-${awayScore}</div>
+
+    <div class="score-container">
+      <span class="score-num">${homeScore}</span>
+      <span class="score-hyphen"></span>
+      <span class="score-num">${awayScore}</span>
     </div>
-    <div class="crest-box">
-      ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="team-logo" />` : '<span style="font-size:80px;">⚽</span>'}
+
+    <div class="crest-container">
+      ${awayLogo ? `<img src="${awayLogo}" alt="${away}" class="crest-img" />` : ''}
     </div>
   </div>
 
-  <!-- 4. Goal Scorers & Red Cards -->
-  <div class="events-container">
-    <!-- Goals -->
+  <!-- Goal Scorers & Cards Section -->
+  <div class="events-section">
     ${(homeScorersList.length > 0 || awayScorersList.length > 0) ? `
       <div class="event-row">
         <div class="event-side-left">
           ${homeScorersList.map((s) => `<div>${s}</div>`).join('')}
         </div>
         <div class="event-icon-box">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">
-            <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" stroke-width="1.3"/>
-            <polygon points="12,7.5 15.5,10 14.2,14 9.8,14 8.5,10" fill="#111827"/>
-            <line x1="12" y1="7.5" x2="12" y2="2" stroke="#111827" stroke-width="1.3"/>
-            <line x1="15.5" y1="10" x2="20.5" y2="7.5" stroke="#111827" stroke-width="1.3"/>
-            <line x1="14.2" y1="14" x2="18" y2="19.5" stroke="#111827" stroke-width="1.3"/>
-            <line x1="9.8" y1="14" x2="6" y2="19.5" stroke="#111827" stroke-width="1.3"/>
-            <line x1="8.5" y1="10" x2="3.5" y2="7.5" stroke="#111827" stroke-width="1.3"/>
-          </svg>
+          <img src="https://xtra-byd.pages.dev/logos/ball.png" alt="⚽" class="ball-icon" />
         </div>
         <div class="event-side-right">
           ${awayScorersList.map((s) => `<div>${s}</div>`).join('')}
@@ -515,7 +695,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       </div>
     ` : ''}
 
-    <!-- Red Cards -->
     ${(homeRedCardList.length > 0 || awayRedCardList.length > 0) ? `
       <div class="event-row">
         <div class="event-side-left">
@@ -530,161 +709,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       </div>
     ` : ''}
   </div>
-`;
 
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${home} vs ${away}</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    }
-    body {
-      width: 1024px;
-      height: 1024px;
-      overflow: hidden;
-      position: relative;
-      background: #FFFFFF url('${cardBgUrl}') no-repeat center center;
-      background-size: cover;
-      color: #111827;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    /* 1. League Title (Top-Right) */
-    .league-title {
-      position: absolute;
-      top: 36px;
-      right: 84px;
-      font-size: 38px;
-      font-weight: 900;
-      font-style: italic;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #3D4347;
-      text-align: right;
-      z-index: 10;
-    }
-
-    /* 2. Header (Center) */
-    .status-container {
-      margin-top: ${isLineup ? '136px' : '146px'};
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 10;
-    }
-    .status-text {
-      font-family: Impact, "Arial Black", -apple-system, sans-serif;
-      font-size: ${isLineup ? '54px' : '60px'};
-      font-weight: 900;
-      letter-spacing: 5px;
-      text-transform: uppercase;
-      color: #000000;
-      line-height: 1;
-      border-bottom: 5px solid #000000;
-      padding-bottom: 2px;
-      display: inline-block;
-    }
-
-    /* 3. Logos & Score Row (Scorecard Mode) */
-    .scoreboard-row {
-      margin-top: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 890px;
-      z-index: 10;
-    }
-    .crest-box {
-      width: 220px;
-      height: 220px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .team-logo {
-      max-width: 210px;
-      max-height: 210px;
-      object-fit: contain;
-      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12));
-    }
-    .score-center {
-      width: 320px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .score-digits {
-      font-family: Impact, "Arial Black", -apple-system, sans-serif;
-      font-size: 144px;
-      line-height: 0.95;
-      font-weight: 900;
-      color: #9E0A24;
-      letter-spacing: 2px;
-    }
-
-    /* 4. Events Section (Goals & Cards) */
-    .events-container {
-      margin-top: 24px;
-      width: 880px;
-      display: flex;
-      flex-direction: column;
-      gap: 22px;
-      z-index: 10;
-    }
-    .event-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      width: 100%;
-    }
-    .event-side-left {
-      flex: 1;
-      text-align: right;
-      padding-right: 36px;
-      font-size: 26px;
-      font-weight: 700;
-      color: #2B3440;
-      line-height: 1.45;
-    }
-    .event-icon-box {
-      width: 50px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      padding-top: 1px;
-    }
-    .event-side-right {
-      flex: 1;
-      text-align: left;
-      padding-left: 36px;
-      font-size: 26px;
-      font-weight: 700;
-      color: #2B3440;
-      line-height: 1.45;
-    }
-    .red-card-icon {
-      width: 26px;
-      height: 38px;
-      background-color: #D91A2A;
-      border-radius: 3px;
-      transform: rotate(14deg);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-    }
-  </style>
-</head>
-<body>
-  ${bodyHtml}
+  <!-- Bottom Left Logo -->
+  <img src="${brandLogoB64}" alt="Inkhel" class="brand-logo" />
 </body>
 </html>`;
 
