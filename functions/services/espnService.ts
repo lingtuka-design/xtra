@@ -379,6 +379,19 @@ export const espnService = {
           redCards: getStat(awayBox, 'redCards'),
         },
       };
+
+      // If there are zero shots, corners, and fouls across both teams, provider does not track live stats
+      const totalStatCount =
+        parseInt(stats.home.shots || '0', 10) +
+        parseInt(stats.away.shots || '0', 10) +
+        parseInt(stats.home.corners || '0', 10) +
+        parseInt(stats.away.corners || '0', 10) +
+        parseInt(stats.home.fouls || '0', 10) +
+        parseInt(stats.away.fouls || '0', 10);
+
+      if (totalStatCount === 0) {
+        stats = undefined;
+      }
     }
 
     const statusType = comp?.status?.type || {};

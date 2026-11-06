@@ -233,6 +233,25 @@ function formatMatchRedCardsDisplay(redEvents: any[], homeTeamId?: string, awayT
   return formatTeam();
 }
 
+// Helper to verify if match statistics are actually tracked and meaningful
+function hasMeaningfulStats(stats: any, leagueName?: string): boolean {
+  if (!stats || !stats.home || !stats.away) return false;
+  if (leagueName) {
+    const l = leagueName.toLowerCase();
+    if (l.includes('indian football league') || l.includes('ifl') || l.includes('chanmari') || l.includes('i-league')) {
+      return false;
+    }
+  }
+  const hShots = parseInt(stats.home.shots || '0', 10);
+  const aShots = parseInt(stats.away.shots || '0', 10);
+  const hCorners = parseInt(stats.home.corners || '0', 10);
+  const aCorners = parseInt(stats.away.corners || '0', 10);
+  const hFouls = parseInt(stats.home.fouls || '0', 10);
+  const aFouls = parseInt(stats.away.fouls || '0', 10);
+
+  return (hShots + aShots + hCorners + aCorners + hFouls + aFouls) > 0;
+}
+
 function formatHalfTimePost(
   homeTeam: string,
   awayTeam: string,
@@ -247,7 +266,7 @@ function formatHalfTimePost(
   const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
   const redCardsSection = redCardsText ? `🟥 ${redCardsText}\n` : '';
   const eventsBlock = (scorersSection || redCardsSection) ? `${scorersSection}${redCardsSection}\n` : '\n';
-  const statsSection = stats
+  const statsSection = hasMeaningfulStats(stats, leagueName)
     ? `📊 Match Stats (HT):
 Possession: ${stats.home.possession} - ${stats.away.possession}
 Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
@@ -276,7 +295,7 @@ function formatWhatsAppHalfTime(
   const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
   const redCardsSection = redCardsText ? `🟥 ${redCardsText}\n` : '';
   const eventsBlock = (scorersSection || redCardsSection) ? `${scorersSection}${redCardsSection}\n` : '\n';
-  const statsSection = stats
+  const statsSection = hasMeaningfulStats(stats, leagueName)
     ? `📊 *Match Stats (HT):*
 Possession: ${stats.home.possession} - ${stats.away.possession}
 Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
@@ -320,7 +339,7 @@ function formatFullTimePost(
   const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
   const redCardsSection = redCardsText ? `🟥 ${redCardsText}\n` : '';
   const eventsBlock = (scorersSection || redCardsSection) ? `\n${scorersSection}${redCardsSection}\n` : '\n';
-  const statsSection = stats
+  const statsSection = hasMeaningfulStats(stats, leagueName)
     ? `📊 Final Match Stats:
 Possession: ${stats.home.possession} - ${stats.away.possession}
 Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
@@ -363,7 +382,7 @@ function formatWhatsAppFullTime(
   const scorersSection = scorersText ? `⚽ ${scorersText}\n` : '';
   const redCardsSection = redCardsText ? `🟥 ${redCardsText}\n` : '';
   const eventsBlock = (scorersSection || redCardsSection) ? `\n${scorersSection}${redCardsSection}\n` : '\n';
-  const statsSection = stats
+  const statsSection = hasMeaningfulStats(stats, leagueName)
     ? `📊 *Final Match Stats:*
 Possession: ${stats.home.possession} - ${stats.away.possession}
 Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
