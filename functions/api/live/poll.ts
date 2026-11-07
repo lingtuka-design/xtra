@@ -1507,47 +1507,49 @@ async function handlePoll(context: EventContext<Env, any, any>) {
             ? `Possession: ${summary.stats.home.possession} - ${summary.stats.away.possession}  •  Shots (Target): ${summary.stats.home.shots}(${summary.stats.home.shotsOnTarget}) - ${summary.stats.away.shots}(${summary.stats.away.shotsOnTarget})`
             : '';
 
-          // Facebook Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
+          // Facebook Image: Priority #1 Match press photo; fallback to dynamic graphic
           const fbImage =
-            htPhotoToUse ||
-            buildCardImageUrl({
-              home: match.home_team,
-              away: match.away_team,
-              homeScore: summary.score.home,
-              awayScore: summary.score.away,
-              homeLogo: match.home_logo,
-              awayLogo: match.away_logo,
-              status: 'HT',
-              leagueName,
-              homeScorers,
-              awayScorers,
-              homeRedCards,
-              awayRedCards,
-              stats: summary.stats,
-              channel: 'fb',
-              bgImage: htPhotoToUse,
-            });
+            (!isGraphicMode && htPhotoToUse)
+              ? htPhotoToUse
+              : buildCardImageUrl({
+                  home: match.home_team,
+                  away: match.away_team,
+                  homeScore: summary.score.home,
+                  awayScore: summary.score.away,
+                  homeLogo: match.home_logo,
+                  awayLogo: match.away_logo,
+                  status: 'HT',
+                  leagueName,
+                  homeScorers,
+                  awayScorers,
+                  homeRedCards,
+                  awayRedCards,
+                  stats: summary.stats,
+                  channel: 'fb',
+                  bgImage: isGraphicMode ? undefined : htPhotoToUse,
+                });
 
-          // WhatsApp Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
+          // WhatsApp Image: Priority #1 Match press photo; fallback to dynamic graphic
           const waImage =
-            htPhotoToUse ||
-            buildCardImageUrl({
-              home: match.home_team,
-              away: match.away_team,
-              homeScore: summary.score.home,
-              awayScore: summary.score.away,
-              homeLogo: match.home_logo,
-              awayLogo: match.away_logo,
-              status: 'HT',
-              leagueName,
-              homeScorers,
-              awayScorers,
-              homeRedCards,
-              awayRedCards,
-              stats: summary.stats,
-              channel: 'wa',
-              bgImage: htPhotoToUse,
-            });
+            (!isGraphicMode && htPhotoToUse)
+              ? htPhotoToUse
+              : buildCardImageUrl({
+                  home: match.home_team,
+                  away: match.away_team,
+                  homeScore: summary.score.home,
+                  awayScore: summary.score.away,
+                  homeLogo: match.home_logo,
+                  awayLogo: match.away_logo,
+                  status: 'HT',
+                  leagueName,
+                  homeScorers,
+                  awayScorers,
+                  homeRedCards,
+                  awayRedCards,
+                  stats: summary.stats,
+                  channel: 'wa',
+                  bgImage: isGraphicMode ? undefined : htPhotoToUse,
+                });
 
           // Pre-warm card images so thum.io renders and caches them immediately before posters download
           await Promise.allSettled([
@@ -1720,15 +1722,17 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           const photoCandidates = summary.matchPhotos || (summary.matchImages || []).map((u: string) => ({ url: u, caption: '' }));
 
           let chosenPhoto = '';
+          const isGraphicMode = Number(match.use_graphic) === 1;
 
-          // Priority 1: User Manual FT Photo (uploaded / pasted by user)
-          if (match.manual_ft_photo && match.manual_ft_photo.trim().length > 0) {
+          if (isGraphicMode) {
+            console.log(`[FT Photo] Graphic mode enabled for ${match.home_team} vs ${match.away_team}: Skipping external photo search.`);
+          } else if (match.manual_ft_photo && match.manual_ft_photo.trim().length > 0) {
             chosenPhoto = match.manual_ft_photo.trim();
             console.log(`[FT Photo] Priority 1: Using User Manual FT Photo: ${chosenPhoto}`);
           }
 
           // Priority 2: Check verified Club Official Twitter for clean on-pitch celebration/action photo
-          if (!chosenPhoto) {
+          if (!isGraphicMode && !chosenPhoto) {
             try {
               const clubPhoto = await clubPhotoService.getMatchActionPhoto({
                 homeTeam: match.home_team,
@@ -1753,7 +1757,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
 
           // Priority 3: Fallback to FotMob (all leagues including ISL)
-          if (!chosenPhoto) {
+          if (!isGraphicMode && !chosenPhoto) {
             try {
               const fotmobRes = await fotmobService.getMatchPhotos({
                 homeTeam: match.home_team,
@@ -1781,47 +1785,49 @@ async function handlePoll(context: EventContext<Env, any, any>) {
 
           // Strict: NO ESPN archive photo fallback (prevents old away jersey file photos). If no fresh FotMob photo, fallback directly to Scorecard Graphic!
 
-          // Facebook Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
+          // Facebook Image: Priority #1 Match press photo; fallback to dynamic graphic
           const fbImage =
-            chosenPhoto ||
-            buildCardImageUrl({
-              home: match.home_team,
-              away: match.away_team,
-              homeScore: summary.score.home,
-              awayScore: summary.score.away,
-              homeLogo: match.home_logo,
-              awayLogo: match.away_logo,
-              status: 'FT',
-              leagueName,
-              homeScorers,
-              awayScorers,
-              homeRedCards,
-              awayRedCards,
-              stats: summary.stats,
-              channel: 'fb',
-              bgImage: chosenPhoto,
-            });
+            (!isGraphicMode && chosenPhoto)
+              ? chosenPhoto
+              : buildCardImageUrl({
+                  home: match.home_team,
+                  away: match.away_team,
+                  homeScore: summary.score.home,
+                  awayScore: summary.score.away,
+                  homeLogo: match.home_logo,
+                  awayLogo: match.away_logo,
+                  status: 'FT',
+                  leagueName,
+                  homeScorers,
+                  awayScorers,
+                  homeRedCards,
+                  awayRedCards,
+                  stats: summary.stats,
+                  channel: 'fb',
+                  bgImage: isGraphicMode ? undefined : chosenPhoto,
+                });
 
-          // WhatsApp Image: Priority #1 Match press photo; fallback to dynamic 4:3 graphic
+          // WhatsApp Image: Priority #1 Match press photo; fallback to dynamic graphic
           const waImage =
-            chosenPhoto ||
-            buildCardImageUrl({
-              home: match.home_team,
-              away: match.away_team,
-              homeScore: summary.score.home,
-              awayScore: summary.score.away,
-              homeLogo: match.home_logo,
-              awayLogo: match.away_logo,
-              status: 'FT',
-              leagueName,
-              homeScorers,
-              awayScorers,
-              homeRedCards,
-              awayRedCards,
-              stats: summary.stats,
-              channel: 'wa',
-              bgImage: chosenPhoto,
-            });
+            (!isGraphicMode && chosenPhoto)
+              ? chosenPhoto
+              : buildCardImageUrl({
+                  home: match.home_team,
+                  away: match.away_team,
+                  homeScore: summary.score.home,
+                  awayScore: summary.score.away,
+                  homeLogo: match.home_logo,
+                  awayLogo: match.away_logo,
+                  status: 'FT',
+                  leagueName,
+                  homeScorers,
+                  awayScorers,
+                  homeRedCards,
+                  awayRedCards,
+                  stats: summary.stats,
+                  channel: 'wa',
+                  bgImage: isGraphicMode ? undefined : chosenPhoto,
+                });
 
           // Pre-warm card images so thum.io renders and caches them immediately before posters download
           await Promise.allSettled([
