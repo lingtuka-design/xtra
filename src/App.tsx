@@ -6,6 +6,7 @@ import { CreatePostCard } from './components/CreatePostCard';
 import { LiveMatchesPanel } from './components/LiveMatchesPanel';
 import { GraphicMakerPanel } from './components/GraphicMakerPanel';
 import { FixturesMakerPanel } from './components/FixturesMakerPanel';
+import { TableMakerPanel } from './components/TableMakerPanel';
 import { LoginModal } from './components/LoginModal';
 import { AnalyticsModal } from './components/AnalyticsModal';
 import { Post } from './types';
@@ -30,7 +31,7 @@ export default function App() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'create' | 'live' | 'queue' | 'graphic' | 'published'>('create');
-  const [graphicMode, setGraphicMode] = useState<'stats' | 'fixtures'>('stats');
+  const [graphicMode, setGraphicMode] = useState<'stats' | 'fixtures' | 'table'>('stats');
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
 
@@ -460,6 +461,11 @@ export default function App() {
           ) : activeTab === 'graphic' ? (
             graphicMode === 'fixtures' ? (
               <FixturesMakerPanel
+                onPostCreated={fetchPosts}
+                onSwitchMode={(mode) => setGraphicMode(mode)}
+              />
+            ) : graphicMode === 'table' ? (
+              <TableMakerPanel
                 onPostCreated={fetchPosts}
                 onSwitchMode={(mode) => setGraphicMode(mode)}
               />

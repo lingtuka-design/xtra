@@ -15,12 +15,13 @@ import {
   ChevronDown,
   Layers,
   Image as ImageIcon,
+  Table as TableIcon,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
 interface FixturesMakerPanelProps {
   onPostCreated?: (silent?: boolean) => Promise<void>;
-  onSwitchMode?: (mode: 'stats' | 'fixtures') => void;
+  onSwitchMode?: (mode: 'stats' | 'fixtures' | 'table') => void;
 }
 
 export interface FixtureMatch {
@@ -449,13 +450,14 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
             <select
               value="fixtures"
               onChange={(e) => {
-                const val = e.target.value as 'stats' | 'fixtures';
+                const val = e.target.value as 'stats' | 'fixtures' | 'table';
                 if (onSwitchMode) onSwitchMode(val);
               }}
               className="bg-[#EFECE6] border border-stone-300 font-bold text-xs py-1.5 pl-3 pr-8 rounded-xl text-stone-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="stats">📊 Stats Card</option>
               <option value="fixtures">📅 Fixtures</option>
+              <option value="table">🏆 League Table</option>
             </select>
           </div>
 
@@ -480,6 +482,17 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
             >
               <Calendar className="w-3.5 h-3.5 text-stone-950" />
               <span>Fixtures</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (onSwitchMode) onSwitchMode('table');
+              }}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-extrabold uppercase tracking-wide transition-all flex items-center gap-1.5 text-stone-600 hover:text-stone-900"
+            >
+              <TableIcon className="w-3.5 h-3.5 text-stone-500" />
+              <span>League Table</span>
             </button>
           </div>
         </div>
