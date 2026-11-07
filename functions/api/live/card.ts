@@ -25,6 +25,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const bgImage = url.searchParams.get('bgImage') || '';
   const channel = (url.searchParams.get('channel') || 'fb').toLowerCase();
   const isFb = channel === 'fb' || channel === 'facebook' || channel === 'xtra';
+  const scorer = (url.searchParams.get('scorer') || '').trim();
+  const minute = (url.searchParams.get('minute') || '').trim();
 
   // EXACT MINIMAL NO GOAL CARD (VAR Disallowed - Red #A80A24)
   if (isNoGoal) {
@@ -171,6 +173,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       transform: translate(-50%, -50%);
       width: 100%;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
     }
@@ -183,6 +186,29 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       text-transform: uppercase;
       line-height: 1;
       text-align: center;
+    }
+    .goal-scorer-info {
+      margin-top: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 40px;
+      font-weight: 900;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 12px 38px;
+      background: rgba(0, 0, 0, 0.32);
+      border-radius: 9999px;
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+    .goal-scorer-minute {
+      color: #FCD34D;
+      font-weight: 900;
     }
   </style>
 </head>
@@ -198,6 +224,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   <div class="goal-center">
     <div class="goal-text">GOAL</div>
+    ${(scorer || minute) ? `
+    <div class="goal-scorer-info">
+      <span>${scorer}</span>
+      ${minute ? `<span class="goal-scorer-minute">${minute.includes("'") ? minute : minute + "'"}</span>` : ''}
+    </div>` : ''}
   </div>
 </body>
 </html>`;

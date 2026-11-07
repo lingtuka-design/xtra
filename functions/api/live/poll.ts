@@ -565,6 +565,8 @@ function buildCardImageUrl(options: {
   homeLogo?: string;
   awayLogo?: string;
   status: 'HT' | 'FT' | 'LINEUP' | 'GOAL' | string;
+  scorer?: string;
+  minute?: string;
   leagueName: string;
   homeScorers?: string;
   awayScorers?: string;
@@ -588,6 +590,8 @@ function buildCardImageUrl(options: {
   if (homeLogo) q.set('homeLogo', homeLogo);
   if (awayLogo) q.set('awayLogo', awayLogo);
   q.set('status', options.status);
+  if (options.scorer) q.set('scorer', options.scorer);
+  if (options.minute) q.set('minute', options.minute);
   const displayLeague =
     /indian\s+super\s+league/i.test(options.leagueName) || options.leagueName.toUpperCase() === 'ISL'
       ? 'ISL'
@@ -959,6 +963,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 homeLogo: match.home_logo,
                 awayLogo: match.away_logo,
                 status: 'GOAL',
+                scorer: scorerName,
+                minute: ev.minute ? String(ev.minute) : '',
                 leagueName,
                 homeScorers,
                 awayScorers,
@@ -976,6 +982,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 homeLogo: match.home_logo,
                 awayLogo: match.away_logo,
                 status: 'GOAL',
+                scorer: scorerName,
+                minute: ev.minute ? String(ev.minute) : '',
                 leagueName,
                 homeScorers,
                 awayScorers,
