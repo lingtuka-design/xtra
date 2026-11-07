@@ -163,9 +163,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%) rotate(-12deg);
-      width: 720px;
-      height: 720px;
-      opacity: 0.38;
+      width: 780px;
+      height: 780px;
+      opacity: 0.12;
       pointer-events: none;
       z-index: 1;
       display: flex;
