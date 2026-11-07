@@ -2,6 +2,7 @@ import { Env } from '../../types';
 import { MATCH_CARD_BG_FB, MATCH_CARD_BG_WA } from './card-bg';
 import { INKHEL_LOGO_B64, INKHEL_XTRA_LIGHT_B64 } from './inkhel-logo-b64';
 import { INKHEL_I_LOGO_B64 } from './inkhel-i-logo-b64';
+import { SOCCER_BALL_SVG } from './soccer-ball-svg';
 import { resolveTeamLogo } from '../../services/clubCrests';
 import { resolveLeagueLogo } from '../../services/leagueLogos';
 
@@ -80,6 +81,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
     .goal-center {
       position: absolute;
+      z-index: 2;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
@@ -101,6 +103,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   </style>
 </head>
 <body>
+  <div class="bg-ball-watermark">
+    ${SOCCER_BALL_SVG}
+  </div>
+
   <div class="crests-top-right">
     <div class="crest-circle">
       ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="crest-img" />` : '<span style="font-size:48px;">⚽</span>'}
@@ -145,9 +151,30 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       height: 1000px;
       overflow: hidden;
       background-color: #1481A4;
+      background-image:
+        radial-gradient(circle at 50% 36%, rgba(255, 255, 255, 0.12) 0%, rgba(0, 0, 0, 0.3) 100%),
+        repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.035) 0px, rgba(255, 255, 255, 0.035) 1.5px, transparent 1.5px, transparent 28px);
       position: relative;
       font-family: Impact, "Arial Black", -apple-system, sans-serif;
       -webkit-font-smoothing: antialiased;
+    }
+    .bg-ball-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-12deg);
+      width: 720px;
+      height: 720px;
+      opacity: 0.38;
+      pointer-events: none;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .bg-ball-watermark svg {
+      width: 100%;
+      height: 100%;
     }
     .crests-top-right {
       position: absolute;
@@ -156,6 +183,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       display: flex;
       align-items: center;
       gap: 18px;
+      z-index: 2;
     }
     .crest-circle {
       width: 112px;
@@ -221,6 +249,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
     .goal-footer-logo {
       position: absolute;
+      z-index: 2;
       bottom: 48px;
       left: 50%;
       transform: translateX(-50%);
