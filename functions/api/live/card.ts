@@ -35,6 +35,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 <head>
   <meta charset="UTF-8">
   <title>${home} vs ${away} - NO GOAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -127,6 +130,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 <head>
   <meta charset="UTF-8">
   <title>${home} vs ${away} - GOAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -178,11 +184,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       justify-content: center;
     }
     .goal-text {
-      font-family: Impact, "Arial Black", "Montserrat", sans-serif;
+      font-family: 'Montserrat', "Arial Black", Impact, sans-serif;
       font-weight: 900;
-      font-size: 215px;
-      letter-spacing: 2px;
+      font-size: 225px;
+      letter-spacing: 3px;
       color: #FFFFFF;
+      -webkit-text-stroke: 8px #FFFFFF;
+      text-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
       text-transform: uppercase;
       line-height: 1;
       text-align: center;
@@ -260,6 +268,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 <head>
   <meta charset="UTF-8">
   <title>${home} vs ${away} - Lineup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -507,6 +518,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
