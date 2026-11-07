@@ -266,6 +266,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   </style>
 </head>
 <body>
+  <div class="bg-ball-watermark">
+    ${SOCCER_BALL_SVG}
+  </div>
+
   <div class="crests-top-right">
     <div class="crest-circle">
       ${homeLogo ? `<img src="${homeLogo}" alt="${home}" class="crest-img" />` : '<span style="font-size:48px;">⚽</span>'}
