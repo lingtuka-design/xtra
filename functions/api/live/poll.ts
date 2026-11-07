@@ -1362,14 +1362,16 @@ async function handlePoll(context: EventContext<Env, any, any>) {
         const htEventId = `ht_${match.event_id}`;
         let claimed = false;
         // Photo Selection Hierarchy:
-        // Priority 1: User Manual HT Photo (uploaded / pasted by user)
+        // Priority 1: User Manual HT Photo (uploaded / pasted by user) ALWAYS takes 1st priority, even if graphic mode is enabled!
         let htPhotoToUse = '';
-        const isGraphicMode = Number(match.use_graphic) === 1;
-        if (isGraphicMode) {
-          console.log(`[HT Photo] Graphic mode enabled for ${match.home_team} vs ${match.away_team}: Skipping external photo search.`);
-        } else if (match.manual_ht_photo && match.manual_ht_photo.trim().length > 0) {
+        const hasManualHtPhoto = Boolean(match.manual_ht_photo && match.manual_ht_photo.trim().length > 0);
+        const isGraphicMode = Number(match.use_graphic) === 1 && !hasManualHtPhoto;
+
+        if (hasManualHtPhoto) {
           htPhotoToUse = match.manual_ht_photo.trim();
-          console.log(`[HT Photo] Priority 1: Using User Manual HT Photo: ${htPhotoToUse}`);
+          console.log(`[HT Photo] Priority 1: Using User Manual HT Photo: ${htPhotoToUse} (overrides graphic/external)`);
+        } else if (Number(match.use_graphic) === 1) {
+          console.log(`[HT Photo] Graphic mode enabled for ${match.home_team} vs ${match.away_team}: Skipping external photo search.`);
         }
 
         // Priority 2: Check verified Club Official Twitter for clean on-pitch celebration/action photo
@@ -1722,13 +1724,14 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           const photoCandidates = summary.matchPhotos || (summary.matchImages || []).map((u: string) => ({ url: u, caption: '' }));
 
           let chosenPhoto = '';
-          const isGraphicMode = Number(match.use_graphic) === 1;
+          const hasManualFtPhoto = Boolean(match.manual_ft_photo && match.manual_ft_photo.trim().length > 0);
+          const isGraphicMode = Number(match.use_graphic) === 1 && !hasManualFtPhoto;
 
-          if (isGraphicMode) {
-            console.log(`[FT Photo] Graphic mode enabled for ${match.home_team} vs ${match.away_team}: Skipping external photo search.`);
-          } else if (match.manual_ft_photo && match.manual_ft_photo.trim().length > 0) {
+          if (hasManualFtPhoto) {
             chosenPhoto = match.manual_ft_photo.trim();
-            console.log(`[FT Photo] Priority 1: Using User Manual FT Photo: ${chosenPhoto}`);
+            console.log(`[FT Photo] Priority 1: Using User Manual FT Photo: ${chosenPhoto} (overrides graphic/external)`);
+          } else if (Number(match.use_graphic) === 1) {
+            console.log(`[FT Photo] Graphic mode enabled for ${match.home_team} vs ${match.away_team}: Skipping external photo search.`);
           }
 
           // Priority 2: Check verified Club Official Twitter for clean on-pitch celebration/action photo
@@ -1972,7 +1975,9 @@ ${winnerTeam}-te chuan penalty shootout-ah ${winnerPens}-${loserPens} in hnehna 
 👉 _Inkhel WhatsApp Channel_`;
 
           const photoCandidates = summary.matchPhotos || (summary.matchImages || []).map((u: string) => ({ url: u, caption: '' }));
+          const manualShootoutPhoto = match.manual_ft_photo && match.manual_ft_photo.trim().length > 0 ? match.manual_ft_photo.trim() : null;
           const shootoutPhoto =
+            manualShootoutPhoto ||
             photoCandidates[0]?.url ||
             buildCardImageUrl({
               home: match.home_team,
