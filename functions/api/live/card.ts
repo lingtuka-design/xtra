@@ -1,6 +1,7 @@
 import { Env } from '../../types';
 import { MATCH_CARD_BG_FB, MATCH_CARD_BG_WA } from './card-bg';
 import { INKHEL_LOGO_B64, INKHEL_XTRA_LIGHT_B64 } from './inkhel-logo-b64';
+import { INKHEL_I_LOGO_B64 } from './inkhel-i-logo-b64';
 import { resolveTeamLogo } from '../../services/clubCrests';
 import { resolveLeagueLogo } from '../../services/leagueLogos';
 
@@ -218,6 +219,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       color: #FCD34D;
       font-weight: 900;
     }
+    .goal-footer-logo {
+      position: absolute;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .goal-i-logo {
+      height: 68px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45));
+    }
   </style>
 </head>
 <body>
@@ -237,6 +253,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       <span>${scorer}</span>
       ${minute ? `<span class="goal-scorer-minute">${minute.includes("'") ? minute : minute + "'"}</span>` : ''}
     </div>` : ''}
+  </div>
+
+  <div class="goal-footer-logo">
+    <img src="${INKHEL_I_LOGO_B64}" alt="Inkhel" class="goal-i-logo" />
   </div>
 </body>
 </html>`;
