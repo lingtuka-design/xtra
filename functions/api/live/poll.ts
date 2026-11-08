@@ -269,7 +269,7 @@ function formatHalfTimePost(
   const statsSection = hasMeaningfulStats(stats, leagueName)
     ? `📊 Match Stats (HT):
 Possession: ${stats.home.possession} - ${stats.away.possession}
-Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
+Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}\u200B) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget}\u200B)
 Corners: ${stats.home.corners} - ${stats.away.corners}
 Fouls: ${stats.home.fouls} - ${stats.away.fouls}
 `
@@ -298,7 +298,7 @@ function formatWhatsAppHalfTime(
   const statsSection = hasMeaningfulStats(stats, leagueName)
     ? `📊 *Match Stats (HT):*
 Possession: ${stats.home.possession} - ${stats.away.possession}
-Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
+Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}\u200B) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget}\u200B)
 Corners: ${stats.home.corners} - ${stats.away.corners}
 Fouls: ${stats.home.fouls} - ${stats.away.fouls}
 `
@@ -342,7 +342,7 @@ function formatFullTimePost(
   const statsSection = hasMeaningfulStats(stats, leagueName)
     ? `📊 Final Match Stats:
 Possession: ${stats.home.possession} - ${stats.away.possession}
-Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
+Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}\u200B) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget}\u200B)
 Corners: ${stats.home.corners} - ${stats.away.corners}
 Fouls: ${stats.home.fouls} - ${stats.away.fouls}
 `
@@ -385,7 +385,7 @@ function formatWhatsAppFullTime(
   const statsSection = hasMeaningfulStats(stats, leagueName)
     ? `📊 *Final Match Stats:*
 Possession: ${stats.home.possession} - ${stats.away.possession}
-Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget})
+Shots: ${stats.home.shots} (Target: ${stats.home.shotsOnTarget}\u200B) - ${stats.away.shots} (Target: ${stats.away.shotsOnTarget}\u200B)
 Corners: ${stats.home.corners} - ${stats.away.corners}
 Fouls: ${stats.home.fouls} - ${stats.away.fouls}
 `

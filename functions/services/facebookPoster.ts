@@ -76,7 +76,64 @@ export class FacebookPoster {
             postId,
           };
         } else if (photoUrl.startsWith('http')) {
-          // Remote Web URL (e.g. pbs.twimg.com)
+          // If the photo is a dynamic screenshot / graphic (e.g. image.thum.io or card endpoint):
+          // NEVER hand the raw URL to Facebook crawler because Facebook scrapes too fast and catches the initial blank white canvas!
+          // Instead, fetch and verify the full rendered image bytes first, then upload directly as binary source.
+          const isDynamicGraphic = photoUrl.includes('image.thum.io') || photoUrl.includes('/api/live/card');
+          let directBlob: Blob | null = null;
+
+          if (isDynamicGraphic) {
+            try {
+              let imgRes = await fetch(photoUrl);
+              if (imgRes.ok) {
+                let blob = await imgRes.blob();
+                // A valid rendered graphic card is 100KB-400KB. A blank white canvas or placeholder is typically < 15KB.
+                if (blob.size < 15000) {
+                  // Wait 2.2 seconds for headless Chrome to finish painting and retry
+                  await new Promise((r) => setTimeout(r, 2200));
+                  imgRes = await fetch(photoUrl);
+                  if (imgRes.ok) {
+                    const retryBlob = await imgRes.blob();
+                    if (retryBlob.size > blob.size) {
+                      blob = retryBlob;
+                    }
+                  }
+                }
+                if (blob.size > 15000) {
+                  directBlob = blob;
+                }
+              }
+            } catch (fetchErr: any) {
+              console.warn('[Facebook Poster] Direct graphic fetch failed, falling back to URL:', fetchErr.message);
+            }
+          }
+
+          if (directBlob) {
+            const formData = new FormData();
+            formData.append('source', directBlob, 'graphic.png');
+            if (caption && caption.trim()) {
+              formData.append('caption', caption.trim());
+            }
+            formData.append('access_token', cleanToken);
+
+            const uploadUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
+            const res = await fetch(uploadUrl, {
+              method: 'POST',
+              body: formData,
+            });
+
+            const data = (await res.json()) as any;
+            if (res.ok && !data.error) {
+              const postId = data.post_id || data.id;
+              return {
+                success: true,
+                postId,
+              };
+            }
+            console.warn('[Facebook Poster] Direct blob upload returned error, falling back to URL:', data.error);
+          }
+
+          // Remote Web URL fallback (e.g. pbs.twimg.com press photo)
           const url = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
           const body = new URLSearchParams();
           body.append('url', photoUrl);
