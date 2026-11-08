@@ -1013,6 +1013,20 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 leagueName
               );
 
+              // Pre-warm the goal card so thum.io finishes rendering and caches the 380KB PNG
+              try {
+                const preRes = await fetch(goalCardFb);
+                if (preRes.ok) {
+                  const b = await preRes.blob();
+                  if (b.size < 150000) {
+                    await new Promise((r) => setTimeout(r, 2500));
+                    await fetch(goalCardFb);
+                  }
+                }
+              } catch (preErr: any) {
+                console.warn('[Live Poll] Pre-warm graphic warning:', preErr.message);
+              }
+
               // 1. Post to Inkhel Xtra Facebook Page with HD Goal Graphic!
               if (env.FB_PAGE_ID && env.FB_PAGE_ACCESS_TOKEN) {
                 try {

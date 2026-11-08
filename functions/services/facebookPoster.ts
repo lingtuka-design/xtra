@@ -78,7 +78,7 @@ export class FacebookPoster {
         } else if (photoUrl.startsWith('http')) {
           // If the photo is a dynamic screenshot / graphic (e.g. image.thum.io or card endpoint):
           // NEVER hand the raw URL to Facebook crawler because Facebook scrapes too fast and catches the initial blank white canvas!
-          // Instead, fetch and verify the full rendered image bytes first, then upload directly as binary source.
+          // Instead, fetch and verify the full rendered image bytes first (> 150KB), then upload directly as binary source.
           const isDynamicGraphic = photoUrl.includes('image.thum.io') || photoUrl.includes('/api/live/card');
           let directBlob: Blob | null = null;
 
@@ -87,30 +87,31 @@ export class FacebookPoster {
               let imgRes = await fetch(photoUrl);
               if (imgRes.ok) {
                 let blob = await imgRes.blob();
-                // A valid rendered graphic card is 100KB-400KB. A blank white canvas or placeholder is typically < 15KB.
-                if (blob.size < 15000) {
-                  // Wait 2.2 seconds for headless Chrome to finish painting and retry
+                let attempts = 0;
+                // An incomplete / blank white canvas from thum.io is ~50KB. A full card graphic is > 200KB.
+                while (blob.size < 150000 && attempts < 4) {
+                  attempts++;
                   await new Promise((r) => setTimeout(r, 2200));
                   imgRes = await fetch(photoUrl);
                   if (imgRes.ok) {
-                    const retryBlob = await imgRes.blob();
-                    if (retryBlob.size > blob.size) {
-                      blob = retryBlob;
+                    const nextBlob = await imgRes.blob();
+                    if (nextBlob.size > blob.size) {
+                      blob = nextBlob;
                     }
                   }
                 }
-                if (blob.size > 15000) {
+                if (blob.size >= 150000) {
                   directBlob = blob;
                 }
               }
             } catch (fetchErr: any) {
-              console.warn('[Facebook Poster] Direct graphic fetch failed, falling back to URL:', fetchErr.message);
+              console.warn('[Facebook Poster] Direct graphic fetch failed:', fetchErr.message);
             }
           }
 
           if (directBlob) {
             const formData = new FormData();
-            formData.append('source', directBlob, 'graphic.png');
+            formData.append('source', directBlob, 'goal-card.png');
             if (caption && caption.trim()) {
               formData.append('caption', caption.trim());
             }
@@ -130,10 +131,39 @@ export class FacebookPoster {
                 postId,
               };
             }
-            console.warn('[Facebook Poster] Direct blob upload returned error, falling back to URL:', data.error);
+            console.warn('[Facebook Poster] Direct blob upload returned error:', data.error);
           }
 
-          // Remote Web URL fallback (e.g. pbs.twimg.com press photo)
+          // CRITICAL SAFETY GUARD:
+          // If this was a dynamic graphic card and we could NOT get a verified >150KB image,
+          // NEVER pass the raw URL to Facebook crawler, as it will publish an ugly blank white box!
+          // Fallback to a text post so the goal announcement is never lost or blank!
+          if (isDynamicGraphic) {
+            console.warn('[Facebook Poster] Graphic card could not be verified (>150KB). Publishing text status update to prevent blank white image.');
+            const feedUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/feed`;
+            const feedBody = new URLSearchParams();
+            feedBody.append('message', caption);
+            feedBody.append('access_token', cleanToken);
+
+            const feedRes = await fetch(feedUrl, {
+              method: 'POST',
+              body: feedBody,
+            });
+
+            const feedData = (await feedRes.json()) as any;
+            if (feedRes.ok && !feedData.error) {
+              return {
+                success: true,
+                postId: feedData.id,
+              };
+            }
+            return {
+              success: false,
+              error: `Facebook API feed fallback error: ${feedData.error?.message || feedRes.statusText}`,
+            };
+          }
+
+          // Standard Remote Web Photo (e.g. pbs.twimg.com / espn press photo)
           const url = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
           const body = new URLSearchParams();
           body.append('url', photoUrl);
