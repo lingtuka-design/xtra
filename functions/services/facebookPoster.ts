@@ -80,6 +80,12 @@ export class FacebookPoster {
           // NEVER hand the raw URL to Facebook crawler because Facebook scrapes too fast and catches the initial blank white canvas!
           // Instead, fetch and verify the full rendered image bytes first (> 150KB), then upload directly as binary source.
           const isDynamicGraphic = photoUrl.includes('image.thum.io') || photoUrl.includes('/api/live/card');
+          const isLineupCard = photoUrl.includes('type=lineup') || photoUrl.includes('status=LINEUP');
+          const isGoalCard = photoUrl.includes('type=goal') || photoUrl.includes('status=GOAL');
+          // For Goal cards: blank white canvas is ~51KB, full graphic is >300KB (threshold: 150KB).
+          // For Lineup cards: legitimate card design is clean white with text columns (size 65KB-105KB, threshold: 40KB).
+          // For Score / Result cards: typical size is 180KB-280KB (threshold: 75KB).
+          const minSizeRequired = isGoalCard ? 150000 : (isLineupCard ? 40000 : 75000);
           let directBlob: Blob | null = null;
 
           if (isDynamicGraphic) {
@@ -88,8 +94,7 @@ export class FacebookPoster {
               if (imgRes.ok) {
                 let blob = await imgRes.blob();
                 let attempts = 0;
-                // An incomplete / blank white canvas from thum.io is ~50KB. A full card graphic is > 200KB.
-                while (blob.size < 150000 && attempts < 4) {
+                while (blob.size < minSizeRequired && attempts < 4) {
                   attempts++;
                   await new Promise((r) => setTimeout(r, 2200));
                   imgRes = await fetch(photoUrl);
@@ -100,7 +105,7 @@ export class FacebookPoster {
                     }
                   }
                 }
-                if (blob.size >= 150000) {
+                if (blob.size >= minSizeRequired) {
                   directBlob = blob;
                 }
               }
@@ -135,7 +140,7 @@ export class FacebookPoster {
           }
 
           // CRITICAL SAFETY GUARD:
-          // If this was a dynamic graphic card and we could NOT get a verified >150KB image,
+          // If this was a dynamic graphic card and we could NOT get a verified minSizeRequired bytes image,
           // NEVER pass the raw URL to Facebook crawler, as it will publish an ugly blank white box!
           // Fallback to a text post so the goal announcement is never lost or blank!
           if (isDynamicGraphic) {
