@@ -2,7 +2,7 @@ import { resolveTeamLogo } from './clubCrests';
 
 export interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL' | 'IL';
+  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL' | 'IL' | 'UNL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -52,12 +52,13 @@ function formatEspnDate(d: Date): string {
 export const espnService = {
   // Fetch upcoming 24h schedule & active live matches for PL, Carabao Cup, La Liga (Barca & Real Madrid only), UCL, ISL, and Indian Football League (Chanmari FC only) (excluding finished FT matches)
   async getFixtures(): Promise<EspnMatch[]> {
-    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL'; slug: string; name: string }[] = [
+    const leagues: { key: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL' | 'UNL'; slug: string; name: string }[] = [
       { key: 'PL', slug: 'eng.1', name: 'PL' },
       { key: 'EFL', slug: 'eng.league_cup', name: 'League Cup' },
       { key: 'LL', slug: 'esp.1', name: 'La Liga' },
       { key: 'BL', slug: 'ger.1', name: 'Bundesliga' },
       { key: 'UCL', slug: 'uefa.champions', name: 'UCL' },
+      { key: 'UNL', slug: 'uefa.nations', name: 'UEFA Nations League' },
       { key: 'ISL', slug: 'ind.1', name: 'ISL' },
       { key: 'IFL', slug: 'ind.2', name: 'Indian Football League' },
     ];

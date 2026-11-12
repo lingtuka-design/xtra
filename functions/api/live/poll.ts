@@ -16,6 +16,9 @@ function toTelegramCaption(text: string): string {
 // Dynamic hashtag generator based on match competition
 function getLeagueHashtag(leagueName: string): string {
   const l = (leagueName || '').toLowerCase();
+  if (l.includes('nations league') || l.includes('unl')) {
+    return '#UEFANationsLeague #NationsLeague';
+  }
   if (l.includes('premier')) {
     return '#PremierLeague';
   }
@@ -663,6 +666,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       const leagueSlug =
         match.league === 'UCL'
           ? 'uefa.champions'
+          : match.league === 'UNL'
+          ? 'uefa.nations'
           : match.league === 'ISL'
           ? 'ind.1'
           : match.league === 'IFL' || match.league === 'IL'
@@ -677,6 +682,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
       const leagueName =
         match.league === 'UCL'
           ? 'UEFA Champions League'
+          : match.league === 'UNL'
+          ? 'UEFA Nations League'
           : match.league === 'ISL'
           ? 'Indian Super League'
           : match.league === 'IFL' || match.league === 'IL'
@@ -1072,7 +1079,7 @@ async function handlePoll(context: EventContext<Env, any, any>) {
           }
         }
 
-        const hasVar = ['PL', 'UCL', 'LL', 'BL'].includes(match.league);
+        const hasVar = ['PL', 'UCL', 'LL', 'BL', 'UNL'].includes(match.league);
 
         // 2b. Check VAR Disallowed Goal Events (Only for competitions with VAR)
         if (hasVar) {

@@ -3,7 +3,7 @@ import { Radio, RefreshCw, CheckCircle2, Circle, Clock, Flame, ShieldAlert, Spar
 
 interface EspnMatch {
   id: string;
-  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL' | 'IL';
+  league: 'PL' | 'UCL' | 'ISL' | 'LL' | 'EFL' | 'BL' | 'IFL' | 'IL' | 'UNL';
   leagueName: string;
   name: string;
   shortName: string;
@@ -40,7 +40,7 @@ export const LiveMatchesPanel: React.FC = () => {
   const [matches, setMatches] = useState<EspnMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'EFL' | 'LL' | 'BL' | 'UCL' | 'ISL' | 'IFL'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PL' | 'EFL' | 'LL' | 'BL' | 'UCL' | 'UNL' | 'ISL' | 'IFL'>('ALL');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -536,6 +536,8 @@ export const LiveMatchesPanel: React.FC = () => {
               className={`px-1.5 py-0.5 rounded font-black text-[10px] tracking-wide ${
                 match.league === 'UCL'
                   ? 'bg-blue-100 text-blue-800'
+                  : match.league === 'UNL'
+                  ? 'bg-sky-100 text-sky-900 border border-sky-200'
                   : match.league === 'ISL'
                   ? 'bg-emerald-100 text-emerald-800'
                   : match.league === 'IFL' || match.league === 'IL'
@@ -549,7 +551,7 @@ export const LiveMatchesPanel: React.FC = () => {
                   : 'bg-purple-100 text-purple-800'
               }`}
             >
-              {match.league === 'LL' ? 'Liga' : match.league === 'BL' ? 'BL' : match.league === 'EFL' ? 'EFL' : (match.league === 'IFL' || match.league === 'IL') ? 'IFL' : match.league}
+              {match.league === 'LL' ? 'Liga' : match.league === 'BL' ? 'BL' : match.league === 'EFL' ? 'EFL' : match.league === 'UNL' ? 'UNL' : (match.league === 'IFL' || match.league === 'IL') ? 'IFL' : match.league}
             </span>
             {isLive && (
               <span className="flex items-center gap-1 text-rose-600 bg-rose-100/90 px-1.5 py-0.2 rounded animate-pulse font-extrabold">
@@ -878,6 +880,16 @@ export const LiveMatchesPanel: React.FC = () => {
               }`}
             >
               UCL
+            </button>
+            <button
+              onClick={() => setActiveFilter('UNL')}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                activeFilter === 'UNL'
+                  ? 'bg-white text-stone-950 shadow-2xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              UNL
             </button>
             <button
               onClick={() => setActiveFilter('ISL')}

@@ -41,6 +41,7 @@ const SUPPORTED_LEAGUES = [
   { id: 'eng.1', name: 'Premier League', tag: 'PREMIER LEAGUE', icon: '🦁' },
   { id: 'esp.1', name: 'La Liga', tag: 'LA LIGA', icon: '🇪🇸' },
   { id: 'uefa.champions', name: 'UEFA Champions League', tag: 'CHAMPIONS LEAGUE', icon: '⭐' },
+  { id: 'uefa.nations', name: 'UEFA Nations League', tag: 'NATIONS LEAGUE', icon: '🇪🇺' },
   { id: 'ita.1', name: 'Serie A', tag: 'SERIE A', icon: '🇮🇹' },
 ];
 

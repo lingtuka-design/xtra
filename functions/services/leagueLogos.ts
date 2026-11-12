@@ -3,6 +3,9 @@ export function resolveLeagueLogo(league: string): string {
   if (l.includes('premier') || l === 'pl' || l === 'epl') {
     return 'https://xtra-byd.pages.dev/logos/pl.png';
   }
+  if (l.includes('nations league') || l.includes('unl') || l === 'nl') {
+    return 'https://a.espncdn.com/i/leaguelogos/soccer/500/2395.png';
+  }
   if (l.includes('champions') || l.includes('ucl') || l === 'uefa') {
     return 'https://xtra-byd.pages.dev/logos/ucl.png';
   }
