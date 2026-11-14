@@ -601,6 +601,29 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       user-select: none;
     }
 
+    ${!isFb ? `
+    /* WhatsApp Channel Center Watermark */
+    .bg-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 660px;
+      height: 660px;
+      opacity: 0.11;
+      pointer-events: none;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .bg-watermark img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    ` : ''}
+
     /* Top Center League Logo */
     .league-logo-box {
       position: absolute;
@@ -610,6 +633,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 2;
     }
 
     .league-logo {
@@ -633,6 +657,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       text-align: center;
       line-height: 1;
       filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+      z-index: 2;
     }
 
     /* Center Match Row */
@@ -645,6 +670,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       align-items: center;
       justify-content: space-between;
       padding: 0 95px;
+      z-index: 2;
     }
 
     .crest-container {
@@ -700,6 +726,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       flex-direction: column;
       align-items: center;
       gap: 24px;
+      z-index: 2;
     }
 
     .event-row {
@@ -765,10 +792,18 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       ${isFb ? 'height: 48px;' : 'height: 42px;'}
       object-fit: contain;
       filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
+      z-index: 2;
     }
   </style>
 </head>
 <body>
+  ${!isFb ? `
+  <!-- WhatsApp Channel Center Watermark -->
+  <div class="bg-watermark">
+    <img src="${INKHEL_I_LOGO_B64}" alt="" />
+  </div>
+  ` : ''}
+
   <!-- League Logo at Top Center -->
   <div class="league-logo-box">
     <img src="${leagueLogoUrl}" alt="${league}" class="league-logo" />
