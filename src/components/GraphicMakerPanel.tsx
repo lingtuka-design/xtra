@@ -84,6 +84,10 @@ const MPL_TEAMS = [
     logo: 'https://upload.wikimedia.org/wikipedia/en/5/59/Chanmari_FC.svg',
   },
   {
+    name: 'Dempo SC',
+    logo: 'https://xtra-byd.pages.dev/logos/dempo-sc.png',
+  },
+  {
     name: 'FC Chhinga Veng',
     logo: 'https://upload.wikimedia.org/wikipedia/en/1/17/Chhinga_Veng_FC.svg',
   },
