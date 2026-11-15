@@ -82,10 +82,10 @@ export class FacebookPoster {
           const isDynamicGraphic = photoUrl.includes('image.thum.io') || photoUrl.includes('/api/live/card');
           const isLineupCard = photoUrl.includes('type=lineup') || photoUrl.includes('status=LINEUP');
           const isGoalCard = photoUrl.includes('type=goal') || photoUrl.includes('status=GOAL');
-          // For Goal cards: blank white canvas is ~51KB, full graphic is >300KB (threshold: 150KB).
+          // For Goal cards: blank white canvas is ~51KB, full graphic is >300KB (threshold: 120KB).
           // For Lineup cards: legitimate card design is clean white with text columns (size 65KB-105KB, threshold: 40KB).
-          // For Score / Result cards: typical size is 180KB-280KB (threshold: 75KB).
-          const minSizeRequired = isGoalCard ? 150000 : (isLineupCard ? 40000 : 75000);
+          // For Score / Result cards: typical size is 180KB-320KB, blank canvas is ~51KB (threshold: 60KB).
+          const minSizeRequired = isGoalCard ? 120000 : (isLineupCard ? 40000 : 60000);
           let directBlob: Blob | null = null;
 
           if (isDynamicGraphic) {
@@ -94,16 +94,21 @@ export class FacebookPoster {
               if (imgRes.ok) {
                 let blob = await imgRes.blob();
                 let attempts = 0;
-                while (blob.size < minSizeRequired && attempts < 4) {
+                while (blob.size < minSizeRequired && attempts < 6) {
                   attempts++;
-                  await new Promise((r) => setTimeout(r, 2200));
-                  imgRes = await fetch(photoUrl);
-                  if (imgRes.ok) {
-                    const nextBlob = await imgRes.blob();
-                    if (nextBlob.size > blob.size) {
-                      blob = nextBlob;
+                  await new Promise((r) => setTimeout(r, 2000));
+                  try {
+                    imgRes = await fetch(photoUrl);
+                    if (imgRes.ok) {
+                      const nextBlob = await imgRes.blob();
+                      if (nextBlob.size >= minSizeRequired) {
+                        blob = nextBlob;
+                        break;
+                      } else if (nextBlob.size > blob.size) {
+                        blob = nextBlob;
+                      }
                     }
-                  }
+                  } catch {}
                 }
                 if (blob.size >= minSizeRequired) {
                   directBlob = blob;
