@@ -4,6 +4,7 @@ export const INTER_KASHI_LOGO = 'https://xtra-byd.pages.dev/logos/inter-kashi.sv
 export const CHANMARI_FC_LOGO = 'https://xtra-byd.pages.dev/logos/chanmari-fc.svg';
 export const SHILLONG_LAJONG_LOGO = 'https://xtra-byd.pages.dev/logos/shillong-lajong.svg';
 export const DEMPO_SC_LOGO = 'https://xtra-byd.pages.dev/logos/dempo-sc.png';
+export const RAJASTHAN_UNITED_LOGO = 'https://xtra-byd.pages.dev/logos/rajasthan-united.png';
 
 export function resolveTeamLogo(name: string, logo?: string | null): string {
   const lower = (name || '').toLowerCase().trim();
@@ -30,6 +31,9 @@ export function resolveTeamLogo(name: string, logo?: string | null): string {
   }
   if (lower.includes('dempo')) {
     return DEMPO_SC_LOGO;
+  }
+  if (lower.includes('rajasthan')) {
+    return RAJASTHAN_UNITED_LOGO;
   }
   if (logo && logo.trim().length > 0) return logo.trim();
   return '';
