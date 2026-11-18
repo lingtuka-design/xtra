@@ -32,7 +32,7 @@ export function resolveTeamLogo(name: string, logo?: string | null): string {
   if (lower.includes('dempo')) {
     return DEMPO_SC_LOGO;
   }
-  if (lower.includes('rajasthan')) {
+  if (lower.includes('rajasthan') || lower.includes('rufc')) {
     return RAJASTHAN_UNITED_LOGO;
   }
   if (logo && logo.trim().length > 0) return logo.trim();
