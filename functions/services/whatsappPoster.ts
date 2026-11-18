@@ -15,7 +15,10 @@ export class WhatsAppPoster {
     channelId?: string,
     apiUrl?: string
   ): Promise<WhatsAppPostResult> {
-    const baseUrl = (apiUrl?.trim() || 'https://xtra-9f05.onrender.com').replace(/\/$/, '');
+    let baseUrl = (apiUrl?.trim() || 'https://xtra-9f05.onrender.com').replace(/\/$/, '');
+    if (baseUrl.includes('xtra-whatsapp-bot.onrender.com')) {
+      baseUrl = 'https://xtra-9f05.onrender.com';
+    }
     const token = apiToken?.trim() || 'xtra_secret_2026';
     const targetChannel = channelId?.trim() || '120363179785749330@newsletter';
 

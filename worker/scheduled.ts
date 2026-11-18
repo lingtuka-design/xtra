@@ -38,7 +38,10 @@ export default {
     );
 
     // 3. Keep-alive ping for WhatsApp Bot microservice (runs every 5 mins to prevent cold-sleep)
-    const waUrl = env.WHATSAPP_API_URL || 'https://xtra-9f05.onrender.com';
+    let waUrl = env.WHATSAPP_API_URL || 'https://xtra-9f05.onrender.com';
+    if (waUrl.includes('xtra-whatsapp-bot.onrender.com')) {
+      waUrl = 'https://xtra-9f05.onrender.com';
+    }
     if (minute % 5 === 0) {
       ctx.waitUntil(
         fetch(`${waUrl.replace(/\/$/, '')}/health`)
