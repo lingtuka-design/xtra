@@ -509,7 +509,7 @@ app.listen(PORT, () => {
   console.log(`[WhatsApp Bot] Server listening on port ${PORT}`);
 
   // Self Keep-Alive: Ping itself every 8 minutes so Render free tier never sleeps
-  const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://xtra-whatsapp-bot.onrender.com';
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://xtra-9f05.onrender.com';
   setInterval(async () => {
     try {
       await fetch(`${SELF_URL}/health`);

@@ -3,7 +3,7 @@ main = "scheduled.ts"
 compatibility_date = "2026-04-01"
 
 [vars]
-WHATSAPP_API_URL = "https://xtra-whatsapp-bot.onrender.com"
+WHATSAPP_API_URL = "https://xtra-9f05.onrender.com"
 
 [triggers]
 crons = ["* * * * *"]
