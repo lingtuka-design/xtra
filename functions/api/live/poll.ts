@@ -634,7 +634,7 @@ function buildCardImageUrl(options: {
   }
 
   const cardEndpoint = `https://xtra-byd.pages.dev/api/live/card?${q.toString()}`;
-  return `https://image.thum.io/get/width/1024/crop/1024/viewportWidth/1024/viewportHeight/1024/noanimate/${cardEndpoint}`;
+  return `https://image.thum.io/get/wait/2/width/1024/crop/1024/viewportWidth/1024/viewportHeight/1024/noanimate/${cardEndpoint}`;
 }
 
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
@@ -1025,8 +1025,8 @@ async function handlePoll(context: EventContext<Env, any, any>) {
                 const preRes = await fetch(goalCardFb);
                 if (preRes.ok) {
                   const b = await preRes.blob();
-                  if (b.size < 150000) {
-                    await new Promise((r) => setTimeout(r, 2500));
+                  if (b.size < 60000) {
+                    await new Promise((r) => setTimeout(r, 2000));
                     await fetch(goalCardFb);
                   }
                 }

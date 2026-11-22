@@ -76,16 +76,14 @@ export class FacebookPoster {
             postId,
           };
         } else if (photoUrl.startsWith('http')) {
-          // If the photo is a dynamic screenshot / graphic (e.g. image.thum.io or card endpoint):
-          // NEVER hand the raw URL to Facebook crawler because Facebook scrapes too fast and catches the initial blank white canvas!
-          // Instead, fetch and verify the full rendered image bytes first (> 150KB), then upload directly as binary source.
+          // Dynamic screenshot / graphic (e.g. image.thum.io or card endpoint)
           const isDynamicGraphic = photoUrl.includes('image.thum.io') || photoUrl.includes('/api/live/card');
           const isLineupCard = photoUrl.includes('type=lineup') || photoUrl.includes('status=LINEUP');
           const isGoalCard = photoUrl.includes('type=goal') || photoUrl.includes('status=GOAL');
-          // For Goal cards: blank white canvas is ~51KB, full graphic is >300KB (threshold: 120KB).
-          // For Lineup cards: legitimate card design is clean white with text columns (size 65KB-105KB, threshold: 40KB).
-          // For Score / Result cards: typical size is 180KB-320KB, blank canvas is ~51KB (threshold: 60KB).
-          const minSizeRequired = isGoalCard ? 120000 : (isLineupCard ? 40000 : 60000);
+          // For Goal cards: blank canvas is ~5KB, full graphic is >300KB (threshold: 60KB).
+          // For Lineup cards: legitimate card design is clean white with text columns (size 65KB-105KB, threshold: 30KB).
+          // For Score / Result cards: typical size is 180KB-320KB, blank canvas is ~5KB (threshold: 40KB).
+          const minSizeRequired = isGoalCard ? 60000 : (isLineupCard ? 30000 : 40000);
           let directBlob: Blob | null = null;
 
           if (isDynamicGraphic) {
@@ -94,7 +92,7 @@ export class FacebookPoster {
               if (imgRes.ok) {
                 let blob = await imgRes.blob();
                 let attempts = 0;
-                while (blob.size < minSizeRequired && attempts < 6) {
+                while (blob.size < minSizeRequired && attempts < 5) {
                   attempts++;
                   await new Promise((r) => setTimeout(r, 2000));
                   try {
@@ -119,9 +117,10 @@ export class FacebookPoster {
             }
           }
 
+          // Method A: Direct binary blob upload (highest reliability for dynamic cards)
           if (directBlob) {
             const formData = new FormData();
-            formData.append('source', directBlob, 'goal-card.png');
+            formData.append('source', directBlob, 'card.png');
             if (caption && caption.trim()) {
               formData.append('caption', caption.trim());
             }
@@ -141,40 +140,11 @@ export class FacebookPoster {
                 postId,
               };
             }
-            console.warn('[Facebook Poster] Direct blob upload returned error:', data.error);
+            console.warn('[Facebook Poster] Direct blob upload failed, falling back to url upload:', data.error);
           }
 
-          // CRITICAL SAFETY GUARD:
-          // If this was a dynamic graphic card and we could NOT get a verified minSizeRequired bytes image,
-          // NEVER pass the raw URL to Facebook crawler, as it will publish an ugly blank white box!
-          // Fallback to a text post so the goal announcement is never lost or blank!
-          if (isDynamicGraphic) {
-            console.warn('[Facebook Poster] Graphic card could not be verified (>150KB). Publishing text status update to prevent blank white image.');
-            const feedUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/feed`;
-            const feedBody = new URLSearchParams();
-            feedBody.append('message', caption);
-            feedBody.append('access_token', cleanToken);
-
-            const feedRes = await fetch(feedUrl, {
-              method: 'POST',
-              body: feedBody,
-            });
-
-            const feedData = (await feedRes.json()) as any;
-            if (feedRes.ok && !feedData.error) {
-              return {
-                success: true,
-                postId: feedData.id,
-              };
-            }
-            return {
-              success: false,
-              error: `Facebook API feed fallback error: ${feedData.error?.message || feedRes.statusText}`,
-            };
-          }
-
-          // Standard Remote Web Photo (e.g. pbs.twimg.com / espn press photo)
-          const url = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
+          // Method B: Standard Remote Web Photo upload via URL (for Twitter/press photos or URL fallback)
+          const photoUrlEndpoint = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/photos`;
           const body = new URLSearchParams();
           body.append('url', photoUrl);
           if (caption && caption.trim()) {
@@ -182,46 +152,38 @@ export class FacebookPoster {
           }
           body.append('access_token', cleanToken);
 
-          const res = await fetch(url, {
+          let res = await fetch(photoUrlEndpoint, {
             method: 'POST',
             body,
           });
 
-          const data = (await res.json()) as any;
-          if (!res.ok || data.error) {
-            const errDetail = data.error?.message || `HTTP ${res.status}`;
-            console.warn(`[Facebook Poster] Photo upload failed (${errDetail}). Falling back to text feed post...`);
-
-            // Fallback: post caption as a standard feed post so the post is never lost
-            const feedUrl = `https://graph.facebook.com/${this.GRAPH_API_VERSION}/${cleanId}/feed`;
-            const feedBody = new URLSearchParams();
-            feedBody.append('message', caption);
-            feedBody.append('access_token', cleanToken);
-
-            const feedRes = await fetch(feedUrl, {
-              method: 'POST',
-              body: feedBody,
-            });
-
-            const feedData = (await feedRes.json()) as any;
-            if (feedRes.ok && !feedData.error) {
-              console.log('[Facebook Poster] Fallback feed post published successfully!');
-              return {
-                success: true,
-                postId: feedData.id,
-              };
-            }
-
+          let data = (await res.json()) as any;
+          if (res.ok && !data.error) {
+            const postId = data.post_id || data.id;
             return {
-              success: false,
-              error: `Facebook API photo error: ${errDetail}; Feed fallback: ${feedData.error?.message || feedRes.statusText}`,
+              success: true,
+              postId,
             };
           }
 
-          const postId = data.post_id || data.id;
+          // Retry once on /photos before reporting error (strictly avoid degrading to text-only feed post)
+          console.warn('[Facebook Poster] Photo upload via url failed, retrying once...', data.error);
+          await new Promise((r) => setTimeout(r, 2000));
+          res = await fetch(photoUrlEndpoint, { method: 'POST', body });
+          data = (await res.json()) as any;
+          if (res.ok && !data.error) {
+            const postId = data.post_id || data.id;
+            return {
+              success: true,
+              postId,
+            };
+          }
+
+          const errDetail = data.error?.message || `HTTP ${res.status}`;
+          console.error('[Facebook Poster] All photo upload attempts failed:', errDetail);
           return {
-            success: true,
-            postId,
+            success: false,
+            error: `Facebook API photo error: ${errDetail}`,
           };
         }
       }
