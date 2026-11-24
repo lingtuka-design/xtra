@@ -76,8 +76,8 @@ export class FacebookPoster {
             postId,
           };
         } else if (photoUrl.startsWith('http')) {
-          // Dynamic screenshot / graphic (e.g. image.thum.io or card endpoint)
-          const isDynamicGraphic = photoUrl.includes('image.thum.io') || photoUrl.includes('/api/live/card');
+          // Dynamic screenshot / graphic (e.g. microlink.io, image.thum.io or card endpoint)
+          const isDynamicGraphic = photoUrl.includes('microlink.io') || photoUrl.includes('image.thum.io') || photoUrl.includes('/api/live/card');
           const isLineupCard = photoUrl.includes('type=lineup') || photoUrl.includes('status=LINEUP');
           const isGoalCard = photoUrl.includes('type=goal') || photoUrl.includes('status=GOAL');
           // For Goal cards: blank canvas is ~5KB, full graphic is >300KB (threshold: 60KB).

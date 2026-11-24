@@ -634,7 +634,7 @@ function buildCardImageUrl(options: {
   }
 
   const cardEndpoint = `https://xtra-byd.pages.dev/api/live/card?${q.toString()}`;
-  return `https://image.thum.io/get/wait/2/width/1024/crop/1024/viewportWidth/1024/viewportHeight/1024/noanimate/${cardEndpoint}`;
+  return `https://api.microlink.io/?url=${encodeURIComponent(cardEndpoint)}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=1024&viewport.height=1024&viewport.deviceScaleFactor=1`;
 }
 
 // POST or GET /api/live/poll -> checks all active tracked matches and auto-posts new goals to Xtra FB + WhatsApp
