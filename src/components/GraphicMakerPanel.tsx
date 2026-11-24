@@ -92,6 +92,10 @@ const MPL_TEAMS = [
     logo: 'https://xtra-byd.pages.dev/logos/rajasthan-united.png',
   },
   {
+    name: 'Sreenidi Deccan FC',
+    logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/1320491_small.png',
+  },
+  {
     name: 'FC Chhinga Veng',
     logo: 'https://upload.wikimedia.org/wikipedia/en/1/17/Chhinga_Veng_FC.svg',
   },
