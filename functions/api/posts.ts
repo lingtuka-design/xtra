@@ -183,9 +183,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         throw new Error('Facebook credentials are not configured');
       }
 
-      // Publish immediately to Facebook Page
+      const publishMainFb = (body as any).publish_main_fb === true;
+
+      // Publish immediately to Facebook Page (skip auto-hashtags in QUAD mode)
       const fbRes = await facebookPoster.postNews(
-        applyDestinationHashtag(mizoCaption, 'fb_xtra', originalText),
+        publishMainFb ? mizoCaption : applyDestinationHashtag(mizoCaption, 'fb_xtra', originalText),
         photoUrl || undefined,
         env.FB_PAGE_ID,
         env.FB_PAGE_ACCESS_TOKEN
@@ -202,7 +204,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           try {
             console.log('Broadcasting manual post to WhatsApp Channel...');
             const waRes = await whatsappPoster.postNews(
-              applyDestinationHashtag(mizoCaption, 'wa', originalText),
+              publishMainFb ? mizoCaption : applyDestinationHashtag(mizoCaption, 'wa', originalText),
               photoUrl || undefined,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
@@ -219,7 +221,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           try {
             console.log('Broadcasting manual post to Telegram Channel...');
             const tgRes = await telegramPoster.postNews(
-              applyDestinationHashtag(mizoCaption, 'tg', originalText),
+              publishMainFb ? mizoCaption : applyDestinationHashtag(mizoCaption, 'tg', originalText),
               photoUrl || undefined,
               env.TELEGRAM_BOT_TOKEN,
               env.TELEGRAM_CHANNEL_ID
@@ -230,14 +232,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           }
         }
 
-        // Also broadcast to Main Inkhel.com FB Page if requested (TRIO mode)
-        const publishMainFb = (body as any).publish_main_fb === true;
+        // Also broadcast to Main Inkhel.com FB Page if requested (QUAD mode)
         if (publishMainFb) {
           if (env.MAIN_FB_PAGE_ID && env.MAIN_FB_PAGE_ACCESS_TOKEN) {
             try {
               console.log('Broadcasting manual post to Inkhel.com Main FB Page...');
               const mainFbRes = await facebookPoster.postNews(
-                applyDestinationHashtag(mizoCaption, 'fb_main', originalText),
+                mizoCaption,
                 photoUrl || undefined,
                 env.MAIN_FB_PAGE_ID,
                 env.MAIN_FB_PAGE_ACCESS_TOKEN

@@ -59,10 +59,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Determine whether this was a scheduled queue item or a direct publish
     const publishSource = post.facebook_status === 'queued' ? 'queue' : 'direct';
+    const publishToMainFb = (body as any).publish_main_fb === true;
 
-    // Call Meta Graph API
+    // Call Meta Graph API (skip auto-hashtags in QUAD mode)
     const fbResult = await facebookPoster.postNews(
-      applyDestinationHashtag(post.mizo_translation, 'fb_xtra', post.original_text || post.tweet_url),
+      publishToMainFb ? post.mizo_translation : applyDestinationHashtag(post.mizo_translation, 'fb_xtra', post.original_text || post.tweet_url),
       post.primary_image_url,
       env.FB_PAGE_ID,
       env.FB_PAGE_ACCESS_TOKEN
@@ -90,7 +91,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!body.skip_whatsapp) {
       try {
         const waRes = await whatsappPoster.postNews(
-          applyDestinationHashtag(post.mizo_translation, 'wa', post.original_text || post.tweet_url),
+          publishToMainFb ? post.mizo_translation : applyDestinationHashtag(post.mizo_translation, 'wa', post.original_text || post.tweet_url),
           post.primary_image_url,
           env.WHATSAPP_API_TOKEN,
           env.WHATSAPP_CHANNEL_ID,
@@ -111,7 +112,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!body.skip_telegram) {
       try {
         const tgRes = await telegramPoster.postNews(
-          applyDestinationHashtag(post.mizo_translation, 'tg', post.original_text || post.tweet_url),
+          publishToMainFb ? post.mizo_translation : applyDestinationHashtag(post.mizo_translation, 'tg', post.original_text || post.tweet_url),
           post.primary_image_url,
           env.TELEGRAM_BOT_TOKEN,
           env.TELEGRAM_CHANNEL_ID
@@ -126,14 +127,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
-    // Publish to Inkhel.com Main FB Page if requested (TRIO mode)
+    // Publish to Inkhel.com Main FB Page if requested (QUAD mode)
     let mainFbNotice = '';
-    const publishToMainFb = (body as any).publish_main_fb === true;
     if (publishToMainFb) {
       if (env.MAIN_FB_PAGE_ID && env.MAIN_FB_PAGE_ACCESS_TOKEN) {
         try {
           const mainFbResult = await facebookPoster.postNews(
-            applyDestinationHashtag(post.mizo_translation, 'fb_main', post.original_text || post.tweet_url),
+            post.mizo_translation,
             post.primary_image_url,
             env.MAIN_FB_PAGE_ID,
             env.MAIN_FB_PAGE_ACCESS_TOKEN
