@@ -2,6 +2,7 @@ import { Env, PostRecord } from '../types';
 import { facebookPoster } from '../services/facebookPoster';
 import { whatsappPoster } from '../services/whatsappPoster';
 import { telegramPoster } from '../services/telegramPoster';
+import { applyDestinationHashtag } from '../services/hashtagHelper';
 import { reorderQueue } from '../services/queueService';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -184,7 +185,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
       // Publish immediately to Facebook Page
       const fbRes = await facebookPoster.postNews(
-        mizoCaption,
+        applyDestinationHashtag(mizoCaption, 'fb_xtra', originalText),
         photoUrl || undefined,
         env.FB_PAGE_ID,
         env.FB_PAGE_ACCESS_TOKEN
@@ -201,7 +202,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           try {
             console.log('Broadcasting manual post to WhatsApp Channel...');
             const waRes = await whatsappPoster.postNews(
-              mizoCaption,
+              applyDestinationHashtag(mizoCaption, 'wa', originalText),
               photoUrl || undefined,
               env.WHATSAPP_API_TOKEN,
               env.WHATSAPP_CHANNEL_ID,
@@ -218,7 +219,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           try {
             console.log('Broadcasting manual post to Telegram Channel...');
             const tgRes = await telegramPoster.postNews(
-              mizoCaption,
+              applyDestinationHashtag(mizoCaption, 'tg', originalText),
               photoUrl || undefined,
               env.TELEGRAM_BOT_TOKEN,
               env.TELEGRAM_CHANNEL_ID
@@ -236,7 +237,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             try {
               console.log('Broadcasting manual post to Inkhel.com Main FB Page...');
               const mainFbRes = await facebookPoster.postNews(
-                mizoCaption,
+                applyDestinationHashtag(mizoCaption, 'fb_main', originalText),
                 photoUrl || undefined,
                 env.MAIN_FB_PAGE_ID,
                 env.MAIN_FB_PAGE_ACCESS_TOKEN

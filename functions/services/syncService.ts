@@ -3,6 +3,7 @@ import { facebookPoster } from './facebookPoster';
 import { whatsappPoster } from './whatsappPoster';
 import { telegramPoster } from './telegramPoster';
 import { breakingMonitorService } from './breakingMonitorService';
+import { applyDestinationHashtag } from './hashtagHelper';
 
 export class SyncService {
   /**
@@ -116,7 +117,7 @@ export class SyncService {
 
           console.log(`[FB Queue Drip] Auto-publishing queued post #${nextQueued.id} to Facebook, WhatsApp & Telegram...`);
           const fbRes = await facebookPoster.postNews(
-            nextQueued.mizo_translation,
+            applyDestinationHashtag(nextQueued.mizo_translation, 'fb_xtra', nextQueued.original_text || nextQueued.tweet_url),
             nextQueued.primary_image_url,
             env.FB_PAGE_ID,
             env.FB_PAGE_ACCESS_TOKEN
@@ -132,7 +133,7 @@ export class SyncService {
             try {
               console.log(`[WA Channel Drip] Auto-publishing post #${nextQueued.id} to WhatsApp Channel...`);
               const waRes = await whatsappPoster.postNews(
-                nextQueued.mizo_translation,
+                applyDestinationHashtag(nextQueued.mizo_translation, 'wa', nextQueued.original_text || nextQueued.tweet_url),
                 nextQueued.primary_image_url,
                 env.WHATSAPP_API_TOKEN,
                 env.WHATSAPP_CHANNEL_ID,
@@ -151,7 +152,7 @@ export class SyncService {
             try {
               console.log(`[Telegram Drip] Auto-publishing post #${nextQueued.id} to Telegram Channel...`);
               const tgRes = await telegramPoster.postNews(
-                nextQueued.mizo_translation,
+                applyDestinationHashtag(nextQueued.mizo_translation, 'tg', nextQueued.original_text || nextQueued.tweet_url),
                 nextQueued.primary_image_url,
                 env.TELEGRAM_BOT_TOKEN,
                 env.TELEGRAM_CHANNEL_ID

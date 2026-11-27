@@ -2,6 +2,7 @@ import { Env, PostRecord } from '../types';
 import { facebookPoster } from '../services/facebookPoster';
 import { whatsappPoster } from '../services/whatsappPoster';
 import { telegramPoster } from '../services/telegramPoster';
+import { applyDestinationHashtag } from '../services/hashtagHelper';
 import { reorderQueue } from '../services/queueService';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -61,7 +62,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Call Meta Graph API
     const fbResult = await facebookPoster.postNews(
-      post.mizo_translation,
+      applyDestinationHashtag(post.mizo_translation, 'fb_xtra', post.original_text || post.tweet_url),
       post.primary_image_url,
       env.FB_PAGE_ID,
       env.FB_PAGE_ACCESS_TOKEN
@@ -89,7 +90,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!body.skip_whatsapp) {
       try {
         const waRes = await whatsappPoster.postNews(
-          post.mizo_translation,
+          applyDestinationHashtag(post.mizo_translation, 'wa', post.original_text || post.tweet_url),
           post.primary_image_url,
           env.WHATSAPP_API_TOKEN,
           env.WHATSAPP_CHANNEL_ID,
@@ -110,7 +111,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!body.skip_telegram) {
       try {
         const tgRes = await telegramPoster.postNews(
-          post.mizo_translation,
+          applyDestinationHashtag(post.mizo_translation, 'tg', post.original_text || post.tweet_url),
           post.primary_image_url,
           env.TELEGRAM_BOT_TOKEN,
           env.TELEGRAM_CHANNEL_ID
@@ -132,7 +133,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       if (env.MAIN_FB_PAGE_ID && env.MAIN_FB_PAGE_ACCESS_TOKEN) {
         try {
           const mainFbResult = await facebookPoster.postNews(
-            post.mizo_translation,
+            applyDestinationHashtag(post.mizo_translation, 'fb_main', post.original_text || post.tweet_url),
             post.primary_image_url,
             env.MAIN_FB_PAGE_ID,
             env.MAIN_FB_PAGE_ACCESS_TOKEN
