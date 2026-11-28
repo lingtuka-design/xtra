@@ -45,6 +45,54 @@ const SUPPORTED_LEAGUES = [
   { id: 'ita.1', name: 'Serie A', tag: 'SERIE A', icon: '🇮🇹' },
 ];
 
+const CLUB_SHORT_NAMES: Record<string, string> = {
+  'brighton & hove albion': 'Brighton',
+  'brighton and hove albion': 'Brighton',
+  'tottenham hotspur': 'Tottenham',
+  'wolverhampton wanderers': 'Wolves',
+  'west ham united': 'West Ham',
+  'newcastle united': 'Newcastle',
+  'manchester united': 'Man United',
+  'manchester city': 'Man City',
+  'nottingham forest': 'Nottm Forest',
+  'afc bournemouth': 'Bournemouth',
+  'leicester city': 'Leicester',
+  'ipswich town': 'Ipswich',
+  'leeds united': 'Leeds',
+  'crystal palace': 'Crystal Palace',
+  'sheffield united': 'Sheff Utd',
+  'paris saint-germain': 'PSG',
+  'borussia dortmund': 'Dortmund',
+  'bayer leverkusen': 'Leverkusen',
+  'eintracht frankfurt': 'Frankfurt',
+  'internazionale': 'Inter',
+  'inter milan': 'Inter',
+  'as roma': 'Roma',
+  'ss lazio': 'Lazio',
+  'atletico madrid': 'Atlético',
+  'atlético madrid': 'Atlético',
+  'athletic club': 'Athletic',
+  'athletic bilbao': 'Athletic',
+  'real sociedad': 'Sociedad',
+  'real betis': 'Betis',
+  'deportivo alaves': 'Alavés',
+  'celta vigo': 'Celta',
+  'rayo vallecano': 'Rayo',
+};
+
+function shortenClubName(name: string): string {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return trimmed;
+  const mapped = CLUB_SHORT_NAMES[trimmed.toLowerCase()];
+  if (mapped) return mapped;
+  return trimmed
+    .replace(/\s+Hotspur$/i, '')
+    .replace(/\s+&\s+Hove\s+Albion$/i, '')
+    .replace(/\s+Wanderers$/i, '')
+    .replace(/^AFC\s+/i, '')
+    .trim();
+}
+
 // Dot matrix SVG generator
 const DotMatrixSvg = () => (
   <svg width="60" height="90" viewBox="0 0 60 90" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -266,9 +314,9 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
           istDateFormatted,
           istDateSortKey,
           istTime,
-          homeTeam: home?.team?.displayName || 'Home Team',
+          homeTeam: shortenClubName(home?.team?.shortDisplayName || home?.team?.displayName || 'Home Team'),
           homeLogo: home?.team?.logo || home?.team?.logos?.[0]?.href || '',
-          awayTeam: away?.team?.displayName || 'Away Team',
+          awayTeam: shortenClubName(away?.team?.shortDisplayName || away?.team?.displayName || 'Away Team'),
           awayLogo: away?.team?.logo || away?.team?.logos?.[0]?.href || '',
           selected: true,
         });
@@ -964,12 +1012,12 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
                         <p className="text-sm font-bold">Match thlan a la awm lo</p>
                       </div>
                     ) : (
-                      <div className="w-[720px] space-y-5">
+                      <div className="w-[760px] space-y-5">
                         {groupedFixtures.map((group, gIdx) => (
                           <div key={gIdx} className="space-y-2.5">
                             {/* Date Header Banner */}
                             <div
-                              className="w-full py-1.5 px-4 rounded-lg flex items-center justify-center font-black text-[13.5px] uppercase tracking-[1.5px] text-amber-300"
+                              className="w-full py-1.5 px-4 rounded-lg flex items-center justify-center font-black text-[14.5px] uppercase tracking-[1.5px] text-amber-300"
                               style={{
                                 background: 'linear-gradient(90deg, rgba(138, 10, 10, 0) 0%, rgba(138, 10, 10, 0.85) 25%, rgba(138, 10, 10, 0.85) 75%, rgba(138, 10, 10, 0) 100%)',
                                 textShadow: '0 1px 3px rgba(0, 0, 0, 0.9)',
@@ -979,26 +1027,26 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
                             </div>
 
                             {/* Match Rows */}
-                            <div className="space-y-2">
+                            <div className="space-y-2.5">
                               {group.matches.map((m) => (
                                 <div
                                   key={m.id}
-                                  className="w-full h-[62px] bg-white rounded-xl px-5 flex items-center justify-between"
+                                  className="w-full h-[70px] bg-white rounded-xl px-5 flex items-center justify-between"
                                   style={{
                                     boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
                                   }}
                                 >
                                   {/* Home Team */}
                                   <div className="flex items-center justify-end gap-3 flex-1 min-w-0 pr-3">
-                                    <span className="font-extrabold text-[16.5px] text-stone-900 truncate uppercase tracking-tight text-right">
-                                      {m.homeTeam}
+                                    <span className="font-black text-[21px] text-stone-900 truncate uppercase tracking-tight text-right">
+                                      {shortenClubName(m.homeTeam)}
                                     </span>
-                                    <div className="w-[38px] h-[38px] flex items-center justify-center shrink-0">
+                                    <div className="w-[42px] h-[42px] flex items-center justify-center shrink-0">
                                       {m.homeLogo ? (
                                         <img
                                           src={getSafeImageSrc(m.homeLogo)}
                                           alt=""
-                                          className="max-w-[36px] max-h-[36px] object-contain"
+                                          className="max-w-[40px] max-h-[40px] object-contain"
                                           crossOrigin="anonymous"
                                           style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.15))' }}
                                         />
@@ -1010,25 +1058,25 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
 
                                   {/* Center Time Pill */}
                                   <div
-                                    className="bg-stone-900 text-white rounded-lg px-3.5 py-1.5 text-center shrink-0 flex items-center justify-center border border-stone-800"
+                                    className="bg-stone-900 text-white rounded-lg px-4 py-1.5 text-center shrink-0 flex items-center justify-center border border-stone-800"
                                     style={{
-                                      minWidth: '100px',
+                                      minWidth: '118px',
                                       boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.15)',
                                     }}
                                   >
-                                    <span className="text-[14.5px] font-black text-amber-400 tracking-wide">
+                                    <span className="text-[19px] font-black text-amber-400 tracking-wide">
                                       {m.istTime}
                                     </span>
                                   </div>
 
                                   {/* Away Team */}
                                   <div className="flex items-center justify-start gap-3 flex-1 min-w-0 pl-3">
-                                    <div className="w-[38px] h-[38px] flex items-center justify-center shrink-0">
+                                    <div className="w-[42px] h-[42px] flex items-center justify-center shrink-0">
                                       {m.awayLogo ? (
                                         <img
                                           src={getSafeImageSrc(m.awayLogo)}
                                           alt=""
-                                          className="max-w-[36px] max-h-[36px] object-contain"
+                                          className="max-w-[40px] max-h-[40px] object-contain"
                                           crossOrigin="anonymous"
                                           style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.15))' }}
                                         />
@@ -1036,8 +1084,8 @@ export const FixturesMakerPanel: React.FC<FixturesMakerPanelProps> = ({ onSwitch
                                         <span className="text-xl">⚽</span>
                                       )}
                                     </div>
-                                    <span className="font-extrabold text-[16.5px] text-stone-900 truncate uppercase tracking-tight text-left">
-                                      {m.awayTeam}
+                                    <span className="font-black text-[21px] text-stone-900 truncate uppercase tracking-tight text-left">
+                                      {shortenClubName(m.awayTeam)}
                                     </span>
                                   </div>
                                 </div>
